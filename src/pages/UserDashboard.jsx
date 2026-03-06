@@ -20,8 +20,6 @@ const IMAGE_MAP = {
     ptz_camera: ptzImg,
 };
 
-import dashboardBg from '../assets/hero_bg_1.png';
-
 
 const UserDashboard = () => {
     const { user, isAuthenticated, logout } = useAuth();
@@ -462,7 +460,7 @@ const UserDashboard = () => {
     };
 
     return (
-        <div className="bg-[#F5F7FA] min-h-screen flex flex-col lg:flex-row font-sans">
+        <div className="bg-white min-h-screen flex flex-col lg:flex-row font-sans">
 
             {/* Sidebar navigation - Full height, flush to edge */}
             <div className="w-full lg:w-[280px] flex-shrink-0">
@@ -524,15 +522,7 @@ const UserDashboard = () => {
             </div>
 
             {/* Main Content Area */}
-            <div
-                className="flex-1 overflow-x-hidden"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(245, 247, 250, 0.94), rgba(245, 247, 250, 0.94)), url(${dashboardBg})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundAttachment: 'fixed'
-                }}
-            >
+            <div className="flex-1 overflow-x-hidden">
 
 
                 <div className="px-8 lg:px-12 pt-8 lg:pt-12 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">

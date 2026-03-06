@@ -5,7 +5,6 @@ import { ChevronRight, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Import local professional images
-import contactBg from '../assets/cctv_contact_bg.png';
 
 const Contact = () => {
     // Scroll to top on mount
@@ -15,22 +14,10 @@ const Contact = () => {
 
     return (
         <div className="pt-12 min-h-screen bg-white relative overflow-hidden">
-            {/* Page Background Image & Overlay */}
-            <div
-                className="absolute inset-0 z-0 bg-cover bg-center bg-fixed opacity-[0.06]"
-                style={{ backgroundImage: `url(${contactBg})` }}
-            >
-                <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white"></div>
-            </div>
+
             {/* Header / Breadcrumbs */}
             <div className="bg-[#0b0f1a] py-28 relative overflow-hidden">
-                {/* Background Image & Overlay */}
-                <div
-                    className="absolute inset-0 z-0 bg-cover bg-center opacity-60 grayscale"
-                    style={{ backgroundImage: `url(${contactBg})` }}
-                >
-                    <div className="absolute inset-0 bg-[#0b0f1a]/85 mix-blend-multiply"></div>
-                </div>
+
 
                 <div className="container mx-auto px-4 md:px-8 relative z-10 text-center">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6">Contact Us</h1>

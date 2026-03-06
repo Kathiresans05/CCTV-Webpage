@@ -39,7 +39,8 @@ const ScrollToHash = () => {
 // Hide on /contact (per previous request) and /about (since it's inside AboutPage)
 const ConditionalFeaturesSlider = () => {
   const { pathname } = useLocation();
-  if (pathname === '/contact' || pathname === '/about') return null;
+  const hiddenPaths = ['/contact', '/about', '/dashboard', '/login', '/signup', '/admin', '/my-bookings'];
+  if (hiddenPaths.includes(pathname)) return null;
   return <FeaturesSlider />;
 };
 

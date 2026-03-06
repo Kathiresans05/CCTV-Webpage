@@ -7,7 +7,10 @@
   --color-secondary-black: #111827;
   --color-secondary-gray: #374151;
   --color-light-gray: #f3f4f6;
-  --color-white: #ffffff;
+  --color-white: #EAECF0;
+
+  /* Override Tailwind's built-in white so bg-white = #EAECF0 everywhere */
+  --color-white: #EAECF0;
 
   --animate-fade-in-up: fade-in-up 0.8s ease-out;
 }
@@ -27,8 +30,14 @@
 body {
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--color-secondary-gray);
-  background-color: var(--color-white);
+  background-color: #EAECF0;
 }
+
+/* Global override: replace all white backgrounds with #EAECF0 */
+.bg-white {
+  background-color: #EAECF0 !important;
+}
+
 
 /* Custom Scrollbar for Sidebar Categories */
 .custom-scrollbar::-webkit-scrollbar {

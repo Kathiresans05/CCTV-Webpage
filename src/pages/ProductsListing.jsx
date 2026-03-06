@@ -116,7 +116,7 @@ const ProductsListing = () => {
 
     // ── Render ──────────────────────────────────────
     return (
-        <div className="bg-[#F5F7FA] min-h-screen py-4">
+        <div className="bg-white min-h-screen py-4">
             <div className="w-full px-4 lg:px-10">
 
                 {/* Loading State */}
