@@ -29,12 +29,17 @@ const ContactForm = () => {
         setError(null);
 
         try {
+            const submissionData = {
+                ...formData,
+                name: `${formData.firstName} ${formData.lastName}`.trim()
+            };
+
             const response = await fetch('/api/contact', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(submissionData),
             });
 
             const data = await response.json();

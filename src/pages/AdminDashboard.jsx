@@ -57,25 +57,26 @@ const AdminDashboard = () => {
         '/admin': 'overview',
         '/admin/dashboard': 'overview',
         '/admin/employees': 'employees',
-        '/admin/products': 'inventory',
-        '/admin/inventory': 'inventory',
+        '/admin/products': 'products',
         '/admin/bookings': 'bookings',
         '/admin/enquiries': 'enquiries',
         '/admin/attendance': 'attendance',
         '/admin/reports': 'reports',
-        '/admin/settings': 'settings'
+        '/admin/settings': 'settings',
+        '/admin/notifications': 'notifications'
     };
 
     // Reverse mapping for navigation
     const tabToPath = {
         'overview': '/admin/dashboard',
         'employees': '/admin/employees',
-        'inventory': '/admin/inventory',
+        'products': '/admin/products',
         'bookings': '/admin/bookings',
         'enquiries': '/admin/enquiries',
         'attendance': '/admin/attendance',
         'reports': '/admin/reports',
-        'settings': '/admin/settings'
+        'settings': '/admin/settings',
+        'notifications': '/admin/notifications'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
@@ -331,11 +332,6 @@ const AdminDashboard = () => {
                 { label: 'Total Employees', value: employees.length, icon: Users, color: 'text-primary-navy', bg: 'bg-bg-soft', trend: 'Stable' },
                 { label: 'Present Today', value: attendance.length, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: 'Live' },
                 { label: 'Technicians Active', value: employees.filter(e => e.isActive).length, icon: Play, color: 'text-status-info-text', bg: 'bg-status-info-bg', trend: 'Field' }
-            ],
-            assets: [
-                { label: 'Total Products', value: stocks.length, icon: Package, color: 'text-primary-navy', bg: 'bg-bg-soft', trend: 'Inventory' },
-                { label: 'Low Stock', value: stocks.filter(s => s.quantity < (s.reorderLevel || 10)).length, icon: AlertTriangle, color: 'text-primary-red', bg: 'bg-primary-red/10', trend: 'Warning' },
-                { label: 'Verified Systems', value: bookings.filter(b => b.status === 'Completed').length, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: 'Secure' }
             ]
         };
 
@@ -368,23 +364,13 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* 2. Staff and 3. Assets */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    <div>
-                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <Users size={14} className="text-primary-navy/40" /> Staff
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                            {kpis.staff.map((stat, i) => renderKpiCard(stat, i))}
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <Package size={14} className="text-primary-navy/40" /> Assets
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                            {kpis.assets.map((stat, i) => renderKpiCard(stat, i))}
-                        </div>
+                {/* 2. Staff */}
+                <div>
+                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Users size={14} className="text-primary-navy/40" /> Staff
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        {kpis.staff.map((stat, i) => renderKpiCard(stat, i))}
                     </div>
                 </div>
 
@@ -396,7 +382,7 @@ const AdminDashboard = () => {
                             <h3 className="text-lg font-bold text-primary-navy">Recent Booking Requests</h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Incoming installation inquiries</p>
                         </div>
-                        <button onClick={() => setActiveTab('bookings')} className="zoho-btn-primary px-4 py-2 rounded-lg text-xs">View All</button>
+                        <button onClick={() => setActiveTab('bookings')} className="zoho-btn-secondary px-5 py-2.5 rounded-lg text-xs">View All</button>
                     </div>
                     <div className="space-y-4">
                         {bookings.slice(0, 5).map(b => (
@@ -425,28 +411,6 @@ const AdminDashboard = () => {
 
                 {/* Operations Alerts & Activity */}
                 <div className="space-y-8">
-                    <div className="zoho-card p-8 border-l-4 border-l-primary-red">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-sm font-bold text-primary-navy flex items-center gap-2">
-                                <AlertTriangle size={18} className="text-primary-red" />
-                                Inventory Alerts
-                            </h3>
-                            <span className="text-[10px] font-bold text-primary-red uppercase tracking-wider">{stocks.filter(s => s.quantity < 10).length} Critical</span>
-                        </div>
-                        <div className="space-y-5">
-                            {stocks.filter(s => s.quantity < 10).slice(0, 4).map(s => (
-                                <div key={s.id} className="group">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="font-bold text-[13px] text-primary-navy truncate pr-4">{s.name}</p>
-                                        <p className="text-[13px] font-extrabold text-primary-red">{s.quantity}</p>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-bg-soft rounded-full overflow-hidden">
-                                        <div className="bg-primary-red h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min((s.quantity / 20) * 100, 100)}%` }}></div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
 
                     <div className="bg-primary-navy p-8 rounded-[16px] text-white shadow-xl shadow-navy-dark/40 relative overflow-hidden">
                         <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
@@ -540,16 +504,18 @@ const AdminDashboard = () => {
                                         }`}>{b.status}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => {
-                                                setEditingBooking(b);
-                                                setBookingForm({ status: b.status, assignedEmployee: b.assignedEmployee?._id || '' });
-                                                setShowBookingModal(true);
-                                            }}
-                                            className="zoho-btn-primary px-3 py-1.5 rounded-lg text-[10px] shrink-0"
-                                        >
-                                            Modify
-                                        </button>
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingBooking(b);
+                                                    setBookingForm({ status: b.status, assignedEmployee: b.assignedEmployee?._id || '' });
+                                                    setShowBookingModal(true);
+                                                }}
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px] shrink-0"
+                                            >
+                                                Modify
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -755,12 +721,20 @@ const AdminDashboard = () => {
                                         }`}>{q.status || 'New'}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => updateEnquiryStatus(q._id, 'Closed')}
-                                            className="p-2 text-text-muted hover:text-primary-red bg-bg-soft hover:bg-white rounded-lg transition-all border border-transparent hover:border-border-soft"
-                                        >
-                                            <CheckCircle2 size={18} />
-                                        </button>
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => updateEnquiryStatus(q._id, 'Processed')}
+                                                className="zoho-btn-secondary px-4 py-2 rounded-xl text-[10px]"
+                                            >
+                                                Update Status
+                                            </button>
+                                            <button 
+                                                onClick={() => updateEnquiryStatus(q._id, 'Closed')}
+                                                className="p-2 text-text-muted hover:text-primary-red bg-bg-soft hover:bg-white rounded-lg transition-all border border-transparent hover:border-border-soft"
+                                            >
+                                                <CheckCircle2 size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -862,7 +836,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                     </div>
-                    <button onClick={handleSettingsUpdate} className="zoho-btn-primary w-full py-4 text-sm rounded-2xl shadow-xl shadow-red-900/30">Commit Configuration Changes</button>
+                    <button onClick={handleSettingsUpdate} className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">Commit Configuration Changes</button>
                 </div>
 
                 <div className="lg:col-span-5 space-y-10">
@@ -897,7 +871,7 @@ const AdminDashboard = () => {
                                 <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Confirm Authorization</label>
                                 <input type="password" placeholder="••••••••" className="zoho-input" />
                             </div>
-                            <button className="zoho-btn-primary w-full py-4 text-xs font-black bg-primary-navy hover:bg-primary-red">Update Security Credentials</button>
+                            <button className="zoho-btn-secondary w-full py-4 text-xs font-black">Update Security Credentials</button>
                         </div>
                     </div>
                 </div>
@@ -918,7 +892,7 @@ const AdminDashboard = () => {
                         setEmployeeForm({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
                         setShowEmployeeModal(true);
                     }}
-                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2"
+                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
                     Register Employee
@@ -982,16 +956,18 @@ const AdminDashboard = () => {
                                         <p className="text-sm font-extrabold text-primary-navy">{e.assignedJobs || 0}</p>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => {
-                                                setEditingEmployee(e);
-                                                setEmployeeForm({ ...e, password: '' });
-                                                setShowEmployeeModal(true);
-                                            }}
-                                            className="zoho-btn-primary px-3 py-1.5 rounded-lg text-[10px]"
-                                        >
-                                            Configure
-                                        </button>
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingEmployee(e);
+                                                    setEmployeeForm({ ...e, password: '' });
+                                                    setShowEmployeeModal(true);
+                                                }}
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
+                                            >
+                                                Configure
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1015,7 +991,7 @@ const AdminDashboard = () => {
                         setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', image: '' });
                         setShowProductModal(true);
                     }}
-                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2"
+                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
                     New Hardware Entry
@@ -1078,16 +1054,18 @@ const AdminDashboard = () => {
                                         }`}>{s.quantity < 10 ? 'Critical' : s.quantity < 20 ? 'Warning' : 'Stable'}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => {
-                                                setEditingProduct(s);
-                                                setProductForm({ ...s });
-                                                setShowProductModal(true);
-                                            }}
-                                            className="zoho-btn-primary px-3 py-1.5 rounded-lg text-[10px]"
-                                        >
-                                            Update
-                                        </button>
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingProduct(s);
+                                                    setProductForm({ ...s });
+                                                    setShowProductModal(true);
+                                                }}
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
+                                            >
+                                                Update
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1145,15 +1123,17 @@ const AdminDashboard = () => {
                                         {new Date(s.updatedAt).toLocaleDateString()} @ {new Date(s.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button 
-                                            onClick={() => {
-                                                setEditingProduct(s);
-                                                setShowStockModal(true);
-                                            }}
-                                            className="zoho-btn-primary px-3 py-1.5 rounded-lg text-[10px] whitespace-nowrap"
-                                        >
-                                            Inbound Update
-                                        </button>
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingProduct(s);
+                                                    setShowStockModal(true);
+                                                }}
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px] whitespace-nowrap"
+                                            >
+                                                Inbound Update
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1204,7 +1184,7 @@ const AdminDashboard = () => {
                         <textarea value={employeeForm.address} onChange={e => setEmployeeForm({...employeeForm, address: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Primary service area or residence address..." />
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-primary w-full py-4 text-sm rounded-2xl shadow-xl shadow-red-900/30">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
                             {editingEmployee ? 'Commit Changes' : 'Execute Registration'}
                         </button>
                     </div>
@@ -1262,7 +1242,7 @@ const AdminDashboard = () => {
                         <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Stock balance..." />
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-primary w-full py-4 text-sm rounded-2xl shadow-xl shadow-red-900/30">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
                             {editingProduct ? 'Commit Updates' : 'Execute Catalog Entry'}
                         </button>
                     </div>
@@ -1305,7 +1285,7 @@ const AdminDashboard = () => {
                         </select>
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-primary w-full py-4 text-sm rounded-2xl shadow-xl shadow-red-900/30">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
                             Apply Directives
                         </button>
                     </div>
@@ -1345,7 +1325,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-primary w-full py-4 text-sm rounded-2xl shadow-xl shadow-red-900/30">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
                             Confirm Audit Release
                         </button>
                     </div>
@@ -1377,12 +1357,10 @@ const AdminDashboard = () => {
                         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
                         { id: 'bookings', label: 'Bookings', icon: Calendar },
                         { id: 'products', label: 'Products', icon: Package },
-                        { id: 'inventory', label: 'Inventory', icon: BarChart3 },
                         { id: 'employees', label: 'Employees', icon: Users },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
                         { id: 'tracking', label: 'Tracking', icon: Truck },
                         { id: 'enquiries', label: 'Enquiries', icon: Mail },
-                        { id: 'notifications', label: 'Notifications', icon: Bell },
                         { id: 'settings', label: 'Settings', icon: Settings },
                     ].map(item => (
                         <button
@@ -1454,7 +1432,6 @@ const AdminDashboard = () => {
                                 {activeTab === 'overview' && renderOverview()}
                                 {activeTab === 'bookings' && renderBookings()}
                                 {activeTab === 'products' && renderProducts()}
-                                {activeTab === 'inventory' && renderInventory()}
                                 {activeTab === 'employees' && renderEmployees()}
                                 {activeTab === 'attendance' && renderAttendance()}
                                 {activeTab === 'tracking' && renderTracking()}

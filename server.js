@@ -19,7 +19,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ─────────────────────────────────────────────
 // API: Auth Endpoints
@@ -403,11 +404,23 @@ app.post('/api/attendance/checkout', protect, employee, async (req, res) => {
 // ─────────────────────────────────────────────
 app.post('/api/contact', async (req, res) => {
     try {
-        const enquiry = await Enquiry.create(req.body);
+        const { firstName, lastName, name, email, phone, subject, message } = req.body;
+        
+        // Construct name if missing but parts are present
+        const displayName = name || `${firstName || ''} ${lastName || ''}`.trim() || 'Anonymous';
+
+        const enquiry = await Enquiry.create({
+            name: displayName,
+            email,
+            phone: phone || 'N/A',
+            subject,
+            message
+        });
+
         await Notification.create({
             role: 'admin',
             title: 'New Enquiry',
-            message: `New message from ${req.body.firstName || req.body.name}`,
+            message: `New message from ${displayName}`,
             type: 'enquiry',
             referenceId: enquiry._id
         });

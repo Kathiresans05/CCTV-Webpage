@@ -34,9 +34,7 @@ const EmployeeDashboard = () => {
         '/employee': 'overview',
         '/employee/dashboard': 'overview',
         '/employee/requests': 'new',
-        '/employee/assigned-jobs': 'assigned',
-        '/employee/in-progress': 'in-progress',
-        '/employee/completed-jobs': 'completed',
+        '/employee/my-jobs': 'my-jobs',
         '/employee/attendance': 'attendance',
         '/employee/notifications': 'notifications',
         '/employee/profile': 'profile'
@@ -46,15 +44,15 @@ const EmployeeDashboard = () => {
     const tabToPath = {
         'overview': '/employee/dashboard',
         'new': '/employee/requests',
-        'assigned': '/employee/assigned-jobs',
-        'in-progress': '/employee/in-progress',
-        'completed': '/employee/completed-jobs',
+        'my-jobs': '/employee/my-jobs',
         'attendance': '/employee/attendance',
         'notifications': '/employee/notifications',
         'profile': '/employee/profile'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
+    const [myJobsFilter, setMyJobsFilter] = useState('All');
+    const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     
     useEffect(() => {
         const path = location.pathname;
@@ -84,6 +82,10 @@ const EmployeeDashboard = () => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file (JPG, PNG, etc.)');
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 alert('Image size should be less than 5MB');
                 return;
@@ -149,7 +151,8 @@ const EmployeeDashboard = () => {
                 alert(data.message || 'Action failed');
             }
         } catch (error) {
-            alert('Error connecting to server');
+            console.error('Job action error:', error);
+            alert('Error connecting to server. Please ensure the backend is running.');
         }
     };
 
@@ -219,37 +222,77 @@ const EmployeeDashboard = () => {
 
         return (
             <div className="space-y-8 animate-in fade-in duration-500">
-                {/* 1. Operations */}
+                {/* 1. Tasks & Alerts - Priority Row 1 */}
                 <div>
                     <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Briefcase size={14} className="text-primary-navy/40" /> Operations
+                        <Clock size={14} className="text-primary-navy/40" /> Tasks & Alerts
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        {kpis.assets.map((stat, i) => renderKpiCard(stat, i))}
+                    </div>
+                </div>
+
+                {/* 2. Attendance Center - Full Width Row 2 */}
+                <div>
+                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <UserCheck size={14} className="text-primary-navy/40" /> Attendance Command Center
+                    </h4>
+                    <div className="bg-white border border-border-soft rounded-2xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${attendanceStatus ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary-red/10 text-primary-red'}`}>
+                                <Clock size={28} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-bold text-primary-navy">
+                                        {attendanceStatus ? 'Shift Active' : 'Off Duty'}
+                                    </h3>
+                                    <span className="text-[10px] font-black text-white bg-primary-navy px-2 py-0.5 rounded-full tracking-wider uppercase">
+                                        Today
+                                    </span>
+                                </div>
+                                <p className="text-xs text-text-muted font-medium mt-1">
+                                    {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            {!attendanceStatus ? (
+                                <button 
+                                    onClick={() => handleAttendanceAction('checkin')} 
+                                    className="zoho-btn-primary flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 text-xs tracking-widest"
+                                >
+                                    Check In
+                                </button>
+                            ) : !attendanceStatus.checkOut ? (
+                                <button 
+                                    onClick={() => handleAttendanceAction('checkout')} 
+                                    className="bg-primary-navy text-white flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-navy-900/20 text-xs font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
+                                >
+                                    Check Out
+                                </button>
+                            ) : (
+                                <div className="bg-bg-soft text-text-muted px-8 py-3 rounded-xl border border-border-soft text-xs font-bold uppercase tracking-widest text-center flex-grow md:flex-initial">
+                                    Duty Completed
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Operations Summary - Row 3 */}
+                <div>
+                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Briefcase size={14} className="text-primary-navy/40" /> Operations Registry
                     </h4>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
                         {kpis.operations.map((stat, i) => renderKpiCard(stat, i))}
                     </div>
                 </div>
-
-                {/* 2. Staff and 3. Assets */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    <div>
-                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <UserCheck size={14} className="text-primary-navy/40" /> Attendance Log
-                        </h4>
-                        <div className="grid grid-cols-1 gap-5">
-                            {kpis.staff.map((stat, i) => renderKpiCard(stat, i))}
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <Clock size={14} className="text-primary-navy/40" /> Tasks & Alerts
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                            {kpis.assets.map((stat, i) => renderKpiCard(stat, i))}
-                        </div>
-                    </div>
-                </div>
             </div>
         );
+
     };
 
     const renderJobTable = (filteredJobs, showActions = false) => (
@@ -302,12 +345,14 @@ const EmployeeDashboard = () => {
                                     {showActions && (
                                         <td className="px-6 py-4 text-right">
                                             {j.status === 'Pending' && (
-                                                <button 
-                                                    onClick={() => handleJobAction(j.bookingId, 'accept')}
-                                                    className="zoho-btn-primary px-5 py-2.5 text-[10px] rounded-xl shadow-lg shadow-red-900/10"
-                                                >
-                                                    Accept Directive
-                                                </button>
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <button 
+                                                        onClick={() => handleJobAction(j.bookingId, 'accept')}
+                                                        className="zoho-btn-secondary px-6 py-3 text-[10px] rounded-xl"
+                                                    >
+                                                        Accept Directive
+                                                    </button>
+                                                </div>
                                             )}
                                             {j.status === 'Accepted' && (
                                                 <button 
@@ -348,92 +393,159 @@ const EmployeeDashboard = () => {
         </div>
     );
 
-    const renderAttendance = () => (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="zoho-card p-10 flex flex-col items-center text-center">
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-8">Shift Schedule</p>
-                    <div className="w-20 h-20 rounded-[24px] bg-primary-red/5 flex items-center justify-center text-primary-red mb-8 shadow-inner">
-                        <Clock size={32} />
-                    </div>
+    const renderAttendance = () => {
+        const checkInTime = attendanceStatus?.checkIn
+            ? new Date(attendanceStatus.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '—';
+        const checkOutTime = attendanceStatus?.checkOut
+            ? new Date(attendanceStatus.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '—';
+        const totalHours = attendanceStatus?.totalHours
+            ? `${Number(attendanceStatus.totalHours).toFixed(1)} hrs`
+            : attendanceStatus?.checkIn && !attendanceStatus?.checkOut
+                ? `${((Date.now() - new Date(attendanceStatus.checkIn)) / (1000 * 60 * 60)).toFixed(1)} hrs`
+                : '—';
+
+        const isCheckedIn = !!attendanceStatus;
+        const isCheckedOut = !!attendanceStatus?.checkOut;
+
+        return (
+            <div className="space-y-4 animate-in fade-in duration-300">
+
+                {/* Page Header */}
+                <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-xl font-bold text-primary-navy tracking-tight">{attendanceStatus ? 'Shift in Progress' : 'External Terminal'}</p>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-2">{new Date().toDateString()}</p>
+                        <h2 className="text-2xl font-semibold text-gray-900" style={{fontFamily: "'Inter', 'Poppins', sans-serif"}}>Attendance</h2>
+                        <p className="text-sm text-gray-500 mt-0.5 font-normal">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                 </div>
 
-                <div className="zoho-card p-8 flex flex-col justify-between">
-                    <div className="text-center">
-                        <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-4">Inbound Entry</p>
-                        <p className="text-4xl font-black text-primary-navy tracking-tighter">{attendanceStatus?.checkIn ? new Date(attendanceStatus.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
-                    </div>
-                    {!attendanceStatus ? (
-                        <button onClick={() => handleAttendanceAction('checkin')} className="zoho-btn-primary w-full py-4 text-xs tracking-widest mt-8 shadow-xl shadow-red-900/20">
-                            Check In
-                        </button>
-                    ) : (
-                        <div className="w-full bg-emerald-500/10 text-emerald-600 py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] text-center border border-emerald-500/20 mt-8">
-                            Entry Registered
+                {/* Horizontal Summary Bar */}
+                <div className="bg-white border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        {/* Status */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 font-medium">Status</span>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-sm font-semibold ${
+                                !isCheckedIn ? 'bg-gray-100 text-gray-600' :
+                                !isCheckedOut ? 'bg-green-100 text-green-700' :
+                                'bg-blue-100 text-blue-700'
+                            }`}>
+                                <span className={`w-2 h-2 rounded-full ${!isCheckedIn ? 'bg-gray-400' : !isCheckedOut ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                                {!isCheckedIn ? 'Not Started' : !isCheckedOut ? 'Active' : 'Completed'}
+                            </span>
                         </div>
-                    )}
+
+                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
+
+                        {/* Check In */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 font-medium">Check In</span>
+                            <span className="text-base font-semibold text-gray-900">{checkInTime}</span>
+                        </div>
+
+                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
+
+                        {/* Check Out */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 font-medium">Check Out</span>
+                            <span className="text-base font-semibold text-gray-900">{checkOutTime}</span>
+                        </div>
+
+                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
+
+                        {/* Working Hours */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 font-medium">Working Hours</span>
+                            <span className="text-base font-semibold text-gray-900">{totalHours}</span>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {!isCheckedIn ? (
+                             <button
+                                 onClick={() => handleAttendanceAction('checkin')}
+                                 className="zoho-btn-secondary px-6 py-2.5 rounded-md text-sm font-semibold"
+                             >
+                                 Check In
+                             </button>
+                        ) : (
+                            <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1.5">
+                                <CheckCircle2 size={14} /> Checked In
+                            </span>
+                        )}
+                        {isCheckedIn && !isCheckedOut && (
+                            <button
+                                onClick={() => handleAttendanceAction('checkout')}
+                                className="bg-primary-navy text-white text-sm font-semibold px-5 py-2 rounded-md hover:opacity-90 transition-colors"
+                            >
+                                Check Out
+                            </button>
+                        )}
+                        {isCheckedOut && (
+                            <span className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1.5">
+                                <CheckCircle2 size={14} /> Shift Done
+                            </span>
+                        )}
+                    </div>
                 </div>
 
-                <div className="zoho-card p-8 flex flex-col justify-between">
-                    <div className="text-center">
-                        <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-4">Outbound Exit</p>
-                        <p className="text-4xl font-black text-primary-navy tracking-tighter">{attendanceStatus?.checkOut ? new Date(attendanceStatus.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
+                {/* Attendance History Table */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">Attendance History</h3>
+                        <span className="text-sm text-gray-400 font-medium">{attendanceHistory.length} records</span>
                     </div>
-                    {attendanceStatus && !attendanceStatus.checkOut ? (
-                        <button onClick={() => handleAttendanceAction('checkout')} className="bg-primary-navy text-white w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-navy-900/20 hover:bg-navy-dark transition-all mt-8">
-                            Check Out
-                        </button>
-                    ) : (
-                        <div className="w-full bg-bg-soft text-text-muted py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] text-center border border-border-soft mt-8">
-                            {attendanceStatus?.checkOut ? 'Exit Registered' : 'Awaiting Entry'}
-                        </div>
-                    )}
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-100">
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Check In</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Check Out</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Working Hours</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {attendanceHistory.map((h, idx) => (
+                                    <tr key={h._id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/30'}`}>
+                                        <td className="px-5 py-3 text-sm font-medium text-gray-800">{h.date}</td>
+                                        <td className="px-5 py-3 text-sm text-gray-600">
+                                            {h.checkIn ? new Date(h.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                        </td>
+                                        <td className="px-5 py-3 text-sm text-gray-600">
+                                            {h.checkOut ? new Date(h.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                        </td>
+                                        <td className="px-5 py-3 text-sm text-gray-600">
+                                            {h.totalHours ? `${Number(h.totalHours).toFixed(1)} hrs` : '—'}
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                                h.status === 'Present' ? 'bg-green-100 text-green-700' :
+                                                h.status === 'Half-Day' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-red-100 text-red-600'
+                                            }`}>
+                                                {h.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {attendanceHistory.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="px-4 py-8 text-center text-xs text-gray-400">
+                                            No attendance records found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-
-            <div className="zoho-card overflow-hidden">
-                <div className="p-6 border-b border-border-soft flex items-center gap-3 bg-bg-soft/30">
-                    <History size={18} className="text-text-muted" />
-                    <h3 className="text-sm font-bold text-primary-navy uppercase tracking-tight">Personal Attendance Log</h3>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="zoho-table">
-                        <thead className="zoho-table-header text-[10px]">
-                            <tr>
-                                <th className="px-8 py-4">Registry Date</th>
-                                <th className="px-8 py-4">Check In</th>
-                                <th className="px-8 py-4">Check Out</th>
-                                <th className="px-8 py-4 text-right">Verification Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-soft">
-                            {attendanceHistory.map(h => (
-                                <tr key={h._id} className="hover:bg-bg-soft/50 transition-colors">
-                                    <td className="px-8 py-4 font-bold text-primary-navy text-xs">{h.date}</td>
-                                    <td className="px-8 py-4 text-text-muted text-xs font-semibold">{h.checkIn ? new Date(h.checkIn).toLocaleTimeString() : '-'}</td>
-                                    <td className="px-8 py-4 text-text-muted text-xs font-semibold">{h.checkOut ? new Date(h.checkOut).toLocaleTimeString() : '-'}</td>
-                                    <td className="px-8 py-4 text-right">
-                                        <span className={`status-chip ${h.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : 'bg-primary-red/10 text-primary-red'}`}>
-                                            {h.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                            {attendanceHistory.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" className="py-16 text-center text-[10px] text-text-muted font-bold uppercase tracking-widest">No attendance records found</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const renderNotifications = () => (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -444,7 +556,7 @@ const EmployeeDashboard = () => {
                         Intelligence Bulletins
                     </h3>
                  </div>
-                 <button onClick={markAllAsRead} className="text-xs font-black text-primary-red bg-primary-red/5 px-4 py-2 rounded-xl hover:bg-primary-red hover:text-white transition-all">Acknowledge All</button>
+                  <button onClick={markAllAsRead} className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-xs">Acknowledge All</button>
              </div>
             {notifications.length > 0 ? notifications.map(n => (
                 <div key={n._id} className={`zoho-card p-6 flex gap-6 items-start group hover:border-primary-red/30 transition-all ${!n.isRead ? 'border-primary-navy/20 bg-primary-navy/5' : ''}`}>
@@ -561,11 +673,8 @@ const EmployeeDashboard = () => {
                     {[
                         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
                         { id: 'new', label: 'New Requests', icon: Plus },
-                        { id: 'assigned', label: 'Assigned Jobs', icon: Calendar },
-                        { id: 'in-progress', label: 'In Execution', icon: Play },
-                        { id: 'completed', label: 'Work History', icon: CheckCircle2 },
+                        { id: 'my-jobs', label: 'My Jobs', icon: Calendar },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
-                        { id: 'notifications', label: 'Alerts', icon: Bell },
                         { id: 'profile', label: 'Personnel Profile', icon: User },
                     ].map(item => (
                         <button
@@ -603,13 +712,53 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <button 
-                            onClick={() => handleTabChange('notifications')}
-                            className="p-2.5 text-text-muted hover:text-primary-navy bg-bg-soft rounded-xl transition-all relative"
-                        >
-                            <Bell size={20} />
-                            {notifications.some(n => !n.isRead) && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary-red rounded-full ring-2 ring-white" />}
-                        </button>
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                                className="p-2.5 text-text-muted hover:text-primary-navy bg-bg-soft rounded-xl transition-all relative"
+                            >
+                                <Bell size={20} />
+                                {notifications.some(n => !n.isRead) && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary-red rounded-full ring-2 ring-white" />}
+                            </button>
+                            
+                            {showNotificationsDropdown && (
+                                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-border-soft overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="p-4 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                                        <h3 className="text-sm font-bold text-primary-navy">Recent Alerts</h3>
+                                        <span className="text-[10px] font-bold text-primary-red uppercase tracking-widest">{notifications.filter(n=>!n.isRead).length} New</span>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                        {notifications.length > 0 ? (
+                                            notifications.slice(0, 5).map(n => (
+                                                <div key={n._id} className={`p-4 border-b border-border-soft/50 hover:bg-bg-soft transition-colors ${!n.isRead ? 'bg-primary-red/5' : ''}`}>
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <h4 className={`text-xs ${!n.isRead ? 'font-bold text-primary-navy' : 'font-medium text-text-dark'}`}>{n.title}</h4>
+                                                    </div>
+                                                    <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed mt-1">{n.message}</p>
+                                                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-2 block">{new Date(n.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-8 text-center text-text-muted">
+                                                <Bell size={24} className="mx-auto mb-2 opacity-20" />
+                                                <p className="text-[10px] uppercase tracking-widest font-bold">No alerts found</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-3 border-t border-border-soft bg-bg-soft/30">
+                                        <button 
+                                            onClick={() => {
+                                                setShowNotificationsDropdown(false);
+                                                handleTabChange('notifications');
+                                            }}
+                                            className="w-full text-center text-[10px] font-bold text-primary-red uppercase tracking-widest hover:underline"
+                                        >
+                                            View All Notifications
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         
                         <div className="h-10 w-px bg-border-soft" />
 
@@ -636,9 +785,34 @@ const EmployeeDashboard = () => {
                             <div className="space-y-8">
                                 {activeTab === 'overview' && renderOverview()}
                                 {activeTab === 'new' && renderJobTable(jobs.filter(j => j.status === 'Pending'), true)}
-                                {activeTab === 'assigned' && renderJobTable(jobs.filter(j => j.status === 'Accepted'), true)}
-                                {activeTab === 'in-progress' && renderJobTable(jobs.filter(j => j.status === 'In Progress'), true)}
-                                {activeTab === 'completed' && renderJobTable(jobs.filter(j => j.status === 'Completed'), false)}
+                                {activeTab === 'my-jobs' && (
+                                    <div className="space-y-6">
+                                        <div className="flex gap-4 border-b border-border-soft pb-4">
+                                            {['All', 'Accepted', 'In Progress', 'Completed'].map(f => (
+                                                <button 
+                                                    key={f}
+                                                    onClick={() => setMyJobsFilter(f)}
+                                                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+                                                        myJobsFilter === f 
+                                                        ? 'bg-primary-navy text-white shadow-md' 
+                                                        : 'bg-bg-soft text-text-muted hover:bg-bg-soft/80'
+                                                    }`}
+                                                >
+                                                    {f}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {renderJobTable(
+                                            jobs.filter(j => {
+                                                const statuses = ['Accepted', 'In Progress', 'Completed'];
+                                                if (!statuses.includes(j.status)) return false;
+                                                if (myJobsFilter !== 'All' && j.status !== myJobsFilter) return false;
+                                                return true;
+                                            }), 
+                                            true
+                                        )}
+                                    </div>
+                                )}
                                 {activeTab === 'attendance' && renderAttendance()}
                                 {activeTab === 'notifications' && renderNotifications()}
                                 {activeTab === 'profile' && renderProfile()}

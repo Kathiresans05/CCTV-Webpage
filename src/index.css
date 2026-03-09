@@ -48,9 +48,12 @@
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   color: var(--color-secondary-gray);
   background-color: #EAECF0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Global override: replace all white backgrounds with #EAECF0 */
@@ -58,21 +61,49 @@ body {
   background-color: #EAECF0 !important;
 }
 
+
+/* ── CRM Typography System ─────────────────────────────────── */
+/* Page title: 24px semibold */
+.crm-page-title    { font-family: 'Inter', sans-serif; font-size: 1.5rem;    font-weight: 600; color: #0F172A; letter-spacing: -0.01em; line-height: 1.3; }
+/* Section title: 20px semibold */
+.crm-section-title { font-family: 'Inter', sans-serif; font-size: 1.25rem;   font-weight: 600; color: #0F172A; line-height: 1.35; }
+/* Card title: 16px semibold */
+.crm-card-title    { font-family: 'Inter', sans-serif; font-size: 1rem;      font-weight: 600; color: #0F172A; }
+/* Sub-label: 14px medium */
+.crm-label         { font-family: 'Inter', sans-serif; font-size: 0.875rem;  font-weight: 500; color: #64748B; }
+/* Body text: 15px regular */
+.crm-body          { font-family: 'Inter', sans-serif; font-size: 0.9375rem; font-weight: 400; color: #374151; }
+/* Badge: 12px semibold */
+.crm-badge         { font-family: 'Inter', sans-serif; font-size: 0.75rem;   font-weight: 600; line-height: 1; }
+
 /* Zoho-Style Enterprise Components */
 .zoho-card {
   @apply bg-white border border-border-soft rounded-[16px] shadow-[0_2px_4px_rgba(0,0,0,0.02),0_1px_0_rgba(0,0,0,0.02)];
 }
 
 .zoho-table-header {
-  @apply bg-bg-soft border-b border-border-soft text-[10px] font-semibold text-text-muted uppercase tracking-wider;
+  @apply bg-bg-soft border-b border-border-soft uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  letter-spacing: 0.05em;
 }
 
 .zoho-btn-primary {
-  @apply bg-primary-red hover:bg-brand-red-hover text-white font-semibold transition-all active:scale-[0.98];
+  @apply bg-primary-red hover:bg-brand-red-hover text-white transition-all active:scale-[0.98];
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.zoho-btn-secondary {
+  @apply bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all active:scale-[0.98];
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .zoho-input {
   @apply border border-border-soft rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-navy/10 focus:border-primary-navy outline-none transition-all placeholder:text-text-muted/50;
+  font-size: 0.9375rem;
 }
 
 .zoho-table {
@@ -80,7 +111,10 @@ body {
 }
 
 .zoho-table td {
-  @apply px-6 py-4 text-sm align-middle;
+  @apply px-5 py-3.5 align-middle;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
 }
 
 .zoho-table th {
@@ -88,7 +122,11 @@ body {
 }
 
 .status-chip {
-  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight inline-flex items-center gap-1.5;
+  @apply px-2.5 py-0.5 rounded-md inline-flex items-center gap-1.5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 
