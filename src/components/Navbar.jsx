@@ -29,18 +29,19 @@ const Navbar = () => {
         if (isAuthenticated && user?.email) {
             const fetchData = async () => {
                 try {
+                    const headers = { 'Authorization': `Bearer ${token}` };
                     // Fetch Bookings
-                    const bookRes = await fetch(`http://localhost:5000/api/bookings?email=${user.email}`);
+                    const bookRes = await fetch(`/api/bookings?email=${user.email}`, { headers });
                     const bookData = await bookRes.json();
                     if (bookData.success) setBookingsCount(bookData.data.length);
 
                     // Fetch Cart
-                    const cartRes = await fetch(`http://localhost:5000/api/cart?email=${user.email}`);
+                    const cartRes = await fetch(`/api/cart?email=${user.email}`, { headers });
                     const cartData = await cartRes.json();
                     if (cartData.success) setCartCount(cartData.data.length);
 
                     // Fetch Wishlist
-                    const wishRes = await fetch(`http://localhost:5000/api/wishlist?email=${user.email}`);
+                    const wishRes = await fetch(`/api/wishlist?email=${user.email}`, { headers });
                     const wishData = await wishRes.json();
                     if (wishData.success) setWishlistCount(wishData.data.length);
                 } catch (err) {
@@ -126,7 +127,7 @@ const Navbar = () => {
             </div>
 
             {/* Main Header */}
-            <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-3' : 'bg-white py-5'}`}>
+            <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-[#ffffff] shadow-md py-3' : 'bg-[#ffffff] py-5'}`}>
                 <div className="w-full px-4 md:px-8 flex justify-between items-center">
 
                     {/* Logo */}
@@ -331,7 +332,7 @@ const Navbar = () => {
 
                 {/* Mobile Nav */}
                 {isMobileMenuOpen && (
-                    <div className="lg:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t border-gray-100 flex flex-col py-4 px-6 z-40">
+                    <div className="lg:hidden absolute top-full left-0 w-full bg-[#ffffff] shadow-lg border-t border-gray-100 flex flex-col py-4 px-6 z-40">
                         {filteredLinks.map((link) => (
                             link.isExternal ? (
                                 <a

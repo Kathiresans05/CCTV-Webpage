@@ -42,7 +42,7 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Column 4: Contact & Map */}
+                    {/* Column 4: Contact Info */}
                     <div>
                         <h3 className="text-white text-base font-bold mb-3 relative pb-1.5 after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-10 after:h-0.5 after:bg-primary-red">Contact Info</h3>
                         <ul className="space-y-2.5 mb-3">
@@ -59,11 +59,6 @@ const Footer = () => {
                                 <span>info@securevision.com</span>
                             </li>
                         </ul>
-                        <div className="w-full h-16 bg-gray-700 rounded overflow-hidden relative">
-                            <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                                [Google Map Placeholder]
-                            </div>
-                        </div>
                     </div>
 
                 </div>

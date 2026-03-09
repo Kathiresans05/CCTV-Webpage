@@ -55,7 +55,7 @@ const ProductsListing = () => {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/products');
+                const res = await fetch('/api/products');
                 const data = await res.json();
                 if (data.success) {
                     // Resolve local image assets from the key returned by server

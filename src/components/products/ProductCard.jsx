@@ -13,7 +13,7 @@ const ProductCard = ({ product, onBookNow }) => {
         if (isAuthenticated && user?.email) {
             const checkWishlist = async () => {
                 try {
-                    const res = await fetch(`http://localhost:5000/api/wishlist?email=${user.email}`);
+                    const res = await fetch(`/api/wishlist?email=${user.email}`);
                     const data = await res.json();
                     if (data.success) {
                         setIsWishlisted(data.data.some(item => item.productId === product.id));
@@ -32,7 +32,7 @@ const ProductCard = ({ product, onBookNow }) => {
 
         setIsAddingToCart(true);
         try {
-            const res = await fetch('http://localhost:5000/api/cart', {
+            const res = await fetch('/api/cart', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email, productId: product.id })
@@ -55,7 +55,7 @@ const ProductCard = ({ product, onBookNow }) => {
 
         setIsTogglingWishlist(true);
         try {
-            const res = await fetch('http://localhost:5000/api/wishlist', {
+            const res = await fetch('/api/wishlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email, productId: product.id })

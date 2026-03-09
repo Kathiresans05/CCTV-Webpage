@@ -39,11 +39,6 @@ const AboutPage = () => {
             <div>
                 <About />
             </div>
-
-            {/* Features Slider Section */}
-            <div className="bg-white py-10 border-t border-gray-100">
-                <FeaturesSlider />
-            </div>
         </div>
     );
 };

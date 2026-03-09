@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { X, Send, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { X, Send, CheckCircle, AlertCircle, Shield, BadgeCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const ProductInquiryModal = ({ product, onClose }) => {
+    const { user, isAuthenticated, token } = useAuth();
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
         message: ''
     });
     const [status, setStatus] = useState('idle'); // idle | loading | success | error
@@ -24,15 +26,21 @@ const ProductInquiryModal = ({ product, onClose }) => {
         setStatus('loading');
 
         try {
-            const response = await fetch('http://localhost:5000/api/products/inquiry', {
+            const response = await fetch('/api/products/inquiry', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
                     phone: formData.phone,
                     productName: product.name,
-                    message: formData.message
+                    productPrice: product.price,
+                    productId: product.id || 0,
+                    message: formData.message,
+                    userId: user?.id || user?._id
                 })
             });
 
@@ -113,7 +121,7 @@ const ProductInquiryModal = ({ product, onClose }) => {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <p className="text-gray-500 text-sm mb-2">
-                                Fill in your details and we'll get back to you with pricing and availability.
+                                Please confirm your details below to book this service.
                             </p>
 
                             {/* Name */}
@@ -183,8 +191,8 @@ const ProductInquiryModal = ({ product, onClose }) => {
                                     </>
                                 ) : (
                                     <>
-                                        <Send size={15} />
-                                        Send Inquiry
+                                        <BadgeCheck size={15} />
+                                        Confirm Booking
                                     </>
                                 )}
                             </button>

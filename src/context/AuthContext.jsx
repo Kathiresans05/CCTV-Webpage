@@ -4,20 +4,23 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load user from localStorage on mount
+        // Load user and token from localStorage on mount
         const savedUser = localStorage.getItem('secureVisionUser');
-        if (savedUser) {
+        const savedToken = localStorage.getItem('secureVisionToken');
+        if (savedUser && savedToken) {
             setUser(JSON.parse(savedUser));
+            setToken(savedToken);
         }
         setLoading(false);
     }, []);
 
     const login = async (email, password) => {
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -25,7 +28,9 @@ export const AuthProvider = ({ children }) => {
             const data = await response.json();
             if (data.success) {
                 setUser(data.user);
+                setToken(data.token);
                 localStorage.setItem('secureVisionUser', JSON.stringify(data.user));
+                localStorage.setItem('secureVisionToken', data.token);
                 return { success: true };
             } else {
                 return { success: false, message: data.message };
@@ -37,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
     const signup = async (name, email, password) => {
         try {
-            const response = await fetch('http://localhost:5000/api/auth/signup', {
+            const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password })
@@ -45,7 +50,9 @@ export const AuthProvider = ({ children }) => {
             const data = await response.json();
             if (data.success) {
                 setUser(data.user);
+                setToken(data.token);
                 localStorage.setItem('secureVisionUser', JSON.stringify(data.user));
+                localStorage.setItem('secureVisionToken', data.token);
                 return { success: true };
             } else {
                 return { success: false, message: data.message };
@@ -57,11 +64,13 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         setUser(null);
+        setToken(null);
         localStorage.removeItem('secureVisionUser');
+        localStorage.removeItem('secureVisionToken');
     };
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, loading }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, signup, logout, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

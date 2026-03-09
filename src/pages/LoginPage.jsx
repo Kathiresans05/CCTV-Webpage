@@ -25,6 +25,8 @@ const LoginPage = () => {
             const savedUser = JSON.parse(localStorage.getItem('secureVisionUser'));
             if (savedUser?.role === 'admin') {
                 navigate('/admin');
+            } else if (savedUser?.role === 'employee') {
+                navigate('/employee');
             } else {
                 navigate('/dashboard');
             }

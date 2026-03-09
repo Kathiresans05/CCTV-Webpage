@@ -27,7 +27,7 @@ const BulkInquiryModal = ({ items, onClose, onSuccess, user }) => {
 
         try {
             // Using the existing inquiry endpoint but formatting for bulk
-            const response = await fetch('http://localhost:5000/api/products/inquiry', {
+            const response = await fetch('/api/products/inquiry', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

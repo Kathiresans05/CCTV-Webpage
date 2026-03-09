@@ -73,18 +73,18 @@ const UserDashboard = () => {
 
             try {
                 // Fetch all products first for mapping
-                const prodRes = await fetch('http://localhost:5000/api/products');
+                const prodRes = await fetch('/api/products');
                 const prodData = await prodRes.json();
                 if (prodData.success) setAllProducts(prodData.data);
 
                 if (activeTab === 'wishlist') {
-                    const wishRes = await fetch(`http://localhost:5000/api/wishlist?email=${user.email}`);
+                    const wishRes = await fetch(`/api/wishlist?email=${user.email}`);
                     const wishData = await wishRes.json();
                     if (wishData.success) setWishlistIds(wishData.data.map(item => item.productId));
                 }
 
                 if (activeTab === 'cart') {
-                    const cartRes = await fetch(`http://localhost:5000/api/cart?email=${user.email}`);
+                    const cartRes = await fetch(`/api/cart?email=${user.email}`);
                     const cartData = await cartRes.json();
                     if (cartData.success) setCartItems(cartData.data);
                 }
@@ -123,7 +123,7 @@ const UserDashboard = () => {
 
     const removeFromWishlist = async (productId) => {
         try {
-            const res = await fetch('http://localhost:5000/api/wishlist', {
+            const res = await fetch('/api/wishlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email, productId })
@@ -139,7 +139,7 @@ const UserDashboard = () => {
 
     const removeFromCart = async (productId) => {
         try {
-            const res = await fetch('http://localhost:5000/api/cart', {
+            const res = await fetch('/api/cart', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email, productId, action: 'remove' })
@@ -163,7 +163,7 @@ const UserDashboard = () => {
             // Assuming we just clear the local state and notify the user for this demo
             // In a real app, this would be a single POST to /api/checkout
             for (const item of cartItems) {
-                await fetch('http://localhost:5000/api/cart', {
+                await fetch('/api/cart', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: user.email, productId: item.productId, action: 'remove' })

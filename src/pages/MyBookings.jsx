@@ -6,6 +6,7 @@ import {
     ArrowRight, IndianRupee, Heart
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -88,7 +89,7 @@ const BookingCard = ({ booking }) => {
                                 {booking.status}
                             </span>
                             <div className="text-right">
-                                <p className="text-xl font-bold text-gray-900 leading-none">₹799</p>
+                                <p className="text-xl font-bold text-gray-900 leading-none">₹{booking.productPrice || 0}</p>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{booking.status}</p>
                             </div>
                         </div>
@@ -124,6 +125,7 @@ const BookingCard = ({ booking }) => {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 const MyBookings = ({ isDashboardComponent = false }) => {
+    const { token } = useAuth();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -135,7 +137,11 @@ const MyBookings = ({ isDashboardComponent = false }) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('http://localhost:5000/api/bookings');
+            const res = await fetch('/api/bookings', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             const data = await res.json();
             if (data.success) {
                 setBookings(data.data);

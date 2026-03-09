@@ -1,758 +1,628 @@
 import express from 'express';
 import cors from 'cors';
-import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+import connectDB from './config/db.js';
+import User from './models/User.js';
+import Booking from './models/Booking.js';
+import Stock from './models/Stock.js';
+import Enquiry from './models/Enquiry.js';
+import Attendance from './models/Attendance.js';
+import Notification from './models/Notification.js';
+import generateToken from './utils/generateToken.js';
+import { protect, admin, employee } from './middleware/authMiddleware.js';
+
+dotenv.config();
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-
-// ─────────────────────────────────────────────
-// Users & Auth Store
-// ─────────────────────────────────────────────
-let usersStore = [
-    { id: 0, name: 'Admin', email: 'admin@gmail.com', password: 'admin123', role: 'admin' }
-]; // { id, name, email, password, role }
-let userIdCounter = 1;
+app.use(express.json({ limit: '10mb' }));
 
 // ─────────────────────────────────────────────
 // API: Auth Endpoints
 // ─────────────────────────────────────────────
 
 // Signup
-app.post('/api/auth/signup', (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-        return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { name, email, phone, password } = req.body;
+
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
+
+        const user = await User.create({
+            name,
+            email,
+            phone: phone || 'N/A',
+            password
+        });
+
+        if (user) {
+            res.status(201).json({
+                success: true,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    role: user.role
+                },
+                token: generateToken(user._id)
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    const existingUser = usersStore.find(u => u.email === email);
-    if (existingUser) {
-        return res.status(400).json({ success: false, message: 'User already exists with this email.' });
-    }
-
-    const newUser = { id: userIdCounter++, name, email, password, role: 'customer' };
-    usersStore.push(newUser);
-
-    // In a real app, we'd use JWT or session. For this mock, we just return user info.
-    res.status(201).json({
-        success: true,
-        message: 'Account created successfully!',
-        user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role }
-    });
 });
 
 // Login
-app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = usersStore.find(u => u.email === email && u.password === password);
-
-    if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-    }
-
-    res.status(200).json({
-        success: true,
-        message: 'Logged in successfully!',
-        user: { id: user.id, name: user.name, email: user.email, role: user.role }
-    });
-});
-
-// Get current user (Mock)
-app.get('/api/auth/me', (req, res) => {
-    // This would normally check a token/session. 
-    // For now, we'll let the frontend manage the state after login/signup.
-    res.status(200).json({ success: true, user: null });
-});
-
-// ─────────────────────────────────────────────
-// Products Data (single source of truth)
-// ─────────────────────────────────────────────
-const productsData = [
-    {
-        "id": 1,
-        "name": "Bullet Cameras Pro Series v1",
-        "price": 6378,
-        "image": "bullet_camera",
-        "category": "Bullet Cameras",
-        "rating": "4.1",
-        "description": "Professional Bullet Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 2,
-        "name": "Bullet Cameras Ultra Elite",
-        "price": 9474,
-        "image": "dome_camera",
-        "category": "Bullet Cameras",
-        "rating": "4.8",
-        "description": "Enterprise-grade Bullet Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 3,
-        "name": "Dome Cameras Pro Series v1",
-        "price": 10523,
-        "image": "dome_camera",
-        "category": "Dome Cameras",
-        "rating": "4.3",
-        "description": "Professional Dome Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 4,
-        "name": "Dome Cameras Ultra Elite",
-        "price": 28453,
-        "image": "ptz_camera",
-        "category": "Dome Cameras",
-        "rating": "4.9",
-        "description": "Enterprise-grade Dome Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 5,
-        "name": "PTZ Cameras Pro Series v1",
-        "price": 18234,
-        "image": "ptz_camera",
-        "category": "PTZ Cameras",
-        "rating": "4.6",
-        "description": "Professional PTZ Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 6,
-        "name": "PTZ Cameras Ultra Elite",
-        "price": 23456,
-        "image": "bullet_camera",
-        "category": "PTZ Cameras",
-        "rating": "4.7",
-        "description": "Enterprise-grade PTZ Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 7,
-        "name": "Fisheye Cameras Pro Series v1",
-        "price": 5432,
-        "image": "bullet_camera",
-        "category": "Fisheye Cameras",
-        "rating": "4.2",
-        "description": "Professional Fisheye Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 8,
-        "name": "Fisheye Cameras Ultra Elite",
-        "price": 12345,
-        "image": "dome_camera",
-        "category": "Fisheye Cameras",
-        "rating": "4.8",
-        "description": "Enterprise-grade Fisheye Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 9,
-        "name": "Wireless Wi-Fi Cameras Pro Series v1",
-        "price": 8765,
-        "image": "dome_camera",
-        "category": "Wireless Wi-Fi Cameras",
-        "rating": "4.5",
-        "description": "Professional Wireless Wi-Fi Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 10,
-        "name": "Wireless Wi-Fi Cameras Ultra Elite",
-        "price": 19876,
-        "image": "ptz_camera",
-        "category": "Wireless Wi-Fi Cameras",
-        "rating": "4.9",
-        "description": "Enterprise-grade Wireless Wi-Fi Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 11,
-        "name": "Solar Powered Cameras Pro Series v1",
-        "price": 12345,
-        "image": "ptz_camera",
-        "category": "Solar Powered Cameras",
-        "rating": "4.4",
-        "description": "Professional Solar Powered Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 12,
-        "name": "Solar Powered Cameras Ultra Elite",
-        "price": 25432,
-        "image": "bullet_camera",
-        "category": "Solar Powered Cameras",
-        "rating": "4.7",
-        "description": "Enterprise-grade Solar Powered Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 13,
-        "name": "4K Ultra HD Cameras Pro Series v1",
-        "price": 15678,
-        "image": "bullet_camera",
-        "category": "4K Ultra HD Cameras",
-        "rating": "4.8",
-        "description": "Professional 4K Ultra HD Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 14,
-        "name": "4K Ultra HD Cameras Ultra Elite",
-        "price": 32145,
-        "image": "dome_camera",
-        "category": "4K Ultra HD Cameras",
-        "rating": "5.0",
-        "description": "Enterprise-grade 4K Ultra HD Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 15,
-        "name": "Color Night Vision Cameras Pro Series v1",
-        "price": 9876,
-        "image": "dome_camera",
-        "category": "Color Night Vision Cameras",
-        "rating": "4.6",
-        "description": "Professional Color Night Vision Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 16,
-        "name": "Color Night Vision Cameras Ultra Elite",
-        "price": 21345,
-        "image": "ptz_camera",
-        "category": "Color Night Vision Cameras",
-        "rating": "4.9",
-        "description": "Enterprise-grade Color Night Vision Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 17,
-        "name": "Thermal Imaging Cameras Pro Series v1",
-        "price": 18765,
-        "image": "ptz_camera",
-        "category": "Thermal Imaging Cameras",
-        "rating": "4.3",
-        "description": "Professional Thermal Imaging Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 18,
-        "name": "Thermal Imaging Cameras Ultra Elite",
-        "price": 35432,
-        "image": "bullet_camera",
-        "category": "Thermal Imaging Cameras",
-        "rating": "4.7",
-        "description": "Enterprise-grade Thermal Imaging Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 19,
-        "name": "LPR (License Plate) Cameras Pro Series v1",
-        "price": 14567,
-        "image": "bullet_camera",
-        "category": "LPR (License Plate) Cameras",
-        "rating": "4.5",
-        "description": "Professional LPR (License Plate) Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 20,
-        "name": "LPR (License Plate) Cameras Ultra Elite",
-        "price": 27654,
-        "image": "dome_camera",
-        "category": "LPR (License Plate) Cameras",
-        "rating": "4.8",
-        "description": "Enterprise-grade LPR (License Plate) Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 21,
-        "name": "Panoramic Cameras Pro Series v1",
-        "price": 11234,
-        "image": "dome_camera",
-        "category": "Panoramic Cameras",
-        "rating": "4.4",
-        "description": "Professional Panoramic Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 22,
-        "name": "Panoramic Cameras Ultra Elite",
-        "price": 24321,
-        "image": "ptz_camera",
-        "category": "Panoramic Cameras",
-        "rating": "4.7",
-        "description": "Enterprise-grade Panoramic Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 23,
-        "name": "Varifocal Cameras Pro Series v1",
-        "price": 9543,
-        "image": "ptz_camera",
-        "category": "Varifocal Cameras",
-        "rating": "4.3",
-        "description": "Professional Varifocal Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 24,
-        "name": "Varifocal Cameras Ultra Elite",
-        "price": 18765,
-        "image": "bullet_camera",
-        "category": "Varifocal Cameras",
-        "rating": "4.6",
-        "description": "Enterprise-grade Varifocal Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 25,
-        "name": "Hidden Pinhole Cameras Pro Series v1",
-        "price": 6543,
-        "image": "bullet_camera",
-        "category": "Hidden Pinhole Cameras",
-        "rating": "4.1",
-        "description": "Professional Hidden Pinhole Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    },
-    {
-        "id": 26,
-        "name": "Hidden Pinhole Cameras Ultra Elite",
-        "price": 13456,
-        "image": "dome_camera",
-        "category": "Hidden Pinhole Cameras",
-        "rating": "4.5",
-        "description": "Enterprise-grade Hidden Pinhole Cameras with advanced AI features.",
-        "features": [
-            "AI Recognition",
-            "Super Night Vision",
-            "IK10 Vandal-Proof",
-            "Cloud Storage"
-        ]
-    },
-    {
-        "id": 27,
-        "name": "Facial Recognition Cameras Pro Series v1",
-        "price": 16789,
-        "image": "dome_camera",
-        "category": "Facial Recognition Cameras",
-        "rating": "4.7",
-        "description": "Professional Facial Recognition Cameras for high-end security and surveillance.",
-        "features": [
-            "Motion Detection",
-            "Night Vision",
-            "Weatherproof",
-            "Mobile App Support"
-        ]
-    }
-];
-
-// ─────────────────────────────────────────────
-// In-Memory Bookings Store
-// ─────────────────────────────────────────────
-let bookingsStore = [];
-let cartStore = []; // { email, productId, quantity }
-let wishlistStore = []; // { email, productId }
-let bookingIdCounter = 1000;
-
-const generateOrderId = () => `SV-${Date.now()}-${bookingIdCounter++}`;
-
-// ─────────────────────────────────────────────
-// Helper: create nodemailer transporter
-// ─────────────────────────────────────────────
-const createTransporter = () => nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'YOUR_EMAIL@gmail.com',   // Replace with your Gmail
-        pass: 'YOUR_APP_PASSWORD'       // Replace with your App Password
-    }
-});
-
-// ─────────────────────────────────────────────
-// API: GET /api/products
-// ─────────────────────────────────────────────
-app.get('/api/products', (req, res) => {
-    const { search } = req.query;
-    let filteredProducts = [...productsData];
-
-    if (search) {
-        const query = search.toLowerCase();
-        filteredProducts = productsData.filter(p =>
-            p.name.toLowerCase().includes(query) ||
-            p.description.toLowerCase().includes(query)
-        );
-    }
-
-    res.status(200).json({ success: true, data: filteredProducts });
-});
-
-// ─────────────────────────────────────────────
-// API: GET /api/bookings
-// Returns all bookings (optionally filter by email)
-// ─────────────────────────────────────────────
-app.get('/api/bookings', (req, res) => {
-    const { email } = req.query;
-    const result = email
-        ? bookingsStore.filter(b => b.email.toLowerCase() === email.toLowerCase())
-        : bookingsStore;
-
-    // Return newest first
-    res.status(200).json({ success: true, data: [...result].reverse() });
-});
-
-// ─────────────────────────────────────────────
-// API: PATCH /api/bookings/:orderId/status
-// Admin endpoint to update booking status
-// Body: { status: 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' }
-// ─────────────────────────────────────────────
-app.patch('/api/bookings/:orderId/status', (req, res) => {
-    const { orderId } = req.params;
-    const { status } = req.body;
-    const validStatuses = ['Pending', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'];
-
-    if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid status value.' });
-    }
-
-    const booking = bookingsStore.find(b => b.orderId === orderId);
-    if (!booking) {
-        return res.status(404).json({ success: false, message: 'Booking not found.' });
-    }
-
-    booking.status = status;
-    booking.updatedAt = new Date().toISOString();
-
-    res.status(200).json({ success: true, data: booking });
-});
-
-// ─────────────────────────────────────────────
-// API: POST /api/products/inquiry
-// Creates a booking + sends email
-// ─────────────────────────────────────────────
-app.post('/api/products/inquiry', async (req, res) => {
-    const { name, email, phone, productName, message } = req.body;
-
-    if (!name || !email || !productName) {
-        return res.status(400).json({ success: false, message: 'Name, email, and product name are required.' });
-    }
-
-    // Create booking record
-    const newBooking = {
-        orderId: generateOrderId(),
-        name,
-        email,
-        phone: phone || '',
-        productName,
-        message: message || '',
-        status: 'Pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    bookingsStore.push(newBooking);
-
-    console.log('New booking created:', newBooking);
-
+app.post('/api/auth/login', async (req, res) => {
     try {
-        const transporter = createTransporter();
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
 
-        const adminMail = {
-            from: email,
-            to: 'kathiresan.antigraviity@gmail.com',
-            subject: `New Product Inquiry: ${productName}`,
-            html: `
-                <h3>New Product Inquiry — SecureVision</h3>
-                <p><strong>Order ID:</strong> ${newBooking.orderId}</p>
-                <table style="border-collapse:collapse;width:100%">
-                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Customer Name</td><td style="padding:8px;border:1px solid #ddd;">${name}</td></tr>
-                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Email</td><td style="padding:8px;border:1px solid #ddd;">${email}</td></tr>
-                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Phone</td><td style="padding:8px;border:1px solid #ddd;">${phone || 'N/A'}</td></tr>
-                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Product</td><td style="padding:8px;border:1px solid #ddd;">${productName}</td></tr>
-                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Message</td><td style="padding:8px;border:1px solid #ddd;">${message || 'No message provided.'}</td></tr>
-                </table>
-            `
-        };
-
-        const customerMail = {
-            from: 'kathiresan.antigraviity@gmail.com',
-            to: email,
-            subject: `Booking Confirmed — ${productName} | Order ${newBooking.orderId}`,
-            html: `
-                <h3>Hello ${name},</h3>
-                <p>Thank you for your inquiry about the <strong>${productName}</strong>.</p>
-                <p>Your booking reference is: <strong>${newBooking.orderId}</strong></p>
-                <p>Current Status: <strong>Pending</strong> — Our team will contact you shortly.</p>
-                <br/>
-                <p>Best regards,<br/><strong>SecureVision CCTV Solutions Team</strong></p>
-            `
-        };
-
-        if (transporter.options.auth.user === 'YOUR_EMAIL@gmail.com') {
-            console.log('SMTP not configured. Simulating inquiry email send...');
-            return res.status(200).json({
+        if (user && (await user.matchPassword(password))) {
+            res.json({
                 success: true,
-                message: 'Inquiry submitted! Your booking is now Pending. Track it on the My Bookings page.',
-                orderId: newBooking.orderId
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    role: user.role
+                },
+                token: generateToken(user._id)
+            });
+        } else {
+            res.status(401).json({ success: false, message: 'Invalid email or password' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get current user
+app.get('/api/auth/me', protect, async (req, res) => {
+    res.json({ success: true, user: req.user });
+});
+
+// ─────────────────────────────────────────────
+// API: Products & Stock
+// ─────────────────────────────────────────────
+
+// Get all products (from Stock)
+app.get('/api/products', async (req, res) => {
+    try {
+        const stocks = await Stock.find({});
+        const products = stocks.map(s => ({
+            _id: s._id,
+            id: s.productId,
+            name: s.productName,
+            price: s.price,
+            image: s.sku.includes('BC') ? 'bullet_camera' : s.sku.includes('DC') ? 'dome_camera' : 'ptz_camera',
+            category: s.category,
+            brand: s.brand,
+            sku: s.sku,
+            rating: '4.5',
+            description: s.description || `${s.brand} ${s.productName}`,
+            quantity: s.quantity,
+            reorderLevel: s.reorderLevel,
+            status: s.status
+        }));
+        res.json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Add Product
+app.post('/api/admin/products', protect, admin, async (req, res) => {
+    try {
+        const stock = await Stock.create(req.body);
+        res.status(201).json({ success: true, data: stock });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Update Product
+app.put('/api/admin/products/:id', protect, admin, async (req, res) => {
+    try {
+        const stock = await Stock.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ success: true, data: stock });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Delete Product
+app.delete('/api/admin/products/:id', protect, admin, async (req, res) => {
+    try {
+        await Stock.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Product deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Adjust Stock
+app.patch('/api/admin/products/:id/stock', protect, admin, async (req, res) => {
+    try {
+        const { quantity, type } = req.body;
+        const stock = await Stock.findById(req.params.id);
+        if (!stock) return res.status(404).json({ success: false, message: 'Stock not found' });
+
+        const adjustment = type === 'add' ? quantity : -quantity;
+        stock.quantity += adjustment;
+        
+        // Update status based on quantity
+        if (stock.quantity <= 0) {
+            stock.status = 'outofstock';
+            stock.quantity = 0;
+        } else if (stock.quantity <= stock.reorderLevel) {
+            stock.status = 'lowstock';
+        } else {
+            stock.status = 'instock';
+        }
+
+        await stock.save();
+
+        if (stock.status !== 'instock') {
+            await Notification.create({
+                role: 'admin',
+                title: stock.status === 'outofstock' ? 'Product Out of Stock' : 'Low Stock Warning',
+                message: `${stock.productName} (${stock.sku}) is ${stock.status === 'outofstock' ? 'currently out of stock' : `running low (${stock.quantity} units left)`}`,
+                type: 'stock',
+                referenceId: stock._id
             });
         }
 
-        await transporter.sendMail(adminMail);
-        await transporter.sendMail(customerMail);
-
-        res.status(200).json({
-            success: true,
-            message: 'Inquiry submitted! Your booking is now Pending. Track it on the My Bookings page.',
-            orderId: newBooking.orderId
-        });
+        res.json({ success: true, data: stock });
     } catch (error) {
-        console.error('Error sending inquiry email:', error);
-        res.status(500).json({ success: false, message: 'Failed to submit inquiry. Please try again later.' });
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
 // ─────────────────────────────────────────────
-// API: Cart Endpoints
+// API: Bookings Management
 // ─────────────────────────────────────────────
-app.get('/api/cart', (req, res) => {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ success: false, message: 'Email is required.' });
 
-    const userCart = cartStore.filter(item => item.email.toLowerCase() === email.toLowerCase());
-    const data = userCart.map(item => {
-        const product = productsData.find(p => p.id === item.productId);
-        return { ...item, product };
-    });
-
-    res.status(200).json({ success: true, data });
-});
-
-app.post('/api/cart', (req, res) => {
-    const { email, productId, quantity = 1 } = req.body;
-    if (!email || !productId) return res.status(400).json({ success: false, message: 'Email and productId are required.' });
-
-    const existingItem = cartStore.find(item => item.email.toLowerCase() === email.toLowerCase() && item.productId === productId);
-    if (existingItem) {
-        existingItem.quantity += quantity;
-    } else {
-        cartStore.push({ email, productId, quantity });
-    }
-    res.status(200).json({ success: true, message: 'Added to cart' });
-});
-
-// ─────────────────────────────────────────────
-// API: Wishlist Endpoints
-// ─────────────────────────────────────────────
-app.get('/api/wishlist', (req, res) => {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ success: false, message: 'Email is required.' });
-
-    const userWishlist = wishlistStore.filter(item => item.email.toLowerCase() === email.toLowerCase());
-    const data = userWishlist.map(item => {
-        const product = productsData.find(p => p.id === item.productId);
-        return { ...item, product };
-    });
-
-    res.status(200).json({ success: true, data });
-});
-
-app.post('/api/wishlist', (req, res) => {
-    const { email, productId } = req.body;
-    if (!email || !productId) return res.status(400).json({ success: false, message: 'Email and productId are required.' });
-
-    const index = wishlistStore.findIndex(item => item.email.toLowerCase() === email.toLowerCase() && item.productId === productId);
-    if (index > -1) {
-        wishlistStore.splice(index, 1);
-        res.status(200).json({ success: true, message: 'Removed from wishlist', action: 'removed' });
-    } else {
-        wishlistStore.push({ email, productId });
-        res.status(200).json({ success: true, message: 'Added to wishlist', action: 'added' });
-    }
-});
-
-// ─────────────────────────────────────────────
-// API: POST /api/contact
-// ─────────────────────────────────────────────
-app.post('/api/contact', async (req, res) => {
-    const { firstName, lastName, email, phone, subject, message } = req.body;
-    console.log('Received contact form submission:', { firstName, lastName, email, phone, subject, message });
-
+// Create Booking (Customer)
+app.post('/api/bookings', protect, async (req, res) => {
     try {
-        const transporter = createTransporter();
+        const { productName, productId, address, city, preferredDate, notes } = req.body;
+        const bookingId = `BK${Date.now()}`;
 
-        const adminMailOptions = {
-            from: email,
-            to: 'kathiresan.antigraviity@gmail.com',
-            subject: `New Contact Form Submission: ${subject}`,
-            html: `
-                <h3>New Inquiry from SecureVision Website</h3>
-                <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
-                <p><strong>Subject:</strong> ${subject}</p>
-                <p><strong>Message:</strong></p>
-                <p>${message}</p>
-            `
-        };
+        const booking = await Booking.create({
+            bookingId,
+            customerId: req.user._id,
+            customerName: req.user.name,
+            customerEmail: req.user.email,
+            customerPhone: req.user.phone,
+            productId: productId || 0,
+            productName,
+            address,
+            city,
+            preferredDate,
+            notes
+        });
 
-        const customerMailOptions = {
-            from: 'kathiresan.antigraviity@gmail.com',
-            to: email,
-            subject: 'Thank you for contacting SecureVision',
-            text: `Hello sir/Mam I am recived your queries I am contact immediately.`
-        };
+        await Notification.create({
+            role: 'admin',
+            title: 'New Booking Request',
+            message: `New booking for ${productName} by ${req.user.name}`,
+            type: 'booking',
+            referenceId: bookingId
+        });
 
-        if (transporter.options.auth.user === 'YOUR_EMAIL@gmail.com') {
-            console.log('SMTP Credentials not configured. Simulating email send...');
-            return res.status(200).json({ success: true, message: 'Form submitted successfully (Simulated Email)' });
+        await Notification.create({
+            role: 'employee',
+            title: 'New Job Available',
+            message: `New installation request at ${city || 'Location'}`,
+            type: 'booking',
+            referenceId: bookingId
+        });
+
+        res.status(201).json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+// Legacy endpoint mapping (backward compatibility for existing frontend)
+app.post('/api/products/inquiry', async (req, res) => {
+    try {
+        const { name, email, phone, productName, productPrice, address, message, userId } = req.body;
+        const bookingId = `BK${Date.now()}`;
+        
+        const booking = await Booking.create({
+            bookingId,
+            customerId: userId || null,
+            customerName: name,
+            customerEmail: email,
+            customerPhone: phone,
+            productId: 0,
+            productName,
+            productPrice: productPrice || 0,
+            address,
+            notes: message,
+            status: 'Pending'
+        });
+
+        res.status(201).json({ success: true, message: 'Booking Submitted Successfully', orderId: bookingId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get User's Bookings
+app.get('/api/bookings', protect, async (req, res) => {
+    try {
+        console.log('--- Bookings Fetch ---');
+        console.log('User:', req.user.email, 'Role:', req.user.role);
+        let query = {};
+        if (req.user.role === 'customer') {
+            query = { customerEmail: req.user.email };
+        } else if (req.user.role === 'employee') {
+            query = { 
+                $or: [
+                    { status: 'Pending' },
+                    { assignedEmployee: req.user._id }
+                ]
+            };
+        }
+        console.log('Query:', JSON.stringify(query));
+        const bookings = await Booking.find(query).populate('assignedEmployee', 'name email phone').sort({ createdAt: -1 });
+        console.log('Bookings found:', bookings.length);
+        res.json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Bookings Fetch Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get All Bookings (Admin)
+app.get('/api/admin/bookings', protect, admin, async (req, res) => {
+    try {
+        const bookings = await Booking.find({}).populate('assignedEmployee', 'name email phone').sort({ createdAt: -1 });
+        res.json({ success: true, data: bookings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Update Booking
+app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
+    try {
+        const { status, assignedEmployee } = req.body;
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        const oldStatus = booking.status;
+        const oldAssignee = booking.assignedEmployee;
+
+        booking.status = status || booking.status;
+        booking.assignedEmployee = assignedEmployee || booking.assignedEmployee;
+        
+        // Sync employee name if assignedEmployee is updated
+        if (assignedEmployee && String(assignedEmployee) !== String(oldAssignee)) {
+            const empRecord = await User.findById(assignedEmployee);
+            if (empRecord) {
+                booking.assignedEmployeeName = empRecord.name;
+                booking.assignedEmployeePhone = empRecord.phone;
+            }
         }
 
-        await transporter.sendMail(adminMailOptions);
-        await transporter.sendMail(customerMailOptions);
-        res.status(200).json({ success: true, message: 'Message sent successfully!' });
+        if (status === 'Accepted' && oldStatus !== 'Accepted') {
+            booking.acceptedAt = Date.now();
+        }
+
+        await booking.save();
+
+        // Notify Employee if assigned or status changed
+        if (assignedEmployee && String(assignedEmployee) !== String(oldAssignee)) {
+            await Notification.create({
+                userId: assignedEmployee,
+                role: 'employee',
+                title: 'New Job Assigned',
+                message: `You have been assigned to job ${booking.bookingId}`,
+                type: 'booking',
+                referenceId: booking.bookingId
+            });
+        }
+
+        res.json({ success: true, data: booking });
     } catch (error) {
-        console.error('Error sending email:', error);
-        res.status(500).json({ success: false, message: 'Failed to send message. Please try again later.' });
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`✅ Server is running on http://localhost:${PORT}`);
-    console.log(`   GET    /api/products`);
-    console.log(`   GET    /api/bookings?email=...`);
-    console.log(`   PATCH  /api/bookings/:orderId/status`);
-    console.log(`   POST   /api/products/inquiry`);
-    console.log(`   POST   /api/contact`);
-    console.log(`\n🔑 ADMIN CREDENTIALS FOR TESTING:`);
-    console.log(`   Email: admin@gmail.com`);
-    console.log(`   Pass:  admin123`);
+// ─────────────────────────────────────────────
+// API: Attendance
+// ─────────────────────────────────────────────
+
+app.get('/api/attendance/status', protect, employee, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
+        res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
+
+app.post('/api/attendance/checkin', protect, employee, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        let attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
+
+        if (attendance) {
+            return res.status(400).json({ success: false, message: 'Already checked in today' });
+        }
+
+        attendance = await Attendance.create({
+            employeeId: req.user._id,
+            date: today,
+            checkIn: Date.now()
+        });
+
+        res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/attendance/checkout', protect, employee, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        let attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
+
+        if (!attendance) return res.status(400).json({ success: false, message: 'No check-in found for today' });
+        if (attendance.checkOut) return res.status(400).json({ success: false, message: 'Already checked out today' });
+
+        attendance.checkOut = Date.now();
+        const diff = (attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60);
+        attendance.totalHours = diff.toFixed(2);
+        await attendance.save();
+
+        res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// API: Contact & Enquiries
+// ─────────────────────────────────────────────
+app.post('/api/contact', async (req, res) => {
+    try {
+        const enquiry = await Enquiry.create(req.body);
+        await Notification.create({
+            role: 'admin',
+            title: 'New Enquiry',
+            message: `New message from ${req.body.firstName || req.body.name}`,
+            type: 'enquiry',
+            referenceId: enquiry._id
+        });
+        res.json({ success: true, message: 'Message sent successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/admin/enquiries', protect, admin, async (req, res) => {
+    try {
+        const enquiries = await Enquiry.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, data: enquiries });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// API: Employee Management (Admin)
+// ─────────────────────────────────────────────
+app.get('/api/admin/employees', protect, admin, async (req, res) => {
+    try {
+        const employees = await User.find({ role: 'employee' }).select('-password');
+        res.json({ success: true, data: employees });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Create Employee
+app.post('/api/admin/employees', protect, admin, async (req, res) => {
+    try {
+        const { name, email, phone, password, role, address } = req.body;
+        const userExists = await User.findOne({ email });
+        if (userExists) return res.status(400).json({ success: false, message: 'User already exists' });
+
+        const employee = await User.create({
+            name, email, phone, password, role: role || 'employee', address
+        });
+        res.status(201).json({ success: true, data: employee });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update Employee
+app.put('/api/admin/employees/:id', protect, admin, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const { name, email, phone, password, role, address, isActive } = req.body;
+        
+        user.name = name || user.name;
+        user.email = email || user.email;
+        user.phone = phone || user.phone;
+        user.role = role || user.role;
+        user.address = address || user.address;
+        if (isActive !== undefined) user.isActive = isActive;
+
+        // Only update password if provided and not empty
+        if (password && password.trim() !== '') {
+            user.password = password;
+        }
+
+        await user.save();
+        res.json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete/Deactivate Employee
+app.delete('/api/admin/employees/:id', protect, admin, async (req, res) => {
+    try {
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Employee removed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/admin/attendance', protect, admin, async (req, res) => {
+    try {
+        const attendance = await Attendance.find({}).populate('employeeId', 'name email').sort({ date: -1 });
+        res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Employee Attendance History
+app.get('/api/attendance/history', protect, employee, async (req, res) => {
+    try {
+        const attendance = await Attendance.find({ employeeId: req.user._id }).sort({ date: -1 });
+        res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Job Lifecycle (Employee Actions)
+// ─────────────────────────────────────────────
+
+// Accept Job
+app.patch('/api/bookings/:id/accept', protect, async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ bookingId: req.params.id });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        if (booking.status !== 'Pending') {
+            return res.status(400).json({ success: false, message: 'Job already accepted or in progress' });
+        }
+
+        booking.status = 'Accepted';
+        booking.assignedEmployee = req.user._id;
+        booking.assignedEmployeeName = req.user.name;
+        booking.assignedEmployeePhone = req.user.phone;
+        booking.acceptedAt = Date.now();
+        await booking.save();
+
+        await Notification.create({
+            role: 'admin',
+            title: 'Job Accepted',
+            message: `${req.user.name} has accepted SV-${booking.bookingId.substring(0,8).toUpperCase()}`,
+            type: 'booking',
+            referenceId: booking._id
+        });
+
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Start Job
+app.patch('/api/bookings/:id/start', protect, async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ bookingId: req.params.id });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        booking.status = 'In Progress';
+        booking.startedAt = Date.now();
+        await booking.save();
+
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Complete Job
+app.patch('/api/bookings/:id/complete', protect, async (req, res) => {
+    try {
+        const { proofPhoto, workNotes } = req.body;
+        const booking = await Booking.findOne({ bookingId: req.params.id });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        booking.status = 'Completed';
+        booking.proofPhoto = proofPhoto;
+        booking.workNotes = workNotes;
+        booking.completedAt = Date.now();
+        await booking.save();
+
+        await Notification.create({
+            role: 'admin',
+            title: 'Job Completed',
+            message: `Technician ${req.user.name} completed SV-${booking.bookingId.substring(0,8).toUpperCase()}`,
+            type: 'booking',
+            referenceId: booking._id
+        });
+
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────
+app.get('/api/notifications', protect, async (req, res) => {
+    try {
+        let query = {};
+        if (req.user.role === 'admin') {
+            query = { role: 'admin' };
+        } else if (req.user.role === 'employee') {
+            query = { $or: [{ role: 'employee' }, { userId: req.user._id }] };
+        } else {
+            query = { userId: req.user._id };
+        }
+        
+        const notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(20);
+        res.json({ success: true, data: notifications });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/notifications/read-all', protect, async (req, res) => {
+    try {
+        let query = {};
+        if (req.user.role === 'admin') {
+            query = { role: 'admin' };
+        } else {
+            query = { userId: req.user._id };
+        }
+        
+        await Notification.updateMany(query, { isRead: true });
+        res.json({ success: true, message: 'All notifications marked as read' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
