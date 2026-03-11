@@ -34,3 +34,5 @@ reset_passwords.js
 debug_employee_auth.js
 seeder.js
 
+
+.vercel

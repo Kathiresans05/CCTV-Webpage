@@ -34,7 +34,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve static files from uploads folder
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
+if (process.env.NODE_ENV !== 'production' && !fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
