@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import ProductSidebar from '../components/products/ProductSidebar';
 import ProductListingGrid from '../components/products/ProductListingGrid';
-import ProductInquiryModal from '../components/products/ProductInquiryModal';
+import ServiceBookingModal from '../components/products/ServiceBookingModal';
 import { useAuth } from '../context/AuthContext';
 
 // Image map: server sends a key, frontend resolves the asset
@@ -61,7 +61,9 @@ const ProductsListing = () => {
                     // Resolve local image assets from the key returned by server
                     const resolved = data.data.map(p => ({
                         ...p,
-                        image: IMAGE_MAP[p.image] || bulletImg
+                        image: (p.image && (p.image.startsWith('http') || p.image.startsWith('/uploads'))) 
+                            ? p.image 
+                            : (IMAGE_MAP[p.image] || bulletImg)
                     }));
                     setAllProducts(resolved);
                 } else {
@@ -116,8 +118,8 @@ const ProductsListing = () => {
 
     // ── Render ──────────────────────────────────────
     return (
-        <div className="bg-white min-h-screen py-4">
-            <div className="w-full px-4 lg:px-10">
+        <div className="bg-white min-h-screen py-4 pl-[1%] pr-4 lg:pr-10">
+            <div className="w-full">
 
                 {/* Loading State */}
                 {loading && (
@@ -184,9 +186,9 @@ const ProductsListing = () => {
                 )}
             </div>
 
-            {/* Book Now Inquiry Modal */}
+            {/* Service Booking Modal */}
             {inquiryProduct && (
-                <ProductInquiryModal
+                <ServiceBookingModal
                     product={inquiryProduct}
                     onClose={() => setInquiryProduct(null)}
                 />

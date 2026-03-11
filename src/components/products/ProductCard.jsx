@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Star, Heart, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-hot-toast';
+
+import { useNavigate } from 'react-router-dom';
 
 const ProductCard = ({ product, onBookNow }) => {
+    const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -28,7 +32,7 @@ const ProductCard = ({ product, onBookNow }) => {
 
     const handleAddToCart = async (e) => {
         e.stopPropagation();
-        if (!isAuthenticated) return alert('Please login to add items to cart!');
+        if (!isAuthenticated) return toast.error('Please login to add items to cart!');
 
         setIsAddingToCart(true);
         try {
@@ -39,11 +43,14 @@ const ProductCard = ({ product, onBookNow }) => {
             });
             const data = await res.json();
             if (data.success) {
-                // Trigger a global navbar update or simply wait for polling if implemented
-                window.location.reload(); // Simple way to refresh navbar for now
+                toast.success('Added to cart successfully!');
+                window.dispatchEvent(new Event('cartUpdated')); // Tell Navbar to sync
+            } else {
+                toast.error(data.message || 'Failed to add to cart');
             }
         } catch (err) {
             console.error('Add to cart failed', err);
+            toast.error('Network error');
         } finally {
             setIsAddingToCart(false);
         }
@@ -51,7 +58,7 @@ const ProductCard = ({ product, onBookNow }) => {
 
     const handleToggleWishlist = async (e) => {
         e.stopPropagation();
-        if (!isAuthenticated) return alert('Please login to use wishlist!');
+        if (!isAuthenticated) return toast.error('Please login to use wishlist!');
 
         setIsTogglingWishlist(true);
         try {
@@ -63,10 +70,14 @@ const ProductCard = ({ product, onBookNow }) => {
             const data = await res.json();
             if (data.success) {
                 setIsWishlisted(data.action === 'added');
-                window.location.reload(); // Simple way to refresh navbar for now
+                toast.success(data.action === 'added' ? 'Added to wishlist!' : 'Removed from wishlist!');
+                window.dispatchEvent(new Event('wishlistUpdated')); // Tell Navbar to sync
+            } else {
+                toast.error(data.message || 'Failed to update wishlist');
             }
         } catch (err) {
             console.error('Wishlist toggle failed', err);
+            toast.error('Network error');
         } finally {
             setIsTogglingWishlist(false);
         }
@@ -75,11 +86,11 @@ const ProductCard = ({ product, onBookNow }) => {
     return (
         <div className="bg-white border border-gray-100 rounded-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl group h-full relative">
             {/* Image Container */}
-            <div className="relative w-full h-[240px] bg-[#F5F5F5] overflow-hidden flex items-center justify-center cursor-pointer">
+            <div className="relative w-full h-[240px] bg-[#F7F8F9] overflow-hidden flex items-center justify-center cursor-pointer p-6">
                 <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-full object-contain scale-[1.2] group-hover:scale-[1.35] transition-transform duration-500"
+                    className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                 />
 
                 {/* Hover Action Vertical Bar - Moved to Top-Right "Box" Area */}
@@ -120,22 +131,38 @@ const ProductCard = ({ product, onBookNow }) => {
                     </div>
                 </div>
 
-                {/* Price Section */}
-                <div className="mt-auto flex items-center justify-between pt-4">
-                    <div>
-                        <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Starting from</p>
-                        <div className="flex flex-col">
-                            <span className="text-2xl font-bold text-[#B91C1C] leading-none mb-1">₹{product.price.toLocaleString('en-IN')}</span>
-                            <span className="text-xs text-gray-400 line-through">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                {/* Price + Buttons Section */}
+                <div className="mt-auto pt-4 flex flex-col gap-3">
+                    {/* Price */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-[11px] uppercase tracking-wider mb-0.5">Starting from</p>
+                            <span className="text-2xl font-bold text-[#B91C1C] leading-none">₹{product.price.toLocaleString('en-IN')}</span>
                         </div>
+                        <span className="text-xs text-gray-400 line-through self-end mb-0.5">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                     </div>
 
-                    <button
-                        onClick={() => onBookNow && onBookNow(product)}
-                        className="bg-[#0b0f1a] text-white px-6 py-2.5 rounded-full font-bold text-[13px] hover:bg-black transition-all duration-300 shadow-md whitespace-nowrap"
-                    >
-                        Book Now
-                    </button>
+                    {/* Buttons Row */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/products/${product._id}`);
+                            }}
+                            className="flex-1 bg-transparent border border-gray-300 text-gray-700 py-2.5 rounded-full font-bold text-[13px] hover:border-primary-red hover:text-primary-red transition-all duration-300 whitespace-nowrap"
+                        >
+                            View Details
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onBookNow) onBookNow(product);
+                            }}
+                            className="flex-1 bg-[#0b0f1a] text-white py-2.5 rounded-full font-bold text-[13px] hover:bg-black transition-all duration-300 shadow-md whitespace-nowrap"
+                        >
+                            Book Now
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

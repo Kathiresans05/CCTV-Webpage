@@ -19,7 +19,7 @@ const notificationSchema = mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['booking', 'work_update', 'enquiry', 'stock', 'attendance']
+        enum: ['booking', 'work_update', 'enquiry', 'stock', 'attendance', 'leave']
     },
     referenceId: {
         type: String // ID of the related object (bookingId, etc)

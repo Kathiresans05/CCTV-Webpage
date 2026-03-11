@@ -33,7 +33,8 @@ import {
     ShieldCheck,
     User,
     Camera,
-    Play
+    Play,
+    Check
 } from 'lucide-react';
 import {
     BarChart,
@@ -43,9 +44,8 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    AreaChart,
-    Area
 } from 'recharts';
+import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
     const { user, token, logout } = useAuth();
@@ -98,9 +98,14 @@ const AdminDashboard = () => {
     const [enquiries, setEnquiries] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [leaves, setLeaves] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [productSearchQuery, setProductSearchQuery] = useState('');
+    const [bookingSearchQuery, setBookingSearchQuery] = useState('');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [bookingsFilter, setBookingsFilter] = useState('All');
     
     // Modal & Form State
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
@@ -111,7 +116,7 @@ const AdminDashboard = () => {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showStockModal, setShowStockModal] = useState(false);
     const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
-    const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', image: '' });
+    const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
     const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '' });
     const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, type: 'add' });
     const [settings, setSettings] = useState({
@@ -123,23 +128,26 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchAllData();
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
     }, []);
 
     const fetchAllData = async () => {
         setLoading(true);
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [bRes, sRes, eRes, qRes, aRes, nRes] = await Promise.all([
+            const [bRes, sRes, eRes, qRes, aRes, lRes, nRes] = await Promise.all([
                 fetch('/api/admin/bookings', { headers }),
                 fetch('/api/products', { headers }),
                 fetch('/api/admin/employees', { headers }),
                 fetch('/api/admin/enquiries', { headers }),
                 fetch('/api/admin/attendance', { headers }),
+                fetch('/api/admin/leaves', { headers }),
                 fetch('/api/notifications', { headers })
             ]);
 
-            const [bData, sData, eData, qData, aData, nData] = await Promise.all([
-                bRes.json(), sRes.json(), eRes.json(), qRes.json(), aRes.json(), nRes.json()
+            const [bData, sData, eData, qData, aData, lData, nData] = await Promise.all([
+                bRes.json(), sRes.json(), eRes.json(), qRes.json(), aRes.json(), lRes.json(), nRes.json()
             ]);
 
             if (bData.success) setBookings(bData.data);
@@ -147,6 +155,7 @@ const AdminDashboard = () => {
             if (eData.success) setEmployees(eData.data);
             if (qData.success) setEnquiries(qData.data);
             if (aData.success) setAttendance(aData.data);
+            if (lData.success) setLeaves(lData.data);
             if (nData.success) setNotifications(nData.data);
         } catch (error) {
             console.error('Error fetching admin data:', error);
@@ -173,17 +182,17 @@ const AdminDashboard = () => {
             const data = await res.json();
             
             if (data.success) {
-                alert(editingEmployee ? 'Staff member updated successfully!' : 'New employee registered successfully!');
+                toast.success(editingEmployee ? 'Staff member updated successfully!' : 'New employee registered successfully!');
                 setShowEmployeeModal(false);
                 setEditingEmployee(null);
                 setEmployeeForm({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
                 fetchAllData();
             } else {
-                alert(`Error: ${data.message || 'Failed to save employee'}`);
+                toast.error(`Error: ${data.message || 'Failed to save employee'}`);
             }
         } catch (error) {
             console.error('Error saving employee:', error);
-            alert(`Network or Server Error: ${error.message}`);
+            toast.error(`Network or Server Error: ${error.message}`);
         }
     };
 
@@ -201,28 +210,66 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                setProductForm({ ...productForm, productImage: data.url });
+            } else {
+                toast.error(`Upload Failed: ${data.message || 'Unknown Server Error'}`);
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            toast.error(`Error uploading image: ${error.message}. Please ensure the backend server is running.`);
+        }
+    };
+
     const handleProductSubmit = async (e) => {
         e.preventDefault();
         try {
             const url = editingProduct ? `/api/admin/products/${editingProduct._id}` : '/api/admin/products';
             const method = editingProduct ? 'PUT' : 'POST';
+
+            // Mapping frontend fields to backend Stock model
+            const submissionData = {
+                ...productForm,
+                productName: productForm.name,
+                productId: productForm.sku || `PRD-${Date.now()}`, // Stock model requires productId
+                price: Number(productForm.price),
+                quantity: Number(productForm.quantity)
+            };
+
             const res = await fetch(url, {
                 method,
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(productForm)
+                body: JSON.stringify(submissionData)
             });
             const data = await res.json();
             if (data.success) {
+                toast.success(editingProduct ? 'Hardware updated successfully' : 'New hardware added to catalog');
                 setShowProductModal(false);
                 setEditingProduct(null);
-                setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', image: '' });
+                setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
                 fetchAllData();
+            } else {
+                toast.error(`Catalog Entry Failed: ${data.message || 'Please check all required fields.'}`);
             }
         } catch (error) {
             console.error('Error saving product:', error);
+            toast.error(`Execution Error: ${error.message}`);
         }
     };
 
@@ -237,6 +284,29 @@ const AdminDashboard = () => {
             if (data.success) fetchAllData();
         } catch (error) {
             console.error('Error deleting product:', error);
+        }
+    };
+
+    const handleLeaveStatusUpdate = async (id, status, adminNotes = '') => {
+        try {
+            const res = await fetch(`/api/admin/leaves/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status, adminNotes })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(`Leave request ${status.toLowerCase()} successfully`);
+                fetchAllData();
+            } else {
+                toast.error(data.message || 'Update failed');
+            }
+        } catch (error) {
+            console.error('Error updating leave status:', error);
+            toast.error('Error connecting to server');
         }
     };
 
@@ -316,17 +386,17 @@ const AdminDashboard = () => {
 
     const handleSettingsUpdate = async (e) => {
         e.preventDefault();
-        alert('Configuration synchronized with enterprise vault (Demo)');
+        toast.success('Configuration synchronized with enterprise vault (Demo)');
     };
 
     const renderOverview = () => {
         // Calculate dynamic values for new KPI cards
         const kpis = {
             operations: [
-                { label: 'Total Bookings', value: bookings.length, icon: Calendar, color: 'text-primary-navy', bg: 'bg-primary-navy/10', trend: '+12%' },
-                { label: 'Pending', value: bookings.filter(b => b.status === 'Pending').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', trend: 'Needs action' },
-                { label: 'In Progress', value: bookings.filter(b => b.status === 'In Progress').length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10', trend: 'Active' },
-                { label: 'Completed', value: bookings.filter(b => b.status === 'Completed').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: '+5%' }
+                { label: 'Total Bookings', value: bookings.length, icon: Calendar, color: 'text-primary-navy', bg: 'bg-primary-navy/10', trend: '+12%', onClick: () => { setActiveTab('bookings'); setBookingsFilter('All'); } },
+                { label: 'Pending', value: bookings.filter(b => b.status === 'Pending').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', trend: 'Needs action', onClick: () => { setActiveTab('bookings'); setBookingsFilter('Pending'); } },
+                { label: 'In Progress', value: bookings.filter(b => b.status === 'In Progress').length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10', trend: 'Active', onClick: () => { setActiveTab('bookings'); setBookingsFilter('In Progress'); } },
+                { label: 'Completed', value: bookings.filter(b => b.status === 'Completed').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: '+5%', onClick: () => { setActiveTab('bookings'); setBookingsFilter('Completed'); } }
             ],
             staff: [
                 { label: 'Total Employees', value: employees.length, icon: Users, color: 'text-primary-navy', bg: 'bg-bg-soft', trend: 'Stable' },
@@ -336,7 +406,11 @@ const AdminDashboard = () => {
         };
 
         const renderKpiCard = (stat, idx) => (
-            <div key={idx} className="bg-white border border-border-soft rounded-2xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-primary-navy/20 transition-all cursor-default h-32">
+            <div 
+                key={idx} 
+                onClick={stat.onClick}
+                className={`bg-white border border-border-soft rounded-2xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-primary-navy/20 transition-all h-32 ${stat.onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-95' : 'cursor-default'}`}
+            >
                 <div className="flex justify-between items-start">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.bg} ${stat.color}`}>
                         <stat.icon size={16} strokeWidth={2.5} />
@@ -346,8 +420,8 @@ const AdminDashboard = () => {
                     </span>
                 </div>
                 <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
-                    <h3 className="text-2xl font-extrabold text-primary-navy tracking-tight leading-none mt-1">{stat.value}</h3>
+                    <p className="crm-label">{stat.label}</p>
+                    <h3 className="crm-section-title mt-1">{stat.value}</h3>
                 </div>
             </div>
         );
@@ -440,16 +514,44 @@ const AdminDashboard = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
                 <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Booking Registry</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Operational Installation Queue</p>
+                     <h3 className="crm-section-title">Booking Registry</h3>
+                     <p className="crm-label mt-1">Operational Installation Queue</p>
                 </div>
             </div>
 
             <div className="zoho-card overflow-hidden">
-                <div className="p-5 border-b border-border-soft flex items-center justify-between bg-white">
-                    <div className="relative w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
-                        <input type="text" placeholder="Search operational registry..." className="zoho-input pl-9" />
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white flex-wrap gap-4">
+                    <div className="flex items-center gap-2">
+                        {['All', 'Pending', 'In Progress', 'Completed'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setBookingsFilter(f)}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                    bookingsFilter === f 
+                                    ? 'bg-primary-navy text-white shadow-md' 
+                                    : 'bg-bg-soft text-text-muted hover:bg-white border border-transparent hover:border-border-soft'
+                                }`}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="zoho-search-bar w-96 group">
+                        <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search operational registry (Customer, ID)..." 
+                            value={bookingSearchQuery}
+                            onChange={(e) => setBookingSearchQuery(e.target.value)}
+                        />
+                        {bookingSearchQuery && (
+                            <button 
+                                onClick={() => setBookingSearchQuery('')}
+                                className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -460,6 +562,7 @@ const AdminDashboard = () => {
                                 <th className="px-6 py-4">Customer</th>
                                 <th className="px-6 py-4">Contact</th>
                                 <th className="px-6 py-4">System Details</th>
+                                <th className="px-6 py-4">Schedule</th>
                                 <th className="px-6 py-4">Deployment Site</th>
                                 <th className="px-6 py-4 text-center">Assigned</th>
                                 <th className="px-6 py-4 text-center">Status</th>
@@ -467,18 +570,39 @@ const AdminDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-soft">
-                            {bookings.map(b => (
+                            {bookings
+                                .filter(b => 
+                                    bookingsFilter === 'All' || b.status === bookingsFilter
+                                )
+                                .filter(b => 
+                                    b.customerName?.toLowerCase().includes(bookingSearchQuery.toLowerCase()) || 
+                                    b.bookingId?.toLowerCase().includes(bookingSearchQuery.toLowerCase()) ||
+                                    b.customerPhone?.includes(bookingSearchQuery)
+                                )
+                                .map(b => (
                                 <tr key={b._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <p className="text-[10px] font-black text-text-muted uppercase tracking-tighter">#SV-{b.bookingId.substring(0, 8).toUpperCase()}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-primary-navy leading-none">{b.customerName}</p>
-                                        <p className="text-[10px] text-text-muted mt-1 font-medium">{new Date(b.createdAt).toLocaleDateString()}</p>
+                                        <p className="crm-card-title leading-none">{b.customerName}</p>
+                                        <p className="crm-body text-[10px] mt-1">{new Date(b.createdAt).toLocaleDateString()}</p>
                                     </td>
                                     <td className="px-6 py-4 text-xs font-bold text-text-muted">{b.customerPhone}</td>
                                     <td className="px-6 py-4">
                                         <p className="text-xs font-bold text-primary-navy truncate max-w-[140px]">{b.productName}</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-[11px] font-bold text-primary-navy flex items-center gap-1">
+                                                <Calendar size={10} className="text-primary-red" />
+                                                {b.preferredDate ? new Date(b.preferredDate).toLocaleDateString() : 'N/A'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-text-muted flex items-center gap-1">
+                                                <Clock size={10} />
+                                                {b.preferredTime || 'N/A'}
+                                            </p>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-1.5 text-text-muted">
@@ -530,8 +654,8 @@ const AdminDashboard = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
              <div className="flex justify-between items-center">
                 <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Installation Tracking</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Live Deployment Status</p>
+                     <h3 className="crm-section-title">Tracked Operations</h3>
+                     <p className="crm-label mt-1">Live Deployment Status</p>
                 </div>
             </div>
 
@@ -659,7 +783,12 @@ const AdminDashboard = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-extrabold text-primary-navy">{a.totalHours || '0.00'} Hours</p>
+                                        <p className="text-sm font-extrabold text-primary-navy">
+                                            {a.checkOut 
+                                                ? (a.totalHours || '0.00') 
+                                                : ((currentTime - new Date(a.checkIn)) / (1000 * 60 * 60)).toFixed(2)
+                                            } Hours
+                                        </p>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <span className={`status-chip ${a.status === 'FULL_DAY' ? 'bg-status-success-bg text-status-success-text' : 'bg-status-warning-bg text-status-warning-text'}`}>
@@ -879,12 +1008,124 @@ const AdminDashboard = () => {
         </div>
     );
 
+    const renderLeaves = () => (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="crm-page-title">Leave Approvals</h2>
+                    <p className="crm-body text-sm mt-0.5">Manage employee absence requests</p>
+                </div>
+            </div>
+
+            <div className="zoho-card overflow-hidden">
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
+                    <div className="zoho-search-bar w-96 group">
+                        <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search by employee name..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="zoho-table">
+                        <thead className="zoho-table-header">
+                            <tr>
+                                <th className="px-6 py-4">Employee</th>
+                                <th className="px-6 py-4">Type</th>
+                                <th className="px-6 py-4">Duration</th>
+                                <th className="px-6 py-4">Reason</th>
+                                <th className="px-6 py-4">Applied</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-soft">
+                            {leaves
+                                .filter(l => (l.employeeName || '').toLowerCase().includes((searchQuery || '').toLowerCase()))
+                                .map(l => (
+                                    <tr key={l._id} className="hover:bg-bg-soft/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-xs uppercase">
+                                                    {l.employeeName?.[0]}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-primary-navy">{l.employeeName}</span>
+                                                    <span className="text-[10px] text-text-muted">{l.employeeId?.email || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-xs font-semibold text-text-dark">{l.leaveType}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col text-xs font-medium">
+                                                <span>{new Date(l.startDate).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs text-text-muted line-clamp-1 max-w-[150px]" title={l.reason}>{l.reason}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-xs text-text-muted">
+                                            {new Date(l.appliedAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`status-chip ${
+                                                l.status === 'Approved' ? 'bg-status-success-bg text-status-success-text' :
+                                                l.status === 'Rejected' ? 'bg-status-danger-bg text-status-danger-text' :
+                                                'bg-status-warning-bg text-status-warning-text'
+                                            }`}>
+                                                {l.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            {l.status === 'Pending' ? (
+                                                <div className="flex justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => handleLeaveStatusUpdate(l._id, 'Approved')}
+                                                        className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-colors"
+                                                        title="Approve"
+                                                    >
+                                                        <Check size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleLeaveStatusUpdate(l._id, 'Rejected')}
+                                                        className="p-1.5 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200 transition-colors"
+                                                        title="Reject"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Processed</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            {leaves.length === 0 && (
+                                <tr>
+                                    <td colSpan="7" className="py-24 text-center">
+                                        <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No pending leave requests</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
     const renderEmployees = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
                 <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Staff Management</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Field Technicians & Office Personnel</p>
+                     <h3 className="crm-section-title">Staff Management</h3>
+                     <p className="crm-label mt-1">Field Technicians & Office Personnel</p>
                 </div>
                 <button 
                     onClick={() => {
@@ -892,18 +1133,31 @@ const AdminDashboard = () => {
                         setEmployeeForm({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
                         setShowEmployeeModal(true);
                     }}
-                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
+                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-900/20"
                 >
                     <Plus size={18} />
-                    Register Employee
+                    ADD EMPLYEE
                 </button>
             </div>
 
             <div className="zoho-card overflow-hidden">
-                <div className="p-6 border-b border-border-soft flex items-center justify-between">
-                    <div className="relative w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
-                        <input type="text" placeholder="Search operational staff..." className="zoho-input pl-9" />
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                    <div className="zoho-search-bar w-96 group">
+                        <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search employee name, phone, or ID" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -920,7 +1174,13 @@ const AdminDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-soft">
-                            {employees.map(e => (
+                            {employees
+                                .filter(e => 
+                                    e.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                    e.phone?.includes(searchQuery) ||
+                                    e._id?.includes(searchQuery)
+                                )
+                                .map(e => (
                                 <tr key={e._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <p className="text-[10px] text-text-muted font-bold tracking-widest uppercase"># {e._id.substring(18)}</p>
@@ -982,8 +1242,8 @@ const AdminDashboard = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
              <div className="flex justify-between items-center">
                 <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Product Catalog</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">CCTV Hardware & Registry</p>
+                     <h3 className="crm-section-title">Product Catalog</h3>
+                     <p className="crm-label mt-1">CCTV Hardware & Registry</p>
                 </div>
                 <button 
                     onClick={() => {
@@ -991,7 +1251,7 @@ const AdminDashboard = () => {
                         setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', image: '' });
                         setShowProductModal(true);
                     }}
-                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
+                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-900/20"
                 >
                     <Plus size={18} />
                     New Hardware Entry
@@ -999,10 +1259,23 @@ const AdminDashboard = () => {
             </div>
 
             <div className="zoho-card overflow-hidden">
-                <div className="p-6 border-b border-border-soft flex items-center justify-between">
-                    <div className="relative w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
-                        <input type="text" placeholder="Search inventory catalog..." className="zoho-input pl-9" />
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                    <div className="zoho-search-bar w-96 group">
+                        <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search inventory catalog (name, SKU, brand)..." 
+                            value={productSearchQuery}
+                            onChange={(e) => setProductSearchQuery(e.target.value)}
+                        />
+                        {productSearchQuery && (
+                            <button 
+                                onClick={() => setProductSearchQuery('')}
+                                className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -1075,6 +1348,7 @@ const AdminDashboard = () => {
             </div>
         </div>
     );
+
 
     const renderInventory = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -1158,8 +1432,8 @@ const AdminDashboard = () => {
                         <X size={20} />
                     </button>
                 </div>
-                <form onSubmit={handleEmployeeSubmit} className="p-10 space-y-8">
-                    <div className="grid grid-cols-2 gap-8">
+                <form onSubmit={handleEmployeeSubmit} className="p-10 space-y-6">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Legal Name</label>
                             <input required type="text" value={employeeForm.name} onChange={e => setEmployeeForm({...employeeForm, name: e.target.value})} className="zoho-input" placeholder="e.g. John Carter" />
@@ -1168,8 +1442,6 @@ const AdminDashboard = () => {
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Official Email</label>
                             <input required type="email" value={employeeForm.email} onChange={e => setEmployeeForm({...employeeForm, email: e.target.value})} className="zoho-input" placeholder="john@securevision.com" />
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-8">
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
                             <input required type="text" value={employeeForm.phone} onChange={e => setEmployeeForm({...employeeForm, phone: e.target.value})} className="zoho-input" placeholder="+91 00000 00000" />
@@ -1178,13 +1450,21 @@ const AdminDashboard = () => {
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Access Token</label>
                             <input required={!editingEmployee} type="password" value={employeeForm.password} onChange={e => setEmployeeForm({...employeeForm, password: e.target.value})} className="zoho-input" placeholder={editingEmployee ? 'Unchanged' : 'Min 6 characters'} />
                         </div>
+                        <div className="col-span-2 space-y-2">
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Area / Home Base</label>
+                            <textarea value={employeeForm.address} onChange={e => setEmployeeForm({...employeeForm, address: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Primary service area or residence address..." />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Area / Home Base</label>
-                        <textarea value={employeeForm.address} onChange={e => setEmployeeForm({...employeeForm, address: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Primary service area or residence address..." />
-                    </div>
-                    <div className="pt-4">
-                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
+                    
+                    <div className="pt-6 flex justify-end items-center gap-3">
+                        <button 
+                            type="button" 
+                            onClick={() => setShowEmployeeModal(false)}
+                            className="px-6 py-3.5 text-sm font-bold text-text-muted hover:text-primary-navy transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
                             {editingEmployee ? 'Commit Changes' : 'Execute Registration'}
                         </button>
                     </div>
@@ -1206,12 +1486,13 @@ const AdminDashboard = () => {
                         <X size={20} />
                     </button>
                 </div>
-                <form onSubmit={handleProductSubmit} className="p-10 space-y-8">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Hardware Label</label>
-                        <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="e.g. Sony 4K Bullet Camera" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-8">
+                <form onSubmit={handleProductSubmit} className="p-10 space-y-6">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                        <div className="col-span-2 space-y-2">
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Hardware Label</label>
+                            <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="e.g. Sony 4K Bullet Camera" />
+                        </div>
+                        
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">SKU Reference</label>
                             <input required type="text" value={productForm.sku} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="zoho-input" placeholder="SV-CAM-001" />
@@ -1226,8 +1507,7 @@ const AdminDashboard = () => {
                                 <option value="DVR/NVR">DVR/NVR</option>
                             </select>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-8">
+                        
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Manufacturer</label>
                             <input required type="text" value={productForm.brand} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="zoho-input" placeholder="Sony, Hikvision, etc." />
@@ -1236,13 +1516,66 @@ const AdminDashboard = () => {
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Unit Value (₹)</label>
                             <input required type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="zoho-input" placeholder="0.00" />
                         </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Stock Balance</label>
+                            <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Initial quantity..." />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Image</label>
+                            <div className="relative">
+                                <input 
+                                    type="file" 
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={handleImageUpload} 
+                                    className="hidden" 
+                                    id="product-image-upload" 
+                                />
+                                <label 
+                                    htmlFor="product-image-upload"
+                                    className="zoho-input flex items-center justify-between cursor-pointer hover:border-primary-red transition-all group"
+                                >
+                                    <span className="text-sm text-text-muted truncate mr-2">
+                                        {productForm.productImage ? 'Change Image' : 'Select File (JPG, PNG, WEBP)'}
+                                    </span>
+                                    <div className="w-8 h-8 rounded-lg bg-bg-soft flex items-center justify-center text-text-muted group-hover:text-primary-red transition-colors">
+                                        <Package size={16} />
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {productForm.productImage && (
+                            <div className="col-span-2 pt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Image Preview</p>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setProductForm({ ...productForm, productImage: '' })}
+                                        className="text-[10px] font-bold text-primary-red uppercase tracking-widest hover:underline"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                                <div className="w-full h-40 rounded-2xl border border-border-soft overflow-hidden bg-bg-soft flex items-center justify-center relative group">
+                                    <img src={productForm.productImage} className="h-full w-full object-contain" alt="Preview" />
+                                    <div className="absolute inset-0 bg-primary-navy/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <p className="text-white text-[10px] font-bold uppercase tracking-widest">Ready to Commit</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Initial Inbound Quantity</label>
-                        <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Stock balance..." />
-                    </div>
-                    <div className="pt-4">
-                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
+
+                    <div className="pt-6 flex justify-end items-center gap-3">
+                        <button 
+                            type="button" 
+                            onClick={() => setShowProductModal(false)}
+                            className="px-6 py-3.5 text-sm font-bold text-text-muted hover:text-primary-navy transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
                             {editingProduct ? 'Commit Updates' : 'Execute Catalog Entry'}
                         </button>
                     </div>
@@ -1344,7 +1677,7 @@ const AdminDashboard = () => {
                             <div className="w-8 h-8 bg-primary-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/30">
                                 <TrendingUp size={18} className="text-white" />
                             </div>
-                            <span className="font-extrabold text-lg tracking-tight uppercase">Secure<span className="text-primary-red">Vision</span></span>
+                            <span className="font-extrabold text-lg tracking-tight uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Secure<span className="text-primary-red">Vision</span></span>
                         </div>
                     )}
                     <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 hover:bg-navy-light/30 rounded-lg transition-colors text-slate-400">
@@ -1359,8 +1692,9 @@ const AdminDashboard = () => {
                         { id: 'products', label: 'Products', icon: Package },
                         { id: 'employees', label: 'Employees', icon: Users },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
-                        { id: 'tracking', label: 'Tracking', icon: Truck },
+                        { id: 'tracking', label: 'Tracked', icon: Truck },
                         { id: 'enquiries', label: 'Enquiries', icon: Mail },
+                        { id: 'leaves', label: 'Leaves', icon: Calendar },
                         { id: 'settings', label: 'Settings', icon: Settings },
                     ].map(item => (
                         <button
@@ -1373,7 +1707,7 @@ const AdminDashboard = () => {
                             }`}
                         >
                             <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'} />
-                            {!isSidebarCollapsed && <span className="text-sm font-bold tracking-wide">{item.label}</span>}
+                            {!isSidebarCollapsed && <span className="text-sm font-bold tracking-wide" style={{ fontFamily: "'Inter', sans-serif" }}>{item.label}</span>}
                             {activeTab === item.id && !isSidebarCollapsed && (
                                 <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-white rounded-r-full" />
                             )}
@@ -1393,8 +1727,8 @@ const AdminDashboard = () => {
             <main className="flex-grow flex flex-col overflow-hidden">
                 <header className="h-20 bg-white border-b border-border-soft flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div className="flex flex-col">
-                        <h2 className="text-xl font-bold text-primary-navy tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
-                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Operations Management Panel</span>
+                        <h2 className="crm-section-title capitalize">{activeTab.replace('-', ' ')}</h2>
+                        <span className="crm-label !text-[10px] mt-0.5">Operations Management Panel</span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -1436,6 +1770,7 @@ const AdminDashboard = () => {
                                 {activeTab === 'attendance' && renderAttendance()}
                                 {activeTab === 'tracking' && renderTracking()}
                                 {activeTab === 'enquiries' && renderEnquiries()}
+                                {activeTab === 'leaves' && renderLeaves()}
                                 {activeTab === 'notifications' && renderNotifications()}
                                 {activeTab === 'settings' && renderSettings()}
                             </div>

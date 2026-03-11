@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Eye, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import ServiceBookingModal from './products/ServiceBookingModal';
 
 // Import local professional images
 import bulletImg from '../assets/bullet_camera.png';
@@ -8,6 +10,10 @@ import domeImg from '../assets/dome_camera.png';
 import ptzImg from '../assets/ptz_camera.png';
 
 const Products = () => {
+    const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const [inquiryProduct, setInquiryProduct] = useState(null);
+
     const products = [
         {
             name: '4K Dome CCTV Camera',
@@ -114,8 +120,14 @@ const Products = () => {
                                     <button className="border border-red-700 text-red-700 hover:bg-red-50 py-2 rounded font-medium transition-colors text-sm text-center">
                                         View Details
                                     </button>
-                                    <button className="bg-[#0b2239] hover:bg-red-700 text-white py-2 rounded font-medium shadow-sm transition-colors text-sm flex items-center justify-center">
-                                        <ShoppingCart size={14} className="mr-2" /> Cart
+                                    <button 
+                                        onClick={() => {
+                                            if (!isAuthenticated) navigate('/signup');
+                                            else setInquiryProduct(product);
+                                        }}
+                                        className="bg-[#0b2239] hover:bg-black text-white py-2 rounded font-medium shadow-sm transition-colors text-sm flex items-center justify-center"
+                                    >
+                                        Book Now
                                     </button>
                                 </div>
                             </div>
@@ -130,6 +142,14 @@ const Products = () => {
                 </div>
 
             </div>
+
+            {/* Service Booking Modal */}
+            {inquiryProduct && (
+                <ServiceBookingModal
+                    product={inquiryProduct}
+                    onClose={() => setInquiryProduct(null)}
+                />
+            )}
         </section>
     );
 };

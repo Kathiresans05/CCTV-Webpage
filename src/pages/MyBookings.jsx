@@ -99,18 +99,18 @@ const BookingCard = ({ booking }) => {
                     <div className="flex flex-wrap items-center gap-y-2 gap-x-6 border-t border-gray-50 pt-4 mt-1">
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium whitespace-nowrap">
                             <Calendar size={14} className="text-gray-300" />
-                            {formattedDate}
+                            {booking.preferredDate ? new Date(booking.preferredDate).toLocaleDateString('en-IN') : formattedDate}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium whitespace-nowrap">
                             <Clock size={14} className="text-gray-300" />
-                            {formattedTime}
+                            {booking.preferredTime || formattedTime}
                         </div>
                         <div className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-lg">
                             SCHEDULED
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium flex-1 min-w-0">
                             <MapPin size={14} className="text-gray-300 flex-shrink-0" />
-                            <span className="truncate">Service Lane 04, Bommidi, Tamil Nadu</span>
+                            <span className="truncate">{booking.address || 'N/A'}</span>
                         </div>
                         <button className="text-[#B91C1C] text-xs font-bold hover:underline py-1 flex items-center gap-1">
                             View Details <ArrowRight size={12} />
@@ -238,15 +238,20 @@ const MyBookings = ({ isDashboardComponent = false }) => {
                 {/* ── Search & Filter Row ─────────────────────────────────────── */}
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-8">
                     <div className="flex flex-col md:flex-row items-center gap-4">
-                        <div className="relative flex-1 w-full">
-                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <div className="zoho-search-bar flex-1 w-full group shadow-none border-gray-100 bg-white">
+                            <Search size={18} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 type="text"
                                 placeholder="Search by service, provider, or booking ID..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3 text-sm border border-gray-100 rounded-xl focus:outline-none focus:border-blue-300 transition-colors bg-white placeholder-gray-400"
+                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-700 placeholder-gray-400 h-full p-0 ml-3"
                             />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600 transition-colors ml-2">
+                                    <X size={16} />
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <Filter size={18} className="text-gray-400" />

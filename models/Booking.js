@@ -45,6 +45,9 @@ const bookingSchema = mongoose.Schema({
     preferredDate: {
         type: Date
     },
+    preferredTime: {
+        type: String
+    },
     notes: {
         type: String
     },

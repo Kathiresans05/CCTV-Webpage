@@ -13,12 +13,10 @@ const Contact = () => {
     }, []);
 
     return (
-        <div className="pt-12 min-h-screen bg-white relative overflow-hidden">
+        <div className="min-h-screen bg-white relative overflow-hidden">
 
             {/* Header / Breadcrumbs */}
-            <div className="bg-[#0b0f1a] py-28 relative overflow-hidden">
-
-
+            <div className="bg-[#0F172A] pt-14 pb-20 relative overflow-hidden">
                 <div className="container mx-auto px-4 md:px-8 relative z-10 text-center">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6">Contact Us</h1>
                     <nav className="flex items-center justify-center space-x-3 text-gray-300">
@@ -32,7 +30,7 @@ const Contact = () => {
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 md:px-8 -mt-20 pb-24 relative z-20">
+            <div className="container mx-auto px-4 md:px-8 -mt-16 pb-24 relative z-20">
                 <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch">
                     {/* Form Column */}
                     <div className="lg:w-7/12 order-2 lg:order-1 flex flex-col">

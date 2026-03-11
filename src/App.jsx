@@ -6,6 +6,7 @@ import FeaturesSlider from './components/FeaturesSlider';
 import Home from './pages/Home';
 import AboutPage from './pages/AboutPage';
 import ProductsListing from './pages/ProductsListing';
+import ProductDetailsPage from './pages/ProductDetailsPage';
 import Contact from './pages/Contact';
 import MyBookings from './pages/MyBookings';
 import UserDashboard from './pages/UserDashboard';
@@ -15,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 // Helper component to handle scrolling to hash
 const ScrollToHash = () => {
@@ -61,6 +63,7 @@ const ConditionalFeaturesSlider = () => {
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" />
       <Router>
         <ScrollToHash />
         <div className="min-h-screen flex flex-col font-sans">
@@ -70,10 +73,14 @@ function App() {
           
           <main className="flex-grow">
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/products" element={<ProductsListing />} />
-              <Route path="/contact" element={<Contact />} />
+              {/* Main Site Routes with Legacy Background */}
+              <Route path="/" element={<div className="legacy-main-bg min-h-full"><Home /></div>} />
+              <Route path="/about" element={<div className="legacy-main-bg min-h-full"><AboutPage /></div>} />
+              <Route path="/products" element={<div className="legacy-main-bg min-h-full"><ProductsListing /></div>} />
+              <Route path="/products/:id" element={<div className="legacy-main-bg min-h-full"><ProductDetailsPage /></div>} />
+              <Route path="/contact" element={<div className="legacy-main-bg min-h-full"><Contact /></div>} />
+              
+              {/* Dashboard and Auth Routes (Unaffected) */}
               <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/my-bookings" element={<ProtectedRoute allowedRoles={['customer']}><MyBookings /></ProtectedRoute>} />
               <Route path="/login" element={<LoginPage />} />

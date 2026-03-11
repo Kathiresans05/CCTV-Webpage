@@ -26,34 +26,44 @@ const Navbar = () => {
 
     // Fetch live data when user is logged in
     useEffect(() => {
-        if (isAuthenticated && user?.email) {
-            const fetchData = async () => {
-                try {
-                    const headers = { 'Authorization': `Bearer ${token}` };
-                    // Fetch Bookings
-                    const bookRes = await fetch(`/api/bookings?email=${user.email}`, { headers });
-                    const bookData = await bookRes.json();
-                    if (bookData.success) setBookingsCount(bookData.data.length);
+        const fetchData = async () => {
+            if (!isAuthenticated || !user?.email) {
+                setBookingsCount(0);
+                setCartCount(0);
+                setWishlistCount(0);
+                return;
+            }
+            try {
+                const headers = { 'Authorization': `Bearer ${user.token}` };
+                // Fetch Bookings
+                const bookRes = await fetch(`/api/bookings?email=${user.email}`, { headers });
+                const bookData = await bookRes.json();
+                if (bookData.success) setBookingsCount(bookData.data.length);
 
-                    // Fetch Cart
-                    const cartRes = await fetch(`/api/cart?email=${user.email}`, { headers });
-                    const cartData = await cartRes.json();
-                    if (cartData.success) setCartCount(cartData.data.length);
+                // Fetch Cart
+                const cartRes = await fetch(`/api/cart?email=${user.email}`, { headers });
+                const cartData = await cartRes.json();
+                if (cartData.success) setCartCount(cartData.data.length);
 
-                    // Fetch Wishlist
-                    const wishRes = await fetch(`/api/wishlist?email=${user.email}`, { headers });
-                    const wishData = await wishRes.json();
-                    if (wishData.success) setWishlistCount(wishData.data.length);
-                } catch (err) {
-                    console.error('Failed to fetch navbar data', err);
-                }
-            };
-            fetchData();
-        } else {
-            setBookingsCount(0);
-            setCartCount(0);
-            setWishlistCount(0);
-        }
+                // Fetch Wishlist
+                const wishRes = await fetch(`/api/wishlist?email=${user.email}`, { headers });
+                const wishData = await wishRes.json();
+                if (wishData.success) setWishlistCount(wishData.data.length);
+            } catch (err) {
+                console.error('Failed to fetch navbar data', err);
+            }
+        };
+
+        fetchData(); // Initial fetch
+
+        // Setup event listener for global state updates
+        window.addEventListener('cartUpdated', fetchData);
+        window.addEventListener('wishlistUpdated', fetchData);
+
+        return () => {
+            window.removeEventListener('cartUpdated', fetchData);
+            window.removeEventListener('wishlistUpdated', fetchData);
+        };
     }, [isAuthenticated, user]);
 
     const navLinks = [

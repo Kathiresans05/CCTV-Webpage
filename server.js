@@ -8,8 +8,18 @@ import Stock from './models/Stock.js';
 import Enquiry from './models/Enquiry.js';
 import Attendance from './models/Attendance.js';
 import Notification from './models/Notification.js';
+import Leave from './models/Leave.js';
+import Cart from './models/Cart.js';
+import Wishlist from './models/Wishlist.js';
 import generateToken from './utils/generateToken.js';
 import { protect, admin, employee } from './middleware/authMiddleware.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 connectDB();
@@ -21,6 +31,39 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve static files from uploads folder
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+app.use('/uploads', express.static(uploadsDir));
+
+// Multer Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|webp/;
+        const mimetypes = /image\/jpeg|image\/jpg|image\/png|image\/webp/;
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = mimetypes.test(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Only JPEG, JPG, PNG and WEBP images are allowed'));
+    }
+});
 
 // ─────────────────────────────────────────────
 // API: Auth Endpoints
@@ -105,7 +148,7 @@ app.get('/api/products', async (req, res) => {
             id: s.productId,
             name: s.productName,
             price: s.price,
-            image: s.sku.includes('BC') ? 'bullet_camera' : s.sku.includes('DC') ? 'dome_camera' : 'ptz_camera',
+            image: s.productImage || (s.sku.includes('BC') ? 'bullet_camera' : s.sku.includes('DC') ? 'dome_camera' : 'ptz_camera'),
             category: s.category,
             brand: s.brand,
             sku: s.sku,
@@ -116,6 +159,95 @@ app.get('/api/products', async (req, res) => {
             status: s.status
         }));
         res.json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get single product details
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const s = await Stock.findById(req.params.id);
+        if (!s) return res.status(404).json({ success: false, message: 'Product not found' });
+        
+        const product = {
+            _id: s._id,
+            id: s.productId,
+            name: s.productName,
+            price: s.price,
+            image: s.productImage || (s.sku.includes('BC') ? 'bullet_camera' : s.sku.includes('DC') ? 'dome_camera' : 'ptz_camera'),
+            category: s.category,
+            brand: s.brand,
+            sku: s.sku,
+            rating: '4.8',
+            description: s.description || `${s.brand} ${s.productName}`,
+            quantity: s.quantity,
+            reorderLevel: s.reorderLevel,
+            status: s.status,
+            // Mocking specifications and video for now as they are not in the database schema
+            specs: s.specs || ['4K Ultra HD', 'Night Vision Up to 30m', 'Mobile App Integration', '360° Coverage', 'Vandal Proof Design', 'Cloud & Local Recording'],
+            videoUrl: s.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ' // Using a placeholder video, realistically would be a real CCTV demo
+        };
+        res.json({ success: true, data: product });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// File Upload Endpoint
+app.post('/api/upload', upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Please upload a file' });
+        }
+        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        res.json({ success: true, url: fileUrl });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Toggle Wishlist
+app.post('/api/wishlist', async (req, res) => {
+    try {
+        const { email, productId } = req.body;
+        const existing = await Wishlist.findOne({ email, productId });
+        if (existing) {
+            await Wishlist.deleteOne({ _id: existing._id });
+            return res.json({ success: true, action: 'removed' });
+        } else {
+            await Wishlist.create({ email, productId });
+            return res.json({ success: true, action: 'added' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get User Wishlist
+app.get('/api/wishlist', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+        const wishlist = await Wishlist.find({ email });
+        res.json({ success: true, data: wishlist });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Add to Cart
+app.post('/api/cart', async (req, res) => {
+    try {
+        const { email, productId } = req.body;
+        const existing = await Cart.findOne({ email, productId });
+        if (existing) {
+            existing.quantity += 1;
+            await existing.save();
+        } else {
+            await Cart.create({ email, productId });
+        }
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -196,27 +328,33 @@ app.patch('/api/admin/products/:id/stock', protect, admin, async (req, res) => {
 // Create Booking (Customer)
 app.post('/api/bookings', protect, async (req, res) => {
     try {
-        const { productName, productId, address, city, preferredDate, notes } = req.body;
+        const { 
+            productName, productId, productPrice, 
+            address, city, preferredDate, preferredTime, 
+            notes, customerName, customerPhone, customerEmail 
+        } = req.body;
         const bookingId = `BK${Date.now()}`;
 
         const booking = await Booking.create({
             bookingId,
             customerId: req.user._id,
-            customerName: req.user.name,
-            customerEmail: req.user.email,
-            customerPhone: req.user.phone,
+            customerName: customerName || req.user.name,
+            customerEmail: customerEmail || req.user.email,
+            customerPhone: customerPhone || req.user.phone,
             productId: productId || 0,
             productName,
-            address,
-            city,
+            productPrice: productPrice || 0,
+            address: address || 'N/A',
+            city: city || 'N/A',
             preferredDate,
+            preferredTime,
             notes
         });
 
         await Notification.create({
             role: 'admin',
             title: 'New Booking Request',
-            message: `New booking for ${productName} by ${req.user.name}`,
+            message: `New booking for ${productName} by ${customerName || req.user.name}`,
             type: 'booking',
             referenceId: bookingId
         });
@@ -394,6 +532,93 @@ app.post('/api/attendance/checkout', protect, employee, async (req, res) => {
         await attendance.save();
 
         res.json({ success: true, data: attendance });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// API: Leave Management
+// ─────────────────────────────────────────────
+
+// Request Leave (Employee)
+app.post('/api/leaves/request', protect, employee, async (req, res) => {
+    console.log('--- LEAVE REQUEST ARRIVED ---');
+    console.log('Body:', req.body);
+    console.log('User:', req.user?.name);
+    try {
+        const { leaveType, startDate, endDate, reason } = req.body;
+        
+        console.log('Creating Leave record...');
+        const leave = await Leave.create({
+            employeeId: req.user._id,
+            employeeName: req.user.name,
+            leaveType,
+            startDate,
+            endDate,
+            reason
+        });
+        console.log('Leave record created:', leave._id);
+
+        console.log('Creating Notification...');
+        await Notification.create({
+            role: 'admin',
+            title: 'New Leave Request',
+            message: `${req.user.name} has requested ${leaveType}`,
+            type: 'leave',
+            referenceId: leave._id
+        });
+        console.log('Notification created.');
+
+        res.json({ success: true, data: leave });
+    } catch (error) {
+        console.error('LEAVE REQUEST ERROR:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get My Leaves (Employee)
+app.get('/api/leaves/my', protect, employee, async (req, res) => {
+    try {
+        const leaves = await Leave.find({ employeeId: req.user._id }).sort({ appliedAt: -1 });
+        res.json({ success: true, data: leaves });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get All Leaves (Admin)
+app.get('/api/admin/leaves', protect, admin, async (req, res) => {
+    try {
+        const leaves = await Leave.find({}).sort({ appliedAt: -1 }).populate('employeeId', 'name email phone');
+        res.json({ success: true, data: leaves });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update Leave Status (Admin)
+app.patch('/api/admin/leaves/:id/status', protect, admin, async (req, res) => {
+    try {
+        const { status, adminNotes } = req.body;
+        const leave = await Leave.findById(req.params.id);
+        
+        if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
+        
+        leave.status = status || leave.status;
+        leave.adminNotes = adminNotes || leave.adminNotes;
+        await leave.save();
+
+        await Notification.create({
+            userId: leave.employeeId,
+            role: 'employee',
+            title: `Leave ${status}`,
+            message: `Your leave request for ${new Date(leave.startDate).toLocaleDateString()} has been ${status.toLowerCase()}.`,
+            type: 'leave',
+            referenceId: leave._id
+        });
+
+        res.json({ success: true, data: leave });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -636,6 +861,15 @@ app.post('/api/notifications/read-all', protect, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+// Global Error Handler for Multer and other errors
+app.use((err, req, res, next) => {
+    console.error('SERVER ERROR:', err);
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ success: false, message: `Multer Error: ${err.message}` });
+    }
+    res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
 });
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

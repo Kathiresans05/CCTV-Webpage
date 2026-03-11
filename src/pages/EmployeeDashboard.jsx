@@ -23,6 +23,7 @@ import {
     LogOut,
     Camera
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const EmployeeDashboard = () => {
     const { user, token, logout } = useAuth();
@@ -37,7 +38,8 @@ const EmployeeDashboard = () => {
         '/employee/my-jobs': 'my-jobs',
         '/employee/attendance': 'attendance',
         '/employee/notifications': 'notifications',
-        '/employee/profile': 'profile'
+        '/employee/profile': 'profile',
+        '/employee/leaves': 'leaves'
     };
 
     // Reverse mapping for navigation
@@ -47,7 +49,8 @@ const EmployeeDashboard = () => {
         'my-jobs': '/employee/my-jobs',
         'attendance': '/employee/attendance',
         'notifications': '/employee/notifications',
-        'profile': '/employee/profile'
+        'profile': '/employee/profile',
+        'leaves': '/employee/leaves'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
@@ -70,8 +73,10 @@ const EmployeeDashboard = () => {
     const [attendanceStatus, setAttendanceStatus] = useState(null);
     const [attendanceHistory, setAttendanceHistory] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [leaves, setLeaves] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
     
     // Modal state for job completion
     const [showProofModal, setShowProofModal] = useState(false);
@@ -79,15 +84,25 @@ const EmployeeDashboard = () => {
     const [proofForm, setProofForm] = useState({ photo: '', notes: '' });
     const [previewUrl, setPreviewUrl] = useState(null);
 
+    // Leave Modal State
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [leaveForm, setLeaveForm] = useState({
+        leaveType: 'Casual Leave',
+        startDate: '',
+        endDate: '',
+        reason: ''
+    });
+    const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select a valid image file (JPG, PNG, etc.)');
+                toast.error('Please select a valid image file (JPG, PNG, etc.)');
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
-                alert('Image size should be less than 5MB');
+                toast.error('Image size should be less than 5MB');
                 return;
             }
             const reader = new FileReader();
@@ -101,29 +116,34 @@ const EmployeeDashboard = () => {
 
     useEffect(() => {
         fetchData();
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
     }, []);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [jRes, aRes, hRes, nRes] = await Promise.all([
+            const [jRes, aRes, hRes, nRes, lRes] = await Promise.all([
                 fetch('/api/bookings', { headers }),
                 fetch('/api/attendance/status', { headers }),
                 fetch('/api/attendance/history', { headers }),
-                fetch('/api/notifications', { headers })
+                fetch('/api/notifications', { headers }),
+                fetch('/api/leaves/my', { headers })
             ]);
             
-            const [jData, aData, hData, nData] = await Promise.all([
-                jRes.json(), aRes.json(), hRes.json(), nRes.json()
+            const [jData, aData, hData, nData, lData] = await Promise.all([
+                jRes.json(), aRes.json(), hRes.json(), nRes.json(), lRes.json()
             ]);
 
             if (jData.success) setJobs(jData.data);
             if (aData.success) setAttendanceStatus(aData.data);
             if (hData.success) setAttendanceHistory(hData.data);
             if (nData.success) setNotifications(nData.data);
+            if (lData.success) setLeaves(lData.data);
         } catch (error) {
             console.error('Error fetching employee data:', error);
+            // Non-blocking error for initial fetch
         } finally {
             setLoading(false);
         }
@@ -148,11 +168,11 @@ const EmployeeDashboard = () => {
                 }
                 fetchData();
             } else {
-                alert(data.message || 'Action failed');
+                toast.error(data.message || 'Action failed');
             }
         } catch (error) {
             console.error('Job action error:', error);
-            alert('Error connecting to server. Please ensure the backend is running.');
+            toast.error('Error connecting to server. Please ensure the backend is running.');
         }
     };
 
@@ -178,11 +198,220 @@ const EmployeeDashboard = () => {
             if (data.success) {
                 fetchData();
             } else {
-                alert(data.message);
+                toast.error(data.message);
             }
         } catch (error) {
-            alert('Attendance update failed');
+            toast.error('Attendance update failed');
         }
+    };
+
+    const handleLeaveSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmittingLeave(true);
+        try {
+            const res = await fetch('/api/leaves/request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(leaveForm)
+            });
+            
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error(`Invalid server response: ${text || 'Empty response'}`);
+            }
+
+            if (data.success) {
+                toast.success('Leave request submitted successfully');
+                setShowLeaveModal(false);
+                setLeaveForm({
+                    leaveType: 'Casual Leave',
+                    startDate: '',
+                    endDate: '',
+                    reason: ''
+                });
+                fetchData();
+            } else {
+                toast.error(data.message || 'Submission failed');
+            }
+        } catch (error) {
+            console.error('Leave submission error:', error);
+            toast.error(`Error: ${error.message}`);
+        } finally {
+            setIsSubmittingLeave(false);
+        }
+    };
+
+    const renderLeaves = () => (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="crm-page-title">Leave Management</h2>
+                    <p className="crm-body text-sm mt-0.5">Request and track your leave status</p>
+                </div>
+                <button 
+                    onClick={() => setShowLeaveModal(true)}
+                    className="zoho-btn-primary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
+                >
+                    <Plus size={18} /> Request Leave
+                </button>
+            </div>
+
+            <div className="zoho-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="zoho-table">
+                        <thead className="zoho-table-header">
+                            <tr>
+                                <th className="px-6 py-4">Leave Type</th>
+                                <th className="px-6 py-4">Duration</th>
+                                <th className="px-6 py-4">Days</th>
+                                <th className="px-6 py-4">Applied On</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-soft">
+                            {leaves && leaves.length > 0 ? (
+                                leaves.map(l => (
+                                    <tr key={l._id} className="hover:bg-bg-soft/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-primary-navy">{l.leaveType}</span>
+                                                <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1 max-w-[200px]">{l.reason}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col text-xs font-semibold text-text-dark">
+                                                <span>{new Date(l.startDate).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-xs font-bold text-primary-navy">
+                                            {Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000 * 60 * 60 * 24)) + 1} Days
+                                        </td>
+                                        <td className="px-6 py-4 text-xs font-medium text-text-muted">
+                                            {new Date(l.appliedAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`status-chip ${
+                                                l.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
+                                                l.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                                                'bg-amber-100 text-amber-700'
+                                            }`}>
+                                                {l.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="py-24 text-center">
+                                        <div className="w-16 h-16 bg-bg-soft rounded-3xl flex items-center justify-center mx-auto mb-4 border border-border-soft">
+                                            <Calendar size={24} className="text-text-muted" />
+                                        </div>
+                                        <p className="text-text-muted font-bold uppercase tracking-widest text-[10px]">No leave records found</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderLeaveModal = () => {
+        if (!showLeaveModal) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-navy-dark/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setShowLeaveModal(false)} />
+                <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-primary-navy px-8 py-6 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xl font-bold text-white tracking-tight">Request Leave</h3>
+                            <p className="text-rose-100/60 text-[10px] uppercase font-bold tracking-widest mt-1">Personnel Absence Directive</p>
+                        </div>
+                        <button onClick={() => setShowLeaveModal(false)} className="text-white/60 hover:text-white transition-colors">
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleLeaveSubmit} className="p-8 space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="crm-label !text-[10px]">Leave Type</label>
+                            <select 
+                                className="zoho-input w-full"
+                                value={leaveForm.leaveType}
+                                onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
+                                required
+                            >
+                                <option>Casual Leave</option>
+                                <option>Sick Leave</option>
+                                <option>Earned Leave</option>
+                                <option>Maternity/Paternity</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="crm-label !text-[10px]">Start Date</label>
+                                <input 
+                                    type="date" 
+                                    className="zoho-input w-full"
+                                    value={leaveForm.startDate}
+                                    onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="crm-label !text-[10px]">End Date</label>
+                                <input 
+                                    type="date" 
+                                    className="zoho-input w-full"
+                                    value={leaveForm.endDate}
+                                    onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="crm-label !text-[10px]">Reason for Absence</label>
+                            <textarea 
+                                className="zoho-input w-full h-24 resize-none"
+                                placeholder="State clearly the reason for leave..."
+                                value={leaveForm.reason}
+                                onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div className="pt-4 flex items-center gap-3">
+                            <button 
+                                type="button"
+                                onClick={() => setShowLeaveModal(false)}
+                                className="zoho-btn-secondary flex-grow py-3 text-xs tracking-widest"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit"
+                                disabled={isSubmittingLeave}
+                                className="zoho-btn-primary flex-grow py-3 text-xs tracking-widest shadow-lg shadow-red-900/20"
+                            >
+                                {isSubmittingLeave ? 'Transmitting...' : 'Submit Request'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
     };
 
     const renderOverview = () => {
@@ -214,8 +443,8 @@ const EmployeeDashboard = () => {
                     </span>
                 </div>
                 <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
-                    <h3 className="text-2xl font-extrabold text-primary-navy tracking-tight leading-none mt-1">{stat.value}</h3>
+                    <p className="crm-label">{stat.label}</p>
+                    <h3 className="crm-section-title mt-1">{stat.value}</h3>
                 </div>
             </div>
         );
@@ -318,9 +547,9 @@ const EmployeeDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-primary-navy leading-tight">{j.customerName}</span>
-                                            <span className="text-[10px] text-text-muted font-bold mt-1 tracking-tight">{j.customerPhone}</span>
-                                            <span className="text-[10px] text-text-muted mt-0.5 truncate max-w-[180px] font-medium">{j.address}, {j.city}</span>
+                                            <span className="crm-card-title leading-tight">{j.customerName}</span>
+                                            <span className="crm-label !text-[10px] mt-1">{j.customerPhone}</span>
+                                            <span className="crm-body !text-[10px] mt-0.5 truncate max-w-[180px]">{j.address}, {j.city}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -403,7 +632,7 @@ const EmployeeDashboard = () => {
         const totalHours = attendanceStatus?.totalHours
             ? `${Number(attendanceStatus.totalHours).toFixed(1)} hrs`
             : attendanceStatus?.checkIn && !attendanceStatus?.checkOut
-                ? `${((Date.now() - new Date(attendanceStatus.checkIn)) / (1000 * 60 * 60)).toFixed(1)} hrs`
+                ? `${((currentTime - new Date(attendanceStatus.checkIn)) / (1000 * 60 * 60)).toFixed(1)} hrs`
                 : '—';
 
         const isCheckedIn = !!attendanceStatus;
@@ -415,8 +644,8 @@ const EmployeeDashboard = () => {
                 {/* Page Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-gray-900" style={{fontFamily: "'Inter', 'Poppins', sans-serif"}}>Attendance</h2>
-                        <p className="text-sm text-gray-500 mt-0.5 font-normal">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <h2 className="crm-page-title">Attendance</h2>
+                        <p className="crm-body text-sm mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                 </div>
 
@@ -551,7 +780,7 @@ const EmployeeDashboard = () => {
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
              <div className="flex justify-between items-center mb-6">
                  <div>
-                    <h3 className="text-xl font-bold text-primary-navy flex items-center gap-3">
+                    <h3 className="crm-section-title flex items-center gap-3">
                         <Bell size={24} className="text-primary-red" />
                         Intelligence Bulletins
                     </h3>
@@ -675,6 +904,7 @@ const EmployeeDashboard = () => {
                         { id: 'new', label: 'New Requests', icon: Plus },
                         { id: 'my-jobs', label: 'My Jobs', icon: Calendar },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
+                        { id: 'leaves', label: 'Leave Center', icon: Calendar },
                         { id: 'profile', label: 'Personnel Profile', icon: User },
                     ].map(item => (
                         <button
@@ -814,6 +1044,7 @@ const EmployeeDashboard = () => {
                                     </div>
                                 )}
                                 {activeTab === 'attendance' && renderAttendance()}
+                                {activeTab === 'leaves' && renderLeaves()}
                                 {activeTab === 'notifications' && renderNotifications()}
                                 {activeTab === 'profile' && renderProfile()}
                             </div>
@@ -828,8 +1059,8 @@ const EmployeeDashboard = () => {
                     <div className="zoho-card max-w-lg w-full p-8 animate-in zoom-in-95 duration-200 shadow-2xl">
                         <div className="flex justify-between items-center mb-8">
                             <div>
-                                <h3 className="text-xl font-bold text-primary-navy tracking-tight">Finalize Operation</h3>
-                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Compliance & Media Verification</p>
+                                <h3 className="crm-section-title">Finalize Operation</h3>
+                                <p className="crm-label mt-1">Compliance & Media Verification</p>
                             </div>
                             <button onClick={() => {
                                 setShowProofModal(false);
@@ -924,6 +1155,7 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
             )}
+            {renderLeaveModal()}
         </div>
     );
 };

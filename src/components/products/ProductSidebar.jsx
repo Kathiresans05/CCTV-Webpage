@@ -15,7 +15,6 @@ const ProductSidebar = ({
     const [openSections, setOpenSections] = useState({
         categories: true,
         price: true,
-        rating: true,
         tags: true,
     });
 
@@ -39,31 +38,39 @@ const ProductSidebar = ({
     };
 
     return (
-        <aside className="w-full lg:w-1/4 space-y-4">
-            {/* Pill Search Section */}
-            <div className="bg-white p-4 border border-gray-200 rounded shadow-sm">
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search products..."
-                        className="w-full pl-10 pr-10 py-2.5 text-[13px] bg-gray-100 border-transparent rounded-full focus:bg-white focus:border-gray-200 focus:ring-0 transition-all placeholder-gray-400 font-medium"
-                    />
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} strokeWidth={2} />
-                    {searchTerm && (
-                        <button
-                            onClick={() => setSearchTerm('')}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-700 transition-colors"
-                        >
-                            <X size={14} />
-                        </button>
-                    )}
+        <aside className="w-full lg:w-1/4">
+
+
+            {/* Price Filter — moved to top */}
+            <div className="bg-[#ffffff] p-4 border-y border-r border-gray-200 shadow-sm">
+                <div
+                    className="flex justify-between items-center cursor-pointer mb-3"
+                    onClick={() => toggleSection('price')}
+                >
+                    <h3 className="text-[14px] font-bold text-gray-800 uppercase tracking-wider">Price</h3>
+                    {openSections.price ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
+                {openSections.price && (
+                    <div className="space-y-3">
+                        <input
+                            type="range"
+                            min="1000"
+                            max="50000"
+                            step="500"
+                            value={priceRange}
+                            onChange={(e) => setPriceRange(parseInt(e.target.value))}
+                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-700"
+                        />
+                        <div className="flex justify-between text-xs font-bold text-gray-700">
+                            <span>₹1,000</span>
+                            <span>₹{priceRange.toLocaleString('en-IN')}</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Categories Section */}
-            <div className="bg-white p-4 border border-gray-200 rounded shadow-sm">
+            <div className="bg-[#ffffff] p-4 border-y border-r border-gray-200 shadow-sm">
                 <div
                     className="flex justify-between items-center cursor-pointer mb-3"
                     onClick={() => toggleSection('categories')}
@@ -95,76 +102,10 @@ const ProductSidebar = ({
                 )}
             </div>
 
-            {/* Price Filter */}
-            <div className="bg-white p-4 border border-gray-200 rounded shadow-sm">
-                <div
-                    className="flex justify-between items-center cursor-pointer mb-3"
-                    onClick={() => toggleSection('price')}
-                >
-                    <h3 className="text-[14px] font-bold text-gray-800 uppercase tracking-wider">Price</h3>
-                    {openSections.price ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-                {openSections.price && (
-                    <div className="space-y-3">
-                        <input
-                            type="range"
-                            min="1000"
-                            max="50000"
-                            step="500"
-                            value={priceRange}
-                            onChange={(e) => setPriceRange(parseInt(e.target.value))}
-                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-700"
-                        />
-                        <div className="flex justify-between text-xs font-bold text-gray-700">
-                            <span>₹1,000</span>
-                            <span>₹{priceRange.toLocaleString('en-IN')}</span>
-                        </div>
-                    </div>
-                )}
-            </div>
 
-            {/* Rating Filter */}
-            <div className="bg-white p-4 border border-gray-200 rounded shadow-sm">
-                <div
-                    className="flex justify-between items-center cursor-pointer mb-3"
-                    onClick={() => toggleSection('rating')}
-                >
-                    <h3 className="text-[14px] font-bold text-gray-800 uppercase tracking-wider">Customer Review</h3>
-                    {openSections.rating ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-                {openSections.rating && (
-                    <div className="space-y-2">
-                        {[4, 3, 2, 1].map((rating) => (
-                            <div
-                                key={rating}
-                                onClick={() => setMinRating(rating)}
-                                className={`flex items-center space-x-2 group cursor-pointer text-sm transition-colors ${minRating === rating ? 'text-red-700' : 'text-gray-600 hover:text-orange-600'}`}
-                            >
-                                <div className="flex text-yellow-500">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star
-                                            key={i}
-                                            size={14}
-                                            fill={i < rating ? "currentColor" : "none"}
-                                            className={i < rating ? "" : "text-gray-300"}
-                                        />
-                                    ))}
-                                </div>
-                                <span className="text-sm font-medium">& Up</span>
-                            </div>
-                        ))}
-                        <button
-                            onClick={() => setMinRating(0)}
-                            className="text-xs text-red-700 hover:underline mt-2"
-                        >
-                            Reset Rating
-                        </button>
-                    </div>
-                )}
-            </div>
 
             {/* Product Tags */}
-            <div className="bg-white p-4 border border-gray-200 rounded shadow-sm">
+            <div className="bg-[#ffffff] p-4 border-y border-r border-gray-200 shadow-sm">
                 <div
                     className="flex justify-between items-center cursor-pointer mb-3"
                     onClick={() => toggleSection('tags')}

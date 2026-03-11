@@ -86,27 +86,12 @@ const Projects = () => {
                 {/* Gallery Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredProjects.map((project) => (
-                        <div key={project.id} className="group relative rounded-lg overflow-hidden border border-gray-100 shadow-sm animate-fade-in-up">
-
+                        <div key={project.id} className="rounded-2xl overflow-hidden border border-gray-100 shadow-md animate-fade-in-up">
                             <img
                                 src={project.image}
                                 alt={project.name}
-                                className="w-full h-72 object-cover transform group-hover:scale-110 transition-transform duration-500"
+                                className="w-full h-72 object-cover"
                             />
-
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-red-900/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-center p-6">
-
-                                <h3 className="text-xl font-bold text-white mb-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{project.name}</h3>
-                                <span className="text-sm font-medium text-red-300 uppercase tracking-wider mb-6 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">{project.category}</span>
-
-                                <button className="flex items-center space-x-2 bg-white text-red-900 px-6 py-2.5 rounded-sm font-medium hover:bg-transparent hover:text-white hover:border hover:border-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-150">
-                                    <Eye size={18} />
-                                    <span>View Project</span>
-                                </button>
-
-                            </div>
-
                         </div>
                     ))}
                 </div>

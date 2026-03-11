@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Uploads
+uploads/
+
+# Scratch scripts
+check_products.js
+test_api.js
+check_db_users.js
+reset_passwords.js
+debug_employee_auth.js
+seeder.js
+
