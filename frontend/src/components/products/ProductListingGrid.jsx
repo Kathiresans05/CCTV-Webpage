@@ -40,7 +40,7 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
                     <p className="text-gray-500 font-medium">No products match your criteria.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-0">
                     {products.map((product) => (
                         <ProductCard
                             key={product.id}
