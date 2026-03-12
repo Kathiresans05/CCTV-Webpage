@@ -179,7 +179,7 @@ const ProductDetailsPage = () => {
                         <div className="mt-auto space-y-4">
                             <button 
                                 onClick={() => setIsBookingModalOpen(true)}
-                                className="w-full bg-primary-red hover:bg-red-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-red-200 transform hover:-translate-y-1 flex justify-center items-center group"
+                                className="w-full bg-primary-red hover:bg-red-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg transform hover:-translate-y-1 flex justify-center items-center group"
                             >
                                 Book Installation Now
                                 <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
