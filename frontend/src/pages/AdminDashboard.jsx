@@ -1803,13 +1803,13 @@ const AdminDashboard = () => {
                         
                         <div className="h-10 w-px bg-border-soft" />
 
-                        <div className="flex items-center gap-3">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-bold text-primary-navy leading-none">{user?.name}</p>
-                                <p className="text-[10px] font-black text-primary-red uppercase tracking-tighter mt-1">Super Admin</p>
+                        <div className="flex items-center gap-3 pl-2 cursor-pointer group">
+                            <div className="w-9 h-9 rounded-full bg-primary-navy text-white flex items-center justify-center font-bold text-[15px] shadow-sm group-hover:ring-2 ring-primary-navy/20 transition-all duration-200">
+                                {user?.name?.[0]?.toUpperCase()}
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold shadow-lg">
-                                {user?.name?.[0]}
+                            <div className="flex flex-col items-start hidden sm:flex">
+                                <span className="text-[14px] font-semibold text-gray-900 leading-tight" style={{fontFamily:"'Inter', sans-serif"}}>{user?.name}</span>
+                                <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/80 mt-0.5 tracking-wide" style={{fontFamily:"'Inter', sans-serif"}}>Super Admin</span>
                             </div>
                         </div>
                     </div>
