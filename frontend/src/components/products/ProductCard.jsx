@@ -84,7 +84,7 @@ const ProductCard = ({ product, onBookNow }) => {
     };
 
     return (
-        <div className="bg-white outline outline-1 outline-gray-100 hover:outline-2 hover:outline-primary-red overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl group h-full relative z-0 hover:z-10">
+        <div className="bg-white outline outline-1 outline-gray-200 hover:outline-2 hover:outline-gray-300 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl group h-full relative z-0 hover:z-10">
             {/* Image Container */}
             <div className="relative w-full h-[240px] bg-[#F7F8F9] overflow-hidden flex items-center justify-center cursor-pointer p-6">
                 <img
