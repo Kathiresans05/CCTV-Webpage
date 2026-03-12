@@ -816,19 +816,18 @@ app.get('/api/attendance/history', protect, employee, async (req, res) => {
 // Accept Job
 app.patch('/api/bookings/:id/accept', protect, async (req, res) => {
     try {
-        const booking = await Booking.findOne({ bookingId: req.params.id });
-        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-        
-        if (booking.status !== 'Pending') {
-            return res.status(400).json({ success: false, message: 'Job already accepted or in progress' });
-        }
-
-        booking.status = 'Accepted';
-        booking.assignedEmployee = req.user._id;
-        booking.assignedEmployeeName = req.user.name;
-        booking.assignedEmployeePhone = req.user.phone;
-        booking.acceptedAt = Date.now();
-        await booking.save();
+        const booking = await Booking.findOneAndUpdate(
+            { bookingId: req.params.id, status: 'Pending' },
+            {
+                status: 'Accepted',
+                assignedEmployee: req.user._id,
+                assignedEmployeeName: req.user.name,
+                assignedEmployeePhone: req.user.phone,
+                acceptedAt: Date.now()
+            },
+            { new: true }
+        );
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found or already accepted' });
 
         await Notification.create({
             role: 'admin',
@@ -847,13 +846,12 @@ app.patch('/api/bookings/:id/accept', protect, async (req, res) => {
 // Start Job
 app.patch('/api/bookings/:id/start', protect, async (req, res) => {
     try {
-        const booking = await Booking.findOne({ bookingId: req.params.id });
+        const booking = await Booking.findOneAndUpdate(
+            { bookingId: req.params.id },
+            { status: 'In Progress', startedAt: Date.now() },
+            { new: true }
+        );
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-        
-        booking.status = 'In Progress';
-        booking.startedAt = Date.now();
-        await booking.save();
-
         res.json({ success: true, data: booking });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

@@ -705,8 +705,10 @@ const AdminDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="space-y-1">
-                                            {b.startTime && <p className="text-[9px] font-bold text-text-muted flex items-center gap-1"><Clock size={8} /> IN: {new Date(b.startTime).toLocaleTimeString()}</p>}
-                                            {b.completionTime && <p className="text-[9px] font-bold text-status-success-text flex items-center gap-1"><Clock size={8} /> OUT: {new Date(b.completionTime).toLocaleTimeString()}</p>}
+                                            {b.acceptedAt && <p className="text-[9px] font-bold text-text-muted flex items-center gap-1"><Clock size={8}/> Accepted: {new Date(b.acceptedAt).toLocaleDateString()} {new Date(b.acceptedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
+                                            {b.startedAt && <p className="text-[9px] font-bold text-blue-500 flex items-center gap-1"><Clock size={8}/> Started: {new Date(b.startedAt).toLocaleDateString()} {new Date(b.startedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
+                                            {b.completedAt && <p className="text-[9px] font-bold text-status-success-text flex items-center gap-1"><Clock size={8}/> Done: {new Date(b.completedAt).toLocaleDateString()} {new Date(b.completedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
+                                            {!b.acceptedAt && !b.startedAt && !b.completedAt && <span className="text-[9px] text-text-muted">—</span>}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -715,17 +717,29 @@ const AdminDashboard = () => {
                                         }`}>{b.status}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {b.proofPhoto ? (
-                                            <div className="w-10 h-10 rounded-lg bg-bg-soft border border-border-soft overflow-hidden cursor-zoom-in shadow-sm hover:scale-105 transition-transform">
-                                                <img src={b.proofPhoto} alt="Proof" className="w-full h-full object-cover" />
+                                        {b.proofPhotos && b.proofPhotos.length > 0 ? (
+                                            <div className="flex gap-1 flex-wrap">
+                                                {b.proofPhotos.map((photo, idx) => (
+                                                    <a key={idx} href={photo} target="_blank" rel="noreferrer">
+                                                        <div className="w-10 h-10 rounded-lg bg-bg-soft border border-border-soft overflow-hidden cursor-zoom-in shadow-sm hover:scale-110 transition-transform">
+                                                            <img src={photo} alt={`Proof ${idx+1}`} className="w-full h-full object-cover" />
+                                                        </div>
+                                                    </a>
+                                                ))}
                                             </div>
+                                        ) : b.proofPhoto ? (
+                                            <a href={b.proofPhoto} target="_blank" rel="noreferrer">
+                                                <div className="w-10 h-10 rounded-lg bg-bg-soft border border-border-soft overflow-hidden cursor-zoom-in shadow-sm hover:scale-110 transition-transform">
+                                                    <img src={b.proofPhoto} alt="Proof" className="w-full h-full object-cover" />
+                                                </div>
+                                            </a>
                                         ) : (
                                             <span className="text-[10px] text-text-muted bg-bg-soft px-2 py-1 rounded border border-border-soft">No Evidence</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <p className="text-[10px] text-text-muted font-medium max-w-[120px] truncate ml-auto italic">
-                                            {b.completionNotes || 'No notes available'}
+                                            {b.workNotes || 'No notes available'}
                                         </p>
                                     </td>
                                 </tr>
