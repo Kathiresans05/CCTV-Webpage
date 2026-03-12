@@ -1502,10 +1502,20 @@ const AdminDashboard = () => {
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Classification</label>
                             <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
                                 <option value="">Select Class</option>
-                                <option value="Bullet Camera">Bullet Camera</option>
-                                <option value="Dome Camera">Dome Camera</option>
-                                <option value="PTZ Camera">PTZ Camera</option>
-                                <option value="DVR/NVR">DVR/NVR</option>
+                                <option value="Bullet Cameras">Bullet Cameras</option>
+                                <option value="Dome Cameras">Dome Cameras</option>
+                                <option value="PTZ Cameras">PTZ Cameras</option>
+                                <option value="Fisheye Cameras">Fisheye Cameras</option>
+                                <option value="IP Cameras">IP Cameras</option>
+                                <option value="Wireless Cameras">Wireless Cameras</option>
+                                <option value="Night Vision Cameras">Night Vision Cameras</option>
+                                <option value="Thermal Cameras">Thermal Cameras</option>
+                                <option value="Panoramic Cameras">Panoramic Cameras</option>
+                                <option value="Hidden Cameras">Hidden Cameras</option>
+                                <option value="Solar Cameras">Solar Cameras</option>
+                                <option value="ANPR Cameras">ANPR Cameras</option>
+                                <option value="Explosion-Proof Cameras">Explosion-Proof Cameras</option>
+                                <option value="Varifocal Cameras">Varifocal Cameras</option>
                             </select>
                         </div>
                         
