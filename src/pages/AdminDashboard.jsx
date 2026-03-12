@@ -1248,7 +1248,7 @@ const AdminDashboard = () => {
                 <button 
                     onClick={() => {
                         setEditingProduct(null);
-                        setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', image: '' });
+                        setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
                         setShowProductModal(true);
                     }}
                     className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-900/20"
@@ -1331,7 +1331,7 @@ const AdminDashboard = () => {
                                             <button 
                                                 onClick={() => {
                                                     setEditingProduct(s);
-                                                    setProductForm({ ...s });
+                                                    setProductForm({ ...s, name: s.productName });
                                                     setShowProductModal(true);
                                                 }}
                                                 className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
@@ -1499,7 +1499,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Classification</label>
-                            <select value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
+                            <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
                                 <option value="">Select Class</option>
                                 <option value="Bullet Camera">Bullet Camera</option>
                                 <option value="Dome Camera">Dome Camera</option>

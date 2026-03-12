@@ -13,6 +13,7 @@ import Cart from './models/Cart.js';
 import Wishlist from './models/Wishlist.js';
 import generateToken from './utils/generateToken.js';
 import { protect, admin, employee } from './middleware/authMiddleware.js';
+import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -22,6 +23,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
+
+// Cloudinary Configuration
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 connectDB();
 
 const app = express();
@@ -194,15 +203,33 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-// File Upload Endpoint
-app.post('/api/upload', upload.single('image'), (req, res) => {
+// File Upload Endpoint (Cloudinary)
+app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'Please upload a file' });
         }
-        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        res.json({ success: true, url: fileUrl });
+
+        // Upload to Cloudinary
+        // We use the file path provided by multer
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'securevision_products',
+            use_filename: true,
+            unique_filename: true
+        });
+
+        // Optional: Delete local file after upload to Cloudinary to save space
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        res.json({ 
+            success: true, 
+            url: result.secure_url,
+            public_id: result.public_id
+        });
     } catch (error) {
+        console.error('Cloudinary Upload Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
