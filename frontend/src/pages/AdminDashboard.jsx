@@ -1261,7 +1261,7 @@ const AdminDashboard = () => {
                     className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
-                    New Hardware Entry
+                    ADD PRODUCT
                 </button>
             </div>
 
