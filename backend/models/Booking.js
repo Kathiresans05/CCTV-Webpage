@@ -23,7 +23,7 @@ const bookingSchema = mongoose.Schema({
         required: true
     },
     productId: {
-        type: Number // Reference to existing product ID
+        type: String // Reference to existing product ID
     },
     productName: {
         type: String
