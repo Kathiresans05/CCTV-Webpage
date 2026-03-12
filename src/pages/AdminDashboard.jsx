@@ -1476,7 +1476,7 @@ const AdminDashboard = () => {
     const renderProductModal = () => (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${showProductModal ? 'visible' : 'invisible'}`}>
             <div className={`absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md transition-opacity duration-500 ${showProductModal ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowProductModal(false)}></div>
-            <div className={`bg-white w-full max-w-xl rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
+            <div className={`bg-white w-full max-w-xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform flex flex-col ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                     <div>
                         <h3 className="text-xl font-bold text-primary-navy">{editingProduct ? 'Hardware Update' : 'New Hardware Entry'}</h3>
@@ -1486,8 +1486,9 @@ const AdminDashboard = () => {
                         <X size={20} />
                     </button>
                 </div>
-                <form onSubmit={handleProductSubmit} className="p-10 space-y-6">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                <form onSubmit={handleProductSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div className="flex-1 p-10 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-border-soft hover:scrollbar-thumb-text-muted transition-colors">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                         <div className="col-span-2 space-y-2">
                             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Hardware Label</label>
                             <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="e.g. Sony 4K Bullet Camera" />
@@ -1566,8 +1567,9 @@ const AdminDashboard = () => {
                             </div>
                         )}
                     </div>
+                    </div>
 
-                    <div className="pt-6 flex justify-end items-center gap-3">
+                    <div className="p-8 border-t border-border-soft flex justify-end items-center gap-3 bg-bg-soft/20 mt-auto">
                         <button 
                             type="button" 
                             onClick={() => setShowProductModal(false)}
