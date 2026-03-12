@@ -256,7 +256,7 @@ const EmployeeDashboard = () => {
                 </div>
                 <button 
                     onClick={() => setShowLeaveModal(true)}
-                    className="zoho-btn-primary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
+                    className="zoho-btn-secondary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
                 >
                     <Plus size={18} /> Request Leave
                 </button>
@@ -490,7 +490,7 @@ const EmployeeDashboard = () => {
                             {!attendanceStatus ? (
                                 <button 
                                     onClick={() => handleAttendanceAction('checkin')} 
-                                    className="zoho-btn-primary flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 text-xs tracking-widest"
+                                    className="zoho-btn-secondary flex-grow md:flex-initial px-8 py-3 rounded-xl text-xs tracking-widest"
                                 >
                                     Login
                                 </button>
