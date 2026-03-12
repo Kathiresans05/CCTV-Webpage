@@ -149,7 +149,7 @@ const ProductDetailsPage = () => {
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">{product.name}</h2>
                         
                         <div className="flex items-center space-x-4 mb-8">
-                            <div className="text-4xl font-black text-primary-navy">₹{product.price.toLocaleString('en-IN')}</div>
+                            <div className="text-4xl font-black text-primary-navy">₹{product.price?.toLocaleString('en-IN') || '0'}</div>
                             <div className="flex flex-col">
                                 <div className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Available Now</div>
                                 <div className="text-xs text-gray-400">Inclusive of all taxes</div>
@@ -160,14 +160,14 @@ const ProductDetailsPage = () => {
                             <div>
                                 <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Description</h4>
                                 <p className="text-gray-600 text-sm leading-relaxed">
-                                    {product.description}
+                                    {product.description || 'No description available.'}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                                     <p className="text-[9px] font-bold text-gray-400 uppercase">Status</p>
-                                    <p className="text-xs font-bold text-green-700 mt-1">{product.status === 'instock' ? 'In Stock' : product.status}</p>
+                                    <p className="text-xs font-bold text-green-700 mt-1">{product.status === 'instock' ? 'In Stock' : (product.status || 'Checking...')}</p>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                                     <p className="text-[9px] font-bold text-gray-400 uppercase">Warranty</p>
