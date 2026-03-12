@@ -1295,7 +1295,6 @@ const AdminDashboard = () => {
                                 <th className="px-6 py-4 uppercase">Classification</th>
                                 <th className="px-6 py-4 uppercase">Manufacturer</th>
                                 <th className="px-6 py-4 uppercase">Unit Value</th>
-                                <th className="px-6 py-4 uppercase text-center">Available</th>
                                 <th className="px-6 py-4 uppercase text-center">Stock State</th>
                                 <th className="px-6 py-4 uppercase text-right">Action</th>
                             </tr>
@@ -1322,9 +1321,6 @@ const AdminDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-sm font-extrabold text-primary-navy">₹{s.price.toLocaleString()}</p>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <p className="text-sm font-extrabold text-primary-navy">{s.quantity}</p>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`status-chip ${
