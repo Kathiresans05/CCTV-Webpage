@@ -1140,7 +1140,7 @@ const AdminDashboard = () => {
                         setEmployeeForm({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
                         setShowEmployeeModal(true);
                     }}
-                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-900/20"
+                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
                     ADD EMPLYEE
@@ -1258,7 +1258,7 @@ const AdminDashboard = () => {
                         setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
                         setShowProductModal(true);
                     }}
-                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-900/20"
+                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
                     New Hardware Entry
