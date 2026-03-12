@@ -314,6 +314,18 @@ app.post('/api/cart', async (req, res) => {
     }
 });
 
+// Get User Cart
+app.get('/api/cart', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+        const cartItems = await Cart.find({ email }).populate('productId');
+        res.json({ success: true, data: cartItems });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Admin Add Product
 app.post('/api/admin/products', protect, admin, async (req, res) => {
     try {
