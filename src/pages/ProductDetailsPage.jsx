@@ -8,7 +8,9 @@ const ProductDetailsPage = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [activeImage, setActiveImage] = useState(null);
+    const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+    const [isZoomed, setIsZoomed] = useState(false);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -17,6 +19,7 @@ const ProductDetailsPage = () => {
                 const data = await res.json();
                 if (data.success) {
                     setProduct(data.data);
+                    setActiveImage(data.data.productImages?.[0] || data.data.image);
                 } else {
                     setError('Product not found');
                 }
@@ -29,6 +32,13 @@ const ProductDetailsPage = () => {
         fetchProduct();
         window.scrollTo(0, 0);
     }, [id]);
+
+    const handleMouseMove = (e) => {
+        const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+        const x = ((e.pageX - left - window.scrollX) / width) * 100;
+        const y = ((e.pageY - top - window.scrollY) / height) * 100;
+        setZoomPosition({ x, y });
+    };
 
     if (loading) {
         return (
@@ -48,6 +58,10 @@ const ProductDetailsPage = () => {
             </div>
         );
     }
+
+    const images = product.productImages && product.productImages.length > 0 
+        ? product.productImages 
+        : [product.image];
 
     return (
         <div className="min-h-screen bg-[#F5F7FA] pb-24">
@@ -72,45 +86,107 @@ const ProductDetailsPage = () => {
             <div className="container mx-auto px-4 md:px-8 -mt-6 relative z-20">
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col lg:flex-row">
                     
-                    {/* Left Column: Image Area */}
-                    <div className="lg:w-1/2 p-8 md:p-12 bg-gray-50 flex items-center justify-center relative border-b lg:border-b-0 lg:border-r border-gray-100">
-                        <div className="absolute top-4 left-4 bg-primary-red text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                            {product.category}
+                    {/* Left Column: Image Gallery Area */}
+                    <div className="lg:w-3/5 p-6 md:p-10 bg-white flex flex-col md:flex-row gap-6 border-b lg:border-b-0 lg:border-r border-gray-100">
+                        
+                        {/* Thumbnails list */}
+                        <div className="flex md:flex-col gap-3 order-2 md:order-1">
+                            {images.map((img, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveImage(img)}
+                                    className={`w-16 h-16 md:w-20 md:h-24 rounded-xl overflow-hidden border-2 transition-all p-1 bg-gray-50 flex-shrink-0 ${
+                                        activeImage === img ? 'border-primary-red ring-4 ring-red-50' : 'border-gray-100 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain" />
+                                </button>
+                            ))}
                         </div>
-                        <img 
-                            src={product.image} 
-                            alt={product.name} 
-                            className="max-h-[400px] w-auto object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
-                        />
+
+                        {/* Main Preview Image */}
+                        <div className="flex-1 order-1 md:order-2 relative group flex items-center justify-center bg-gray-50 rounded-2xl overflow-hidden min-h-[400px] md:min-h-[500px]">
+                            <div className="absolute top-4 left-4 z-10 bg-primary-red text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                {product.category}
+                            </div>
+                            
+                            <div 
+                                className="relative w-full h-full flex items-center justify-center cursor-crosshair overflow-hidden"
+                                onMouseEnter={() => setIsZoomed(true)}
+                                onMouseLeave={() => setIsZoomed(false)}
+                                onMouseMove={handleMouseMove}
+                            >
+                                <img 
+                                    src={activeImage} 
+                                    alt={product.name} 
+                                    className={`max-h-[450px] w-auto object-contain transition-transform duration-300 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
+                                />
+                                
+                                {isZoomed && (
+                                    <div 
+                                        className="absolute inset-0 pointer-events-none z-20"
+                                        style={{
+                                            backgroundImage: `url(${activeImage})`,
+                                            backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                                            backgroundSize: '250%',
+                                            backgroundRepeat: 'no-repeat'
+                                        }}
+                                    ></div>
+                                )}
+                            </div>
+                            
+                            {/* Zoom Instructions */}
+                            <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-500 font-medium pointer-events-none">
+                                Roll over image to zoom
+                            </div>
+                        </div>
                     </div>
 
                     {/* Right Column: Key Info & Overview */}
-                    <div className="lg:w-1/2 p-8 md:p-12 flex flex-col">
+                    <div className="lg:w-2/5 p-8 md:p-12 flex flex-col bg-white">
                         <div className="mb-2 uppercase text-xs font-bold text-gray-400 tracking-widest">{product.brand} • SKU: {product.sku}</div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{product.name}</h2>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">{product.name}</h2>
                         
-                        <div className="flex items-center space-x-4 mb-6">
-                            <div className="text-3xl font-extrabold text-[#B91C1C]">₹{product.price.toLocaleString('en-IN')}</div>
-                            <div className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">
-                                {product.status === 'instock' ? 'In Stock' : product.status}
+                        <div className="flex items-center space-x-4 mb-8">
+                            <div className="text-4xl font-black text-primary-navy">₹{product.price.toLocaleString('en-IN')}</div>
+                            <div className="flex flex-col">
+                                <div className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Available Now</div>
+                                <div className="text-xs text-gray-400">Inclusive of all taxes</div>
                             </div>
                         </div>
 
-                        <p className="text-gray-600 leading-relaxed mb-8">
-                            {product.description}
-                        </p>
+                        <div className="space-y-6 mb-10">
+                            <div>
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Description</h4>
+                                <p className="text-gray-600 text-sm leading-relaxed">
+                                    {product.description}
+                                </p>
+                            </div>
 
-                        <div className="mt-auto">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Status</p>
+                                    <p className="text-xs font-bold text-green-700 mt-1">{product.status === 'instock' ? 'In Stock' : product.status}</p>
+                                </div>
+                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Warranty</p>
+                                    <p className="text-xs font-bold text-primary-navy mt-1">1 Year Brand</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto space-y-4">
                             <button 
                                 onClick={() => setIsBookingModalOpen(true)}
-                                className="w-full bg-[#0b0f1a] hover:bg-black text-white py-4 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-black/20 flex justify-center items-center group"
+                                className="w-full bg-primary-red hover:bg-red-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-red-200 transform hover:-translate-y-1 flex justify-center items-center group"
                             >
                                 Book Installation Now
                                 <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </button>
-                            <p className="text-center text-xs text-gray-400 mt-4 flex items-center justify-center">
-                                <ShieldCheck size={14} className="mr-1 text-green-500" /> Secure checkout & verified installers
-                            </p>
+                            <div className="flex items-center justify-between px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                <span className="flex items-center"><ShieldCheck size={14} className="mr-1 text-green-500" /> Secure Checkout</span>
+                                <span className="flex items-center"><Truck size={14} className="mr-1 text-blue-500" /> Fast Delivery</span>
+                            </div>
                         </div>
                     </div>
                 </div>

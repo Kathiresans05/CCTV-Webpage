@@ -43,6 +43,10 @@ const stockSchema = mongoose.Schema({
         type: String,
         default: ''
     },
+    productImages: {
+        type: [String],
+        default: []
+    },
     status: {
         type: String,
         enum: ['instock', 'lowstock', 'outofstock'],

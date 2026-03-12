@@ -116,7 +116,7 @@ const AdminDashboard = () => {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showStockModal, setShowStockModal] = useState(false);
     const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
-    const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
+    const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '', productImages: [] });
     const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '' });
     const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, type: 'add' });
     const [settings, setSettings] = useState({
@@ -211,26 +211,33 @@ const AdminDashboard = () => {
     };
 
     const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
 
         const formData = new FormData();
-        formData.append('image', file);
+        files.forEach(file => formData.append('images', file));
 
         try {
-            const res = await fetch('/api/upload', {
+            const res = await fetch('/api/upload-multiple', {
                 method: 'POST',
                 body: formData
             });
             const data = await res.json();
             if (data.success) {
-                setProductForm({ ...productForm, productImage: data.url });
+                // If single image was selected, set it as main image too
+                const newUrls = data.urls;
+                setProductForm({ 
+                    ...productForm, 
+                    productImage: productForm.productImage || newUrls[0],
+                    productImages: [...(productForm.productImages || []), ...newUrls].slice(0, 6)
+                });
+                toast.success(`Successfully uploaded ${newUrls.length} images`);
             } else {
                 toast.error(`Upload Failed: ${data.message || 'Unknown Server Error'}`);
             }
         } catch (error) {
-            console.error('Error uploading image:', error);
-            toast.error(`Error uploading image: ${error.message}. Please ensure the backend server is running.`);
+            console.error('Error uploading images:', error);
+            toast.error(`Error uploading images: ${error.message}`);
         }
     };
 
@@ -1331,7 +1338,11 @@ const AdminDashboard = () => {
                                             <button 
                                                 onClick={() => {
                                                     setEditingProduct(s);
-                                                    setProductForm({ ...s, name: s.productName });
+                                                    setProductForm({ 
+                                                        ...s, 
+                                                        name: s.productName,
+                                                        productImages: s.productImages || []
+                                                    });
                                                     setShowProductModal(true);
                                                 }}
                                                 className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
@@ -1537,6 +1548,7 @@ const AdminDashboard = () => {
                             <div className="relative">
                                 <input 
                                     type="file" 
+                                    multiple
                                     accept="image/jpeg,image/png,image/webp"
                                     onChange={handleImageUpload} 
                                     className="hidden" 
@@ -1556,24 +1568,51 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {productForm.productImage && (
+                        {((productForm.productImages && productForm.productImages.length > 0) || productForm.productImage) && (
                             <div className="col-span-2 pt-2">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Image Preview</p>
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Gallery Preview ({productForm.productImages?.length || (productForm.productImage ? 1 : 0)}/6)</p>
                                     <button 
                                         type="button" 
-                                        onClick={() => setProductForm({ ...productForm, productImage: '' })}
+                                        onClick={() => setProductForm({ ...productForm, productImage: '', productImages: [] })}
                                         className="text-[10px] font-bold text-primary-red uppercase tracking-widest hover:underline"
                                     >
-                                        Remove
+                                        Clear All
                                     </button>
                                 </div>
-                                <div className="w-full h-40 rounded-2xl border border-border-soft overflow-hidden bg-bg-soft flex items-center justify-center relative group">
-                                    <img src={productForm.productImage} className="h-full w-full object-contain" alt="Preview" />
-                                    <div className="absolute inset-0 bg-primary-navy/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <p className="text-white text-[10px] font-bold uppercase tracking-widest">Ready to Commit</p>
-                                    </div>
+                                <div className="grid grid-cols-4 gap-3 bg-bg-soft/50 p-4 rounded-3xl border border-border-soft">
+                                    {/* Main Image Selection */}
+                                    {productForm.productImages?.map((img, idx) => (
+                                        <div key={idx} className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${productForm.productImage === img ? 'border-primary-red ring-4 ring-primary-red/10' : 'border-border-soft hover:border-text-muted'}`} onClick={() => setProductForm({ ...productForm, productImage: img })}>
+                                            <img src={img} className="h-full w-full object-cover" alt={`Preview ${idx + 1}`} />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <p className="text-white text-[8px] font-bold uppercase tracking-widest">{productForm.productImage === img ? 'Main Image' : 'Set as Main'}</p>
+                                            </div>
+                                            <button 
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const newImages = productForm.productImages.filter((_, i) => i !== idx);
+                                                    setProductForm({ 
+                                                        ...productForm, 
+                                                        productImages: newImages,
+                                                        productImage: productForm.productImage === img ? (newImages[0] || '') : productForm.productImage
+                                                    });
+                                                }}
+                                                className="absolute top-1 right-1 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center text-primary-red shadow-sm hover:bg-white"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {/* Traditional logic if array is empty but singe image exists */}
+                                    {!productForm.productImages?.length && productForm.productImage && (
+                                         <div className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-primary-red ring-4 ring-primary-red/10">
+                                             <img src={productForm.productImage} className="h-full w-full object-cover" alt="Main Preview" />
+                                         </div>
+                                    )}
                                 </div>
+                                <p className="text-[10px] text-text-muted mt-3 italic">* Click any thumbnail to set it as the primary display image.</p>
                             </div>
                         )}
                     </div>

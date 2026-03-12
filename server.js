@@ -166,7 +166,8 @@ app.get('/api/products', async (req, res) => {
             description: s.description || `${s.brand} ${s.productName}`,
             quantity: s.quantity,
             reorderLevel: s.reorderLevel,
-            status: s.status
+            status: s.status,
+            productImages: s.productImages && s.productImages.length > 0 ? s.productImages : [s.productImage || 'bullet_camera']
         }));
         res.json({ success: true, data: products });
     } catch (error) {
@@ -194,6 +195,7 @@ app.get('/api/products/:id', async (req, res) => {
             quantity: s.quantity,
             reorderLevel: s.reorderLevel,
             status: s.status,
+            productImages: s.productImages && s.productImages.length > 0 ? s.productImages : [s.productImage || 'bullet_camera'],
             // Mocking specifications and video for now as they are not in the database schema
             specs: s.specs || ['4K Ultra HD', 'Night Vision Up to 30m', 'Mobile App Integration', '360° Coverage', 'Vandal Proof Design', 'Cloud & Local Recording'],
             videoUrl: s.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ' // Using a placeholder video, realistically would be a real CCTV demo
@@ -212,14 +214,12 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         }
 
         // Upload to Cloudinary
-        // We use the file path provided by multer
         const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'securevision_products',
             use_filename: true,
             unique_filename: true
         });
 
-        // Optional: Delete local file after upload to Cloudinary to save space
         if (fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
@@ -231,6 +231,39 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         });
     } catch (error) {
         console.error('Cloudinary Upload Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Bulk Upload Endpoint (Cloudinary)
+app.post('/api/upload-multiple', upload.array('images', 6), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: 'Please upload at least one file' });
+        }
+
+        const uploadPromises = req.files.map(async (file) => {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'securevision_products',
+                use_filename: true,
+                unique_filename: true
+            });
+            
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+            
+            return result.secure_url;
+        });
+
+        const urls = await Promise.all(uploadPromises);
+
+        res.json({ 
+            success: true, 
+            urls
+        });
+    } catch (error) {
+        console.error('Cloudinary Bulk Upload Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
