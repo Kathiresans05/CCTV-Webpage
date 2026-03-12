@@ -237,10 +237,10 @@ const ServiceBookingModal = ({ product, onClose }) => {
                         <button
                             onClick={handleSubmit}
                             disabled={status === 'loading' || !isFormValid}
-                            className={`px-10 py-4 rounded-xl font-bold text-sm transition-all flex items-center gap-3 ${
+                            className={`px-10 py-4 rounded-xl font-bold text-sm transition-all flex items-center gap-3 shadow-md ${
                                 status === 'loading' || !isFormValid
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#E2E8F0] text-gray-600 hover:bg-gray-300'
+                                : 'bg-[#0b0f1a] text-white hover:bg-black'
                             }`}
                         >
                             {status === 'loading' ? 'Processing...' : 'Confirm Booking'}

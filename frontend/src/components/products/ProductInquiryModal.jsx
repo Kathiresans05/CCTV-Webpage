@@ -179,7 +179,7 @@ const ProductInquiryModal = ({ product, onClose }) => {
                             {/* Submit */}
                             <button
                                 type="submit" disabled={status === 'loading'}
-                                className="w-full bg-[#B91C1C] hover:bg-red-800 disabled:opacity-70 text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors text-sm mt-2"
+                                className="w-full bg-[#0b0f1a] hover:bg-black shadow-md disabled:opacity-70 text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors text-sm mt-2"
                             >
                                 {status === 'loading' ? (
                                     <>
