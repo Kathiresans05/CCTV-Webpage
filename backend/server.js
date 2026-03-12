@@ -935,7 +935,9 @@ app.use((err, req, res, next) => {
 // Export app for Vercel serverless
 export default app;
 
-// Always listen on Render (and local dev). Only skip on Vercel serverless.
-if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
-}
+// Start server — always listen (Render needs this; Vercel ignores it as it uses export default)
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
+
+export { server };
