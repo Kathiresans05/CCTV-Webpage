@@ -492,14 +492,14 @@ const EmployeeDashboard = () => {
                                     onClick={() => handleAttendanceAction('checkin')} 
                                     className="zoho-btn-primary flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 text-xs tracking-widest"
                                 >
-                                    Check In
+                                    Login
                                 </button>
                             ) : !attendanceStatus.checkOut ? (
                                 <button 
                                     onClick={() => handleAttendanceAction('checkout')} 
                                     className="bg-primary-navy text-white flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-navy-900/20 text-xs font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
                                 >
-                                    Check Out
+                                    Logout
                                 </button>
                             ) : (
                                 <div className="bg-bg-soft text-text-muted px-8 py-3 rounded-xl border border-border-soft text-xs font-bold uppercase tracking-widest text-center flex-grow md:flex-initial">
@@ -669,7 +669,7 @@ const EmployeeDashboard = () => {
 
                         {/* Check In */}
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Check In</span>
+                            <span className="text-sm text-gray-500 font-medium">Login</span>
                             <span className="text-base font-semibold text-gray-900">{checkInTime}</span>
                         </div>
 
@@ -677,7 +677,7 @@ const EmployeeDashboard = () => {
 
                         {/* Check Out */}
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Check Out</span>
+                            <span className="text-sm text-gray-500 font-medium">Logout</span>
                             <span className="text-base font-semibold text-gray-900">{checkOutTime}</span>
                         </div>
 
@@ -697,11 +697,11 @@ const EmployeeDashboard = () => {
                                  onClick={() => handleAttendanceAction('checkin')}
                                  className="zoho-btn-secondary px-6 py-2.5 rounded-md text-sm font-semibold"
                              >
-                                 Check In
+                                 Login
                              </button>
                         ) : (
                             <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1.5">
-                                <CheckCircle2 size={14} /> Checked In
+                                <CheckCircle2 size={14} /> Logged In
                             </span>
                         )}
                         {isCheckedIn && !isCheckedOut && (
@@ -709,7 +709,7 @@ const EmployeeDashboard = () => {
                                 onClick={() => handleAttendanceAction('checkout')}
                                 className="bg-primary-navy text-white text-sm font-semibold px-5 py-2 rounded-md hover:opacity-90 transition-colors"
                             >
-                                Check Out
+                                Logout
                             </button>
                         )}
                         {isCheckedOut && (
@@ -731,8 +731,8 @@ const EmployeeDashboard = () => {
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
                                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Check In</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Check Out</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Login</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Logout</th>
                                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Working Hours</th>
                                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                                 </tr>
