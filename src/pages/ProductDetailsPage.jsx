@@ -136,8 +136,9 @@ const ProductDetailsPage = () => {
                             </div>
                             
                             {/* Zoom Instructions */}
-                            <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-500 font-medium pointer-events-none">
-                                Roll over image to zoom
+                            <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-400 font-medium pointer-events-none flex items-center gap-2">
+                                <span>Roll over image to zoom</span>
+                                <span className="opacity-0">v2-gallery-active</span>
                             </div>
                         </div>
                     </div>
