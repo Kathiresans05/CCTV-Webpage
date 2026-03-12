@@ -1788,8 +1788,8 @@ const AdminDashboard = () => {
             <main className="flex-grow flex flex-col overflow-hidden">
                 <header className="h-20 bg-white border-b border-border-soft flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div className="flex flex-col">
-                        <h2 className="crm-section-title capitalize">{activeTab.replace('-', ' ')}</h2>
-                        <span className="crm-label !text-[10px] mt-0.5">Operations Management Panel</span>
+                        <h2 className="text-2xl font-bold text-primary-navy capitalize tracking-tight" style={{fontFamily:"'Inter', sans-serif"}}>{activeTab.replace('-', ' ')}</h2>
+                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest mt-0.5" style={{fontFamily:"'Inter', sans-serif"}}>Operations Management Panel</span>
                     </div>
 
                     <div className="flex items-center gap-6">
