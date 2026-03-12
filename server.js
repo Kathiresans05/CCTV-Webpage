@@ -51,7 +51,8 @@ app.use('/uploads', express.static(uploadsDir));
 // Multer Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        const uploadPath = process.env.NODE_ENV === 'production' ? '/tmp' : 'uploads/';
+        cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
