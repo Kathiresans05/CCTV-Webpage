@@ -1232,7 +1232,7 @@ const AdminDashboard = () => {
                                                 }}
                                                 className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
                                             >
-                                                Configure
+                                                Update
                                             </button>
                                         </div>
                                     </td>
