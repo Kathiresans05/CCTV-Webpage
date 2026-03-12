@@ -7,10 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies (root, frontend, backend)
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build output
+dist/
+dist-ssr/
+frontend/dist/
 *.local
+
+# Temp files
+*.bak
+vite.config.js.timestamp-*
 
 # Editor directories and files
 .vscode/*
@@ -25,6 +35,15 @@ dist-ssr
 
 # Uploads
 uploads/
+backend/uploads/
+
+# Environment Variables
+.env
+.env.local
+backend/.env
+
+# Vercel
+.vercel
 
 # Scratch scripts
 check_products.js
@@ -33,9 +52,3 @@ check_db_users.js
 reset_passwords.js
 debug_employee_auth.js
 seeder.js
-
-.vercel
-
-# Environment Variables
-.env
-.env.local
