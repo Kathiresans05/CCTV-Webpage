@@ -81,7 +81,7 @@ const EmployeeDashboard = () => {
     // Modal state for job completion
     const [showProofModal, setShowProofModal] = useState(false);
     const [selectedJob, setSelectedJob] = useState(null);
-    const [proofForm, setProofForm] = useState({ photo: '', notes: '' });
+    const [proofForm, setProofForm] = useState({ photos: [], notes: '' });
     const [previewUrl, setPreviewUrl] = useState(null);
 
     // Leave Modal State
@@ -95,23 +95,28 @@ const EmployeeDashboard = () => {
     const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
 
     const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
+        const files = Array.from(e.target.files);
+        if (proofForm.photos.length + files.length > 6) {
+            toast.error('Maximum 6 images allowed');
+            return;
+        }
+        files.forEach(file => {
             if (!file.type.startsWith('image/')) {
-                toast.error('Please select a valid image file (JPG, PNG, etc.)');
+                toast.error(`${file.name} is not a valid image`);
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
-                toast.error('Image size should be less than 5MB');
+                toast.error(`${file.name} exceeds 5MB limit`);
                 return;
             }
             const reader = new FileReader();
             reader.onloadend = () => {
-                setProofForm({ ...proofForm, photo: reader.result });
-                setPreviewUrl(reader.result);
+                setProofForm(prev => ({ ...prev, photos: [...prev.photos, reader.result] }));
             };
             reader.readAsDataURL(file);
-        }
+        });
+        // Reset input so same file can be re-selected
+        e.target.value = '';
     };
 
     useEffect(() => {
@@ -163,7 +168,7 @@ const EmployeeDashboard = () => {
             if (data.success) {
                 if (action === 'complete') {
                     setShowProofModal(false);
-                    setProofForm({ photo: '', notes: '' });
+                    setProofForm({ photos: [], notes: '' });
                     setPreviewUrl(null);
                 }
                 fetchData();
@@ -1065,62 +1070,57 @@ const EmployeeDashboard = () => {
                             <button onClick={() => {
                                 setShowProofModal(false);
                                 setPreviewUrl(null);
-                                setProofForm({ photo: '', notes: '' });
+                                setProofForm({ photos: [], notes: '' });
                             }} className="p-2.5 hover:bg-bg-soft rounded-xl text-text-muted transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
 
                         <div className="space-y-6">
+                            {/* Upload trigger zone */}
                             <div 
-                                onClick={() => document.getElementById('proof-upload').click()}
-                                className={`p-6 bg-bg-soft rounded-2xl border-2 border-dashed transition-all text-center group cursor-pointer relative overflow-hidden h-48 flex flex-col items-center justify-center ${previewUrl ? 'border-emerald-500' : 'border-border-soft hover:border-primary-red/30'}`}
+                                onClick={() => proofForm.photos.length < 6 && document.getElementById('proof-upload').click()}
+                                className={`p-6 bg-bg-soft rounded-2xl border-2 border-dashed transition-all text-center group cursor-pointer flex flex-col items-center justify-center py-8 ${
+                                    proofForm.photos.length >= 6 ? 'opacity-50 cursor-not-allowed border-border-soft' : 'border-border-soft hover:border-primary-red/30'
+                                }`}
                             >
-                                {previewUrl ? (
-                                    <div className="absolute inset-0 w-full h-full">
-                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <p className="text-white text-[10px] font-bold uppercase tracking-widest">Change Media</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                            <Camera size={24} className="text-primary-red" />
-                                        </div>
-                                        <p className="text-[10px] font-bold text-primary-navy uppercase tracking-widest">Transmit Site Media</p>
-                                        <p className="text-[9px] text-text-muted mt-2 font-medium">Click to select installation completion photo</p>
-                                    </>
-                                )}
+                                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform">
+                                    <Camera size={24} className="text-primary-red" />
+                                </div>
+                                <p className="text-[10px] font-bold text-primary-navy uppercase tracking-widest">Transmit Site Media</p>
+                                <p className="text-[9px] text-text-muted mt-1.5 font-medium">
+                                    {proofForm.photos.length > 0
+                                        ? `${proofForm.photos.length}/6 photos selected — click to add more`
+                                        : 'Click to select up to 6 installation photos'
+                                    }
+                                </p>
                                 <input 
                                     id="proof-upload"
                                     type="file" 
                                     accept="image/*"
+                                    multiple
                                     className="hidden"
                                     onChange={handleImageChange}
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Installation Proof</label>
-                                <div className="zoho-input py-4 text-xs font-medium bg-bg-soft border border-border-soft rounded-xl flex items-center justify-between px-4">
-                                    <span className="text-text-muted">
-                                        {previewUrl ? 'Image Selected ✓' : 'No image chosen'}
-                                    </span>
-                                    {previewUrl && (
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setPreviewUrl(null);
-                                                setProofForm({ ...proofForm, photo: '' });
-                                            }}
-                                            className="text-primary-red font-bold text-[10px] uppercase hover:underline"
-                                        >
-                                            Remove
-                                        </button>
-                                    )}
+                            {/* Image previews grid */}
+                            {proofForm.photos.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {proofForm.photos.map((photo, idx) => (
+                                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-border-soft aspect-square">
+                                            <img src={photo} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => setProofForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
+                                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                                            >
+                                                ×
+                                            </button>
+                                            <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">{idx + 1}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Terminal Report</label>
@@ -1137,15 +1137,15 @@ const EmployeeDashboard = () => {
                                     onClick={() => {
                                         setShowProofModal(false);
                                         setPreviewUrl(null);
-                                        setProofForm({ photo: '', notes: '' });
+                                        setProofForm({ photos: [], notes: '' });
                                     }}
                                     className="flex-1 px-6 py-3.5 rounded-xl border border-border-soft text-text-muted font-bold uppercase text-[10px] tracking-widest hover:bg-bg-soft transition-all"
                                 >
                                     Abort
                                 </button>
                                 <button 
-                                    disabled={!proofForm.photo}
-                                    onClick={() => handleJobAction(selectedJob.bookingId, 'complete', { proofPhoto: proofForm.photo, workNotes: proofForm.notes })}
+                                    disabled={proofForm.photos.length === 0}
+                                    onClick={() => handleJobAction(selectedJob.bookingId, 'complete', { proofPhoto: proofForm.photos[0], proofPhotos: proofForm.photos, workNotes: proofForm.notes })}
                                     className="flex-1 zoho-btn-primary py-3.5 text-[10px] rounded-xl shadow-lg shadow-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Finalize Work

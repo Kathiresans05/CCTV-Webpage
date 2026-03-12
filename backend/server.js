@@ -863,12 +863,13 @@ app.patch('/api/bookings/:id/start', protect, async (req, res) => {
 // Complete Job
 app.patch('/api/bookings/:id/complete', protect, async (req, res) => {
     try {
-        const { proofPhoto, workNotes } = req.body;
+        const { proofPhoto, proofPhotos, workNotes } = req.body;
         const booking = await Booking.findOne({ bookingId: req.params.id });
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
         
         booking.status = 'Completed';
-        booking.proofPhoto = proofPhoto;
+        booking.proofPhoto = proofPhoto || (proofPhotos && proofPhotos[0]);
+        booking.proofPhotos = proofPhotos || (proofPhoto ? [proofPhoto] : []);
         booking.workNotes = workNotes;
         booking.completedAt = Date.now();
         await booking.save();

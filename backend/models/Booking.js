@@ -66,6 +66,7 @@ const bookingSchema = mongoose.Schema({
     startedAt: Date,
     completedAt: Date,
     proofPhoto: String,
+    proofPhotos: [String],
     workNotes: String
 }, {
     timestamps: true
