@@ -121,9 +121,6 @@ const Hero = () => {
                                 <p className={`text-base md:text-lg md:leading-relaxed mb-6 max-w-2xl font-medium drop-shadow-sm ${slide.theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                                     {slide.desc}
                                 </p>
-                                <button className={`px-6 py-2.5 rounded font-bold uppercase tracking-wider text-sm shadow-xl transition-transform hover:-translate-y-1 ${slide.theme === 'dark' ? 'bg-primary-red hover:bg-opacity-90 text-white' : 'bg-primary-navy hover:bg-primary-red text-white'}`}>
-                                    {slide.buttonText}
-                                </button>
                             </div>
 
                             {/* Optional side image for 'split' layout */}
