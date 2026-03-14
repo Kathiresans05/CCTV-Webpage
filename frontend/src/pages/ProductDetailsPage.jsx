@@ -1,17 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Home, ChevronRight, CheckCircle2, Truck, ShieldCheck, PenTool, Smartphone, PlayCircle } from 'lucide-react';
 import ServiceBookingModal from '../components/products/ServiceBookingModal';
+import { useAuth } from '../context/AuthContext';
+
+// Import newly generated assets for the gallery
+import bullet1 from '../assets/bullet_1.png';
+import bullet2 from '../assets/bullet_2.png';
+import bullet3 from '../assets/bullet_3.png';
+import bullet4 from '../assets/bullet_4.png';
+import dome1 from '../assets/dome_1.png';
+import dome2 from '../assets/dome_2.png';
+import dome3 from '../assets/dome_3.png';
+import dome4 from '../assets/dome_4.png';
+import bulletDefault from '../assets/bullet_camera.png';
+import domeDefault from '../assets/dome_camera.png';
+import ptzDefault from '../assets/ptz_camera.png';
+
+const IMAGE_MAP = {
+    bullet_1: bullet1, bullet_2: bullet2, bullet_3: bullet3, bullet_4: bullet4,
+    dome_1: dome1, dome_2: dome2, dome_3: dome3, dome_4: dome4,
+    bullet_camera: bulletDefault, dome_camera: domeDefault, ptz_camera: ptzDefault
+};
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-    const [activeImage, setActiveImage] = useState(null);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [isZoomed, setIsZoomed] = useState(false);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setIsBookingModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (isAuthenticated && product) {
+            const pendingAction = sessionStorage.getItem('pendingAction');
+            if (pendingAction === 'bookNow') {
+                const returnUrl = sessionStorage.getItem('returnUrl');
+                if (returnUrl === window.location.pathname + window.location.search) {
+                    setIsBookingModalOpen(true);
+                    sessionStorage.removeItem('pendingAction');
+                    sessionStorage.removeItem('pendingProduct');
+                    sessionStorage.removeItem('returnUrl');
+                }
+            }
+        }
+    }, [isAuthenticated, product]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -19,8 +67,19 @@ const ProductDetailsPage = () => {
                 const res = await fetch(`/api/products/${id}`);
                 const data = await res.json();
                 if (data.success) {
-                    setProduct(data.data);
-                    setActiveImage(data.data.productImages?.[0] || data.data.image);
+                    const resolvedProduct = {
+                        ...data.data,
+                        image: (data.data.image && (data.data.image.startsWith('http') || data.data.image.startsWith('/uploads'))) 
+                            ? data.data.image 
+                            : (IMAGE_MAP[data.data.image] || bulletDefault),
+                        productImages: (data.data.productImages || []).map(img => 
+                            (img && (img.startsWith('http') || img.startsWith('/uploads'))) 
+                                ? img 
+                                : (IMAGE_MAP[img] || img)
+                        )
+                    };
+                    setProduct(resolvedProduct);
+                    setActiveImageIndex(0);
                 } else {
                     setError('Product not found');
                 }
@@ -60,9 +119,9 @@ const ProductDetailsPage = () => {
         );
     }
 
-    const images = product.productImages && product.productImages.length > 0 
+    const images = (product.productImages && product.productImages.length > 0 
         ? product.productImages 
-        : [product.image];
+        : [product.image]).filter((url, index, self) => self.indexOf(url) === index);
 
     return (
         <div className="min-h-screen bg-[#F5F7FA] pb-24">
@@ -95,9 +154,9 @@ const ProductDetailsPage = () => {
                             {images.map((img, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => setActiveImage(img)}
+                                    onClick={() => setActiveImageIndex(idx)}
                                     className={`w-16 h-16 md:w-20 md:h-24 rounded-xl overflow-hidden border-2 transition-all p-1 bg-gray-50 flex-shrink-0 ${
-                                        activeImage === img ? 'border-primary-red ring-4 ring-red-50' : 'border-gray-100 hover:border-gray-300'
+                                        activeImageIndex === idx ? 'border-primary-red ring-4 ring-red-50' : 'border-gray-100 hover:border-gray-300'
                                     }`}
                                 >
                                     <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain" />
@@ -118,7 +177,7 @@ const ProductDetailsPage = () => {
                                 onMouseMove={handleMouseMove}
                             >
                                 <img 
-                                    src={activeImage} 
+                                    src={images[activeImageIndex]} 
                                     alt={product.name} 
                                     className={`max-h-[450px] w-auto object-contain transition-transform duration-300 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
                                 />
@@ -127,7 +186,7 @@ const ProductDetailsPage = () => {
                                     <div 
                                         className="absolute inset-0 pointer-events-none z-20"
                                         style={{
-                                            backgroundImage: `url(${activeImage})`,
+                                            backgroundImage: `url(${images[activeImageIndex]})`,
                                             backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
                                             backgroundSize: '250%',
                                             backgroundRepeat: 'no-repeat'
@@ -178,7 +237,16 @@ const ProductDetailsPage = () => {
 
                         <div className="mt-auto space-y-4">
                             <button 
-                                onClick={() => setIsBookingModalOpen(true)}
+                                onClick={() => {
+                                    if (!isAuthenticated) {
+                                        sessionStorage.setItem('pendingAction', 'bookNow');
+                                        sessionStorage.setItem('returnUrl', window.location.pathname + window.location.search);
+                                        sessionStorage.setItem('pendingProduct', JSON.stringify(product));
+                                        navigate('/signup');
+                                    } else {
+                                        setIsBookingModalOpen(true);
+                                    }
+                                }}
                                 className="w-full bg-primary-red hover:bg-red-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg transform hover:-translate-y-1 flex justify-center items-center group"
                             >
                                 Book Installation Now

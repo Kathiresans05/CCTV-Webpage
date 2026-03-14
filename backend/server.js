@@ -145,6 +145,43 @@ app.get('/api/auth/me', protect, async (req, res) => {
     res.json({ success: true, user: req.user });
 });
 
+// Update user profile
+app.put('/api/auth/profile', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.phone = req.body.phone || user.phone;
+            user.address = req.body.address || user.address;
+
+            // Optional: update password if provided
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+
+            const updatedUser = await user.save();
+
+            res.json({
+                success: true,
+                user: {
+                    id: updatedUser._id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    phone: updatedUser.phone,
+                    role: updatedUser.role,
+                    address: updatedUser.address
+                },
+                token: generateToken(updatedUser._id)
+            });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ─────────────────────────────────────────────
 // API: Products & Stock
 // ─────────────────────────────────────────────
@@ -167,7 +204,11 @@ app.get('/api/products', async (req, res) => {
             quantity: s.quantity,
             reorderLevel: s.reorderLevel,
             status: s.status,
-            productImages: s.productImages && s.productImages.length > 0 ? s.productImages : [s.productImage || 'bullet_camera']
+            productImages: s.productImages && s.productImages.length > 0 
+                ? s.productImages 
+                : (s.category === 'Dome Camera' 
+                    ? ['dome_1', 'dome_2', 'dome_3', 'dome_4'] 
+                    : ['bullet_1', 'bullet_2', 'bullet_3', 'bullet_4'])
         }));
         res.json({ success: true, data: products });
     } catch (error) {
@@ -195,7 +236,11 @@ app.get('/api/products/:id', async (req, res) => {
             quantity: s.quantity,
             reorderLevel: s.reorderLevel,
             status: s.status,
-            productImages: s.productImages && s.productImages.length > 0 ? s.productImages : [s.productImage || 'bullet_camera'],
+            productImages: s.productImages && s.productImages.length > 0 
+                ? s.productImages 
+                : (s.category === 'Dome Camera' 
+                    ? ['dome_1', 'dome_2', 'dome_3', 'dome_4'] 
+                    : ['bullet_1', 'bullet_2', 'bullet_3', 'bullet_4']),
             // Mocking specifications and video for now as they are not in the database schema
             specs: s.specs || ['4K Ultra HD', 'Night Vision Up to 30m', 'Mobile App Integration', '360° Coverage', 'Vandal Proof Design', 'Cloud & Local Recording'],
             videoUrl: s.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ' // Using a placeholder video, realistically would be a real CCTV demo
@@ -562,7 +607,8 @@ app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
 
 app.get('/api/attendance/status', protect, employee, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
         res.json({ success: true, data: attendance });
     } catch (error) {
@@ -572,18 +618,18 @@ app.get('/api/attendance/status', protect, employee, async (req, res) => {
 
 app.post('/api/attendance/checkin', protect, employee, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         let attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
 
-        if (attendance) {
-            return res.status(400).json({ success: false, message: 'Already checked in today' });
+        // If today's attendance already exists, reuse it instead of throwing an error
+        if (!attendance) {
+            attendance = await Attendance.create({
+                employeeId: req.user._id,
+                date: today,
+                checkIn: Date.now()
+            });
         }
-
-        attendance = await Attendance.create({
-            employeeId: req.user._id,
-            date: today,
-            checkIn: Date.now()
-        });
 
         res.json({ success: true, data: attendance });
     } catch (error) {
@@ -593,12 +639,13 @@ app.post('/api/attendance/checkin', protect, employee, async (req, res) => {
 
 app.post('/api/attendance/checkout', protect, employee, async (req, res) => {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         let attendance = await Attendance.findOne({ employeeId: req.user._id, date: today });
 
         if (!attendance) return res.status(400).json({ success: false, message: 'No check-in found for today' });
-        if (attendance.checkOut) return res.status(400).json({ success: false, message: 'Already checked out today' });
 
+        // Allow multiple checkouts by overwriting the checkOut time and recalculating
         attendance.checkOut = Date.now();
         const diff = (attendance.checkOut - attendance.checkIn) / (1000 * 60 * 60);
         attendance.totalHours = diff.toFixed(2);
@@ -931,6 +978,31 @@ app.post('/api/notifications/read-all', protect, async (req, res) => {
         await Notification.updateMany(query, { isRead: true });
         res.json({ success: true, message: 'All notifications marked as read' });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.patch('/api/notifications/:id/read', protect, async (req, res) => {
+    try {
+        console.log(`Marking notification ${req.params.id} as read for user ${req.user._id}`);
+        const notification = await Notification.findById(req.params.id);
+        if (!notification) {
+            console.log(`Notification ${req.params.id} not found`);
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        }
+
+        // Verify ownership (optional but recommended)
+        if (req.user.role !== 'admin' && notification.userId && notification.userId.toString() !== req.user._id.toString()) {
+            console.log(`Unauthorized attempt to read notification ${req.params.id} by user ${req.user._id}`);
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        notification.isRead = true;
+        await notification.save();
+        console.log(`Notification ${req.params.id} marked as read`);
+        res.json({ success: true, data: notification });
+    } catch (error) {
+        console.error('Read notification error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

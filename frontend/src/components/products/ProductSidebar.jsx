@@ -15,7 +15,6 @@ const ProductSidebar = ({
     const [openSections, setOpenSections] = useState({
         categories: true,
         price: true,
-        tags: true,
     });
 
     const toggleSection = (section) => {
@@ -27,7 +26,6 @@ const ProductSidebar = ({
         count: categoryCounts[catName]
     }));
 
-    const tags = ["4K UHD", "Night Vision", "AI Motion", "Solar Powered", "Weatherproof", "Smart Tracking", "Two-Way Audio", "Face Recognition"];
 
     const handleCategoryToggle = (categoryName) => {
         setSelectedCategories(prev =>
@@ -103,29 +101,6 @@ const ProductSidebar = ({
             </div>
 
 
-
-            {/* Product Tags */}
-            <div className="bg-[#ffffff] p-4 border-y border-r border-gray-200 shadow-sm">
-                <div
-                    className="flex justify-between items-center cursor-pointer mb-3"
-                    onClick={() => toggleSection('tags')}
-                >
-                    <h3 className="text-[14px] font-bold text-gray-800 uppercase tracking-wider">Tags</h3>
-                    {openSections.tags ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-                {openSections.tags && (
-                    <div className="flex flex-wrap gap-1.5">
-                        {tags.map((tag) => (
-                            <button
-                                key={tag}
-                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded text-[11px] text-gray-700 transition-all font-bold"
-                            >
-                                {tag}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
         </aside>
     );
 };

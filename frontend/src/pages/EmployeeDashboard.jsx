@@ -66,8 +66,28 @@ const EmployeeDashboard = () => {
 
     const handleTabChange = (tabId) => {
         setActiveTab(tabId);
+        // Clear all overlays/modals on tab change
+        setShowNotificationsDropdown(false);
+        setShowProofModal(false);
+        setShowImageViewer(false);
+        setShowLeaveModal(false);
+        setSelectedJob(null);
         navigate(tabToPath[tabId]);
     };
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setShowNotificationsDropdown(false);
+                setShowProofModal(false);
+                setShowImageViewer(false);
+                setShowLeaveModal(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const [jobs, setJobs] = useState([]);
     const [attendanceStatus, setAttendanceStatus] = useState(null);
@@ -80,8 +100,11 @@ const EmployeeDashboard = () => {
     
     // Modal state for job completion
     const [showProofModal, setShowProofModal] = useState(false);
+    const [showImageViewer, setShowImageViewer] = useState(false);
+    const [viewerImageUrl, setViewerImageUrl] = useState(null);
     const [selectedJob, setSelectedJob] = useState(null);
-    const [proofForm, setProofForm] = useState({ photos: [], notes: '' });
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [previewUrl, setPreviewUrl] = useState(null);
 
     // Leave Modal State
@@ -125,8 +148,8 @@ const EmployeeDashboard = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
             const [jRes, aRes, hRes, nRes, lRes] = await Promise.all([
@@ -148,9 +171,8 @@ const EmployeeDashboard = () => {
             if (lData.success) setLeaves(lData.data);
         } catch (error) {
             console.error('Error fetching employee data:', error);
-            // Non-blocking error for initial fetch
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -182,14 +204,51 @@ const EmployeeDashboard = () => {
     };
 
     const markAllAsRead = async () => {
+        // Optimistic update
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         try {
             await fetch('/api/notifications/read-all', { 
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            fetchData();
+            fetchData(true); // Silent refresh
         } catch (error) {
             console.error('Error marking notifications as read:', error);
+            fetchData(true); // Re-sync on error
+        }
+    };
+
+    const markAsRead = async (id) => {
+        toast.loading('Acknowledging...', { id: 'read-notification' });
+        // Optimistic update
+        setNotifications(prev => prev.map(n => String(n._id) === String(id) ? { ...n, isRead: true } : n));
+        try {
+            const res = await fetch(`/api/notifications/${id}/read`, {
+                method: 'PATCH',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error(`Failed to parse JSON for notification ${id}. Response was:`, text.substring(0, 200));
+                throw new Error('Server returned invalid JSON response');
+            }
+            if (data.success && data.data) {
+                setNotifications(prev => prev.map(n => String(n._id) === String(id) ? data.data : n));
+                toast.success('Notification acknowledged', { id: 'read-notification' });
+            } else {
+                toast.error(data.message || 'Update failed', { id: 'read-notification' });
+                fetchData(true);
+            }
+        } catch (error) {
+            console.error('RAW Error marking notification as read:', error);
+            toast.error(`Connection error: ${error.message}`, { id: 'read-notification' });
+            fetchData(true);
         }
     };
 
@@ -408,7 +467,7 @@ const EmployeeDashboard = () => {
                             <button 
                                 type="submit"
                                 disabled={isSubmittingLeave}
-                                className="zoho-btn-primary flex-grow py-3 text-xs tracking-widest shadow-lg shadow-red-900/20"
+                                className="zoho-btn-primary flex-grow py-3 text-xs tracking-widest"
                             >
                                 {isSubmittingLeave ? 'Transmitting...' : 'Submit Request'}
                             </button>
@@ -457,72 +516,13 @@ const EmployeeDashboard = () => {
         return (
             <div className="space-y-8 animate-in fade-in duration-500">
                 {/* 1. Tasks & Alerts - Priority Row 1 */}
-                <div>
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Clock size={14} className="text-primary-navy/40" /> Tasks & Alerts
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                        {kpis.assets.map((stat, i) => renderKpiCard(stat, i))}
-                    </div>
-                </div>
-
-                {/* 2. Attendance Center - Full Width Row 2 */}
-                <div>
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <UserCheck size={14} className="text-primary-navy/40" /> Attendance Command Center
-                    </h4>
-                    <div className="bg-white border border-border-soft rounded-2xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-6">
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${attendanceStatus ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary-red/10 text-primary-red'}`}>
-                                <Clock size={28} />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-bold text-primary-navy">
-                                        {attendanceStatus ? 'Shift Active' : 'Off Duty'}
-                                    </h3>
-                                    <span className="text-[10px] font-black text-white bg-primary-navy px-2 py-0.5 rounded-full tracking-wider uppercase">
-                                        Today
-                                    </span>
-                                </div>
-                                <p className="text-xs text-text-muted font-medium mt-1">
-                                    {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 w-full md:w-auto">
-                            {!attendanceStatus ? (
-                                <button 
-                                    onClick={() => handleAttendanceAction('checkin')} 
-                                    className="zoho-btn-secondary flex-grow md:flex-initial px-8 py-3 rounded-xl text-xs tracking-widest"
-                                >
-                                    Login
-                                </button>
-                            ) : !attendanceStatus.checkOut ? (
-                                <button 
-                                    onClick={() => handleAttendanceAction('checkout')} 
-                                    className="bg-primary-navy text-white flex-grow md:flex-initial px-8 py-3 rounded-xl shadow-lg shadow-navy-900/20 text-xs font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
-                                >
-                                    Logout
-                                </button>
-                            ) : (
-                                <div className="bg-bg-soft text-text-muted px-8 py-3 rounded-xl border border-border-soft text-xs font-bold uppercase tracking-widest text-center flex-grow md:flex-initial">
-                                    Duty Completed
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {kpis.assets.map((stat, i) => renderKpiCard(stat, i))}
                 </div>
 
                 {/* 3. Operations Summary - Row 3 */}
-                <div>
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Briefcase size={14} className="text-primary-navy/40" /> Operations Registry
-                    </h4>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                        {kpis.operations.map((stat, i) => renderKpiCard(stat, i))}
-                    </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                    {kpis.operations.map((stat, i) => renderKpiCard(stat, i))}
                 </div>
             </div>
         );
@@ -537,10 +537,10 @@ const EmployeeDashboard = () => {
                         <tr>
                             <th className="px-6 py-4">Registry ID</th>
                             <th className="px-6 py-4">Client Detail</th>
-                            <th className="px-6 py-4">Hardware Profile</th>
+                            <th className="px-6 py-4">PRODUCT</th>
                             <th className="px-6 py-4">Timeline</th>
-                            <th className="px-6 py-4 text-center">Operational State</th>
-                            {showActions && <th className="px-6 py-4 text-right">Directives</th>}
+                            <th className="px-6 py-4 text-center">STATUS</th>
+                            {showActions && <th className="px-6 py-4 text-right">CURRENT STATUS</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border-soft">
@@ -584,28 +584,44 @@ const EmployeeDashboard = () => {
                                                         onClick={() => handleJobAction(j.bookingId, 'accept')}
                                                         className="zoho-btn-secondary px-6 py-3 text-[10px] rounded-xl"
                                                     >
-                                                        Accept Directive
+                                                        YET TO START
                                                     </button>
                                                 </div>
                                             )}
                                             {j.status === 'Accepted' && (
-                                                <button 
-                                                    onClick={() => handleJobAction(j.bookingId, 'start')}
-                                                    className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all shadow-lg shadow-navy-900/10"
-                                                >
-                                                    Init Execution
-                                                </button>
+                                                    <button 
+                                                        onClick={() => handleJobAction(j.bookingId, 'start')}
+                                                        className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
+                                                    >
+                                                        START WORK
+                                                    </button>
                                             )}
                                             {j.status === 'In Progress' && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setSelectedJob(j);
-                                                        setShowProofModal(true);
-                                                    }}
-                                                    className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/10 flex items-center gap-2 ml-auto"
-                                                >
-                                                    <Camera size={12} /> Finalize Work
-                                                </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setSelectedJob(j);
+                                                            setShowProofModal(true);
+                                                        }}
+                                                        className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 ml-auto"
+                                                    >
+                                                        <Camera size={12} /> UPLOAD IMAGE
+                                                    </button>
+                                            )}
+                                            {j.status === 'Completed' && j.proofPhoto && (
+                                                <div className="flex justify-end">
+                                                    <div 
+                                                        onClick={() => {
+                                                            setViewerImageUrl(j.proofPhoto);
+                                                            setShowImageViewer(true);
+                                                        }}
+                                                        className="w-12 h-12 rounded-lg overflow-hidden border border-border-soft cursor-pointer hover:border-primary-red/50 transition-all shadow-sm group relative"
+                                                    >
+                                                        <img src={j.proofPhoto} alt="Work Proof" className="w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <Camera size={14} className="text-white" />
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )}
                                         </td>
                                     )}
@@ -643,136 +659,110 @@ const EmployeeDashboard = () => {
         const isCheckedIn = !!attendanceStatus;
         const isCheckedOut = !!attendanceStatus?.checkOut;
 
+        // Generate days for the selected month
+        const today = new Date();
+        const curYear = today.getFullYear();
+        const curMonth = today.getMonth();
+        const curDay = today.getDate();
+
+        let endDay;
+        if (selectedYear < curYear || (selectedYear === curYear && selectedMonth < curMonth)) {
+            // Past month - show full month
+            endDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        } else if (selectedYear === curYear && selectedMonth === curMonth) {
+            // Current month - show up to today
+            endDay = curDay;
+        } else {
+            // Future month - show nothing
+            endDay = 0;
+        }
+
+        const monthDays = [];
+        for (let i = 1; i <= endDay; i++) {
+            const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const date = new Date(selectedYear, selectedMonth, i);
+            
+            // Find record in history
+            const record = attendanceHistory.find(h => h.date === dateStr);
+            
+            let status = 'Absent';
+            if (record) {
+                if (record.checkIn && !record.checkOut) status = 'Active / Open Shift';
+                else if (record.checkIn) status = 'Present';
+            }
+
+            monthDays.push({
+                date: dateStr,
+                displayDate: date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                checkIn: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                checkOut: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                totalHours: record?.totalHours ? `${Number(record.totalHours).toFixed(1)} hrs` : '—',
+                status: status,
+                _id: record?._id || `absent-${dateStr}`
+            });
+        }
+
+        const months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
         return (
-            <div className="space-y-4 animate-in fade-in duration-300">
-
-                {/* Page Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="crm-page-title">Attendance</h2>
-                        <p className="crm-body text-sm mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    </div>
-                </div>
-
-                {/* Horizontal Summary Bar */}
-                <div className="bg-white border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 shadow-sm">
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                        {/* Status */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Status</span>
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-sm font-semibold ${
-                                !isCheckedIn ? 'bg-gray-100 text-gray-600' :
-                                !isCheckedOut ? 'bg-green-100 text-green-700' :
-                                'bg-blue-100 text-blue-700'
-                            }`}>
-                                <span className={`w-2 h-2 rounded-full ${!isCheckedIn ? 'bg-gray-400' : !isCheckedOut ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-                                {!isCheckedIn ? 'Not Started' : !isCheckedOut ? 'Active' : 'Completed'}
-                            </span>
-                        </div>
-
-                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
-
-                        {/* Check In */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Login</span>
-                            <span className="text-base font-semibold text-gray-900">{checkInTime}</span>
-                        </div>
-
-                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
-
-                        {/* Check Out */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Logout</span>
-                            <span className="text-base font-semibold text-gray-900">{checkOutTime}</span>
-                        </div>
-
-                        <div className="w-px h-4 bg-gray-200 hidden sm:block" />
-
-                        {/* Working Hours */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500 font-medium">Working Hours</span>
-                            <span className="text-base font-semibold text-gray-900">{totalHours}</span>
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        {!isCheckedIn ? (
-                             <button
-                                 onClick={() => handleAttendanceAction('checkin')}
-                                 className="zoho-btn-secondary px-6 py-2.5 rounded-md text-sm font-semibold"
-                             >
-                                 Login
-                             </button>
-                        ) : (
-                            <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1.5 rounded border border-green-200 flex items-center gap-1.5">
-                                <CheckCircle2 size={14} /> Logged In
-                            </span>
-                        )}
-                        {isCheckedIn && !isCheckedOut && (
-                            <button
-                                onClick={() => handleAttendanceAction('checkout')}
-                                className="bg-primary-navy text-white text-sm font-semibold px-5 py-2 rounded-md hover:opacity-90 transition-colors"
-                            >
-                                Logout
-                            </button>
-                        )}
-                        {isCheckedOut && (
-                            <span className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1.5 rounded border border-blue-200 flex items-center gap-1.5">
-                                <CheckCircle2 size={14} /> Shift Done
-                            </span>
-                        )}
+            <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-border-soft shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <select 
+                            value={selectedMonth} 
+                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                            className="zoho-input py-2 text-xs font-bold"
+                        >
+                            {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                        </select>
+                        <select 
+                            value={selectedYear} 
+                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                            className="zoho-input py-2 text-xs font-bold"
+                        >
+                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
                     </div>
                 </div>
 
                 {/* Attendance History Table */}
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                    <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">Attendance History</h3>
-                        <span className="text-sm text-gray-400 font-medium">{attendanceHistory.length} records</span>
-                    </div>
+                <div className="zoho-card overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Login</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Logout</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Working Hours</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <table className="zoho-table">
+                            <thead className="zoho-table-header">
+                                <tr>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">Login</th>
+                                    <th className="px-6 py-4">Logout</th>
+                                    <th className="px-6 py-4">Working Hours</th>
+                                    <th className="px-6 py-4 text-center">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {attendanceHistory.map((h, idx) => (
-                                    <tr key={h._id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/30'}`}>
-                                        <td className="px-5 py-3 text-sm font-medium text-gray-800">{h.date}</td>
-                                        <td className="px-5 py-3 text-sm text-gray-600">
-                                            {h.checkIn ? new Date(h.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                            <tbody className="divide-y divide-border-soft">
+                                {monthDays.reverse().map((h) => (
+                                    <tr key={h._id} className="hover:bg-bg-soft/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <span className="text-xs font-bold text-primary-navy">{h.displayDate}</span>
                                         </td>
-                                        <td className="px-5 py-3 text-sm text-gray-600">
-                                            {h.checkOut ? new Date(h.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                        <td className="px-6 py-4 text-xs font-medium text-text-dark">{h.checkIn}</td>
+                                        <td className="px-6 py-4 text-xs font-medium text-text-dark">{h.checkOut}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-xs font-bold text-primary-navy">{h.totalHours}</span>
                                         </td>
-                                        <td className="px-5 py-3 text-sm text-gray-600">
-                                            {h.totalHours ? `${Number(h.totalHours).toFixed(1)} hrs` : '—'}
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
-                                                h.status === 'Present' ? 'bg-green-100 text-green-700' :
-                                                h.status === 'Half-Day' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-red-100 text-red-600'
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`status-chip ${
+                                                h.status === 'Present' ? 'bg-emerald-100 text-emerald-700' :
+                                                h.status === 'Active / Open Shift' ? 'bg-amber-100 text-amber-700 font-bold animate-pulse' :
+                                                'bg-rose-50 text-rose-500 opacity-60'
                                             }`}>
                                                 {h.status}
                                             </span>
                                         </td>
                                     </tr>
                                 ))}
-                                {attendanceHistory.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-xs text-gray-400">
-                                            No attendance records found
-                                        </td>
-                                    </tr>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -783,17 +773,15 @@ const EmployeeDashboard = () => {
 
     const renderNotifications = () => (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
-             <div className="flex justify-between items-center mb-6">
-                 <div>
-                    <h3 className="crm-section-title flex items-center gap-3">
-                        <Bell size={24} className="text-primary-red" />
-                        Intelligence Bulletins
-                    </h3>
-                 </div>
+              <div className="flex justify-end items-center mb-6">
                   <button onClick={markAllAsRead} className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-xs">Acknowledge All</button>
-             </div>
+              </div>
             {notifications.length > 0 ? notifications.map(n => (
-                <div key={n._id} className={`zoho-card p-6 flex gap-6 items-start group hover:border-primary-red/30 transition-all ${!n.isRead ? 'border-primary-navy/20 bg-primary-navy/5' : ''}`}>
+                <div 
+                    key={n._id} 
+                    onClick={() => !n.isRead && markAsRead(n._id)}
+                    className={`zoho-card p-6 flex gap-6 items-start group hover:border-primary-red/30 transition-all cursor-pointer ${!n.isRead ? 'border-primary-navy/20 bg-primary-navy/5' : ''}`}
+                >
                     <div className="w-14 h-14 rounded-2xl bg-bg-soft flex items-center justify-center text-text-muted group-hover:bg-primary-red/5 group-hover:text-primary-red transition-all border border-border-soft">
                         <Bell size={22} />
                     </div>
@@ -833,7 +821,6 @@ const EmployeeDashboard = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <h3 className="text-2xl font-bold text-primary-navy tracking-tight">{user?.name}</h3>
-                            <p className="text-[10px] text-primary-red font-bold uppercase tracking-widest mt-1">Field Intelligence Technician</p>
                         </div>
                         <div className="status-chip bg-emerald-100 text-emerald-700">ACTIVE SERVICE</div>
                     </div>
@@ -892,10 +879,10 @@ const EmployeeDashboard = () => {
                 <div className="p-6 flex items-center justify-between border-b border-navy-light/20 h-20">
                     {!isSidebarCollapsed && (
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-primary-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/30">
+                            <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center shadow-lg shadow-slate-900/30">
                                 <TrendingUp size={18} className="text-white" />
                             </div>
-                            <span className="font-extrabold text-lg tracking-tight uppercase">Secure<span className="text-primary-red">Vision</span></span>
+                            <span className="font-extrabold text-lg tracking-tight uppercase">Secure<span className="text-slate-400">Vision</span></span>
                         </div>
                     )}
                     <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 hover:bg-navy-light/30 rounded-lg transition-colors text-slate-400">
@@ -915,10 +902,10 @@ const EmployeeDashboard = () => {
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative border ${
                                 activeTab === item.id 
-                                ? 'bg-primary-red text-white shadow-lg shadow-red-900/40' 
-                                : 'text-slate-400 hover:bg-navy-light/20 hover:text-white'
+                                ? 'border-slate-500/50 text-white bg-slate-800/30' 
+                                : 'border-transparent text-slate-400 hover:bg-navy-light/20 hover:text-white'
                             }`}
                         >
                             <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'} />
@@ -943,7 +930,6 @@ const EmployeeDashboard = () => {
                 <header className="h-20 bg-white border-b border-border-soft flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div className="flex flex-col">
                         <h2 className="text-xl font-bold text-primary-navy tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
-                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Field Personnel Terminal</span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -965,7 +951,11 @@ const EmployeeDashboard = () => {
                                     <div className="max-h-[300px] overflow-y-auto">
                                         {notifications.length > 0 ? (
                                             notifications.slice(0, 5).map(n => (
-                                                <div key={n._id} className={`p-4 border-b border-border-soft/50 hover:bg-bg-soft transition-colors ${!n.isRead ? 'bg-primary-red/5' : ''}`}>
+                                                <div 
+                                                    key={n._id} 
+                                                    onClick={() => !n.isRead && markAsRead(n._id)}
+                                                    className={`p-4 border-b border-border-soft/50 hover:bg-bg-soft transition-colors cursor-pointer ${!n.isRead ? 'bg-primary-red/5' : ''}`}
+                                                >
                                                     <div className="flex justify-between items-start mb-1">
                                                         <h4 className={`text-xs ${!n.isRead ? 'font-bold text-primary-navy' : 'font-medium text-text-dark'}`}>{n.title}</h4>
                                                     </div>
@@ -1061,11 +1051,10 @@ const EmployeeDashboard = () => {
             {/* Proof Submission Modal */}
             {showProofModal && selectedJob && (
                 <div className="fixed inset-0 bg-primary-navy/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-                    <div className="zoho-card max-w-lg w-full p-8 animate-in zoom-in-95 duration-200 shadow-2xl">
-                        <div className="flex justify-between items-center mb-8">
+                    <div className="zoho-card max-w-lg w-full p-6 animate-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex justify-between items-center mb-5">
                             <div>
-                                <h3 className="crm-section-title">Finalize Operation</h3>
-                                <p className="crm-label mt-1">Compliance & Media Verification</p>
+                                <h3 className="crm-section-title">Complete Job</h3>
                             </div>
                             <button onClick={() => {
                                 setShowProofModal(false);
@@ -1076,24 +1065,24 @@ const EmployeeDashboard = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-6">
-                            {/* Upload trigger zone */}
-                            <div 
-                                onClick={() => proofForm.photos.length < 6 && document.getElementById('proof-upload').click()}
-                                className={`p-6 bg-bg-soft rounded-2xl border-2 border-dashed transition-all text-center group cursor-pointer flex flex-col items-center justify-center py-8 ${
-                                    proofForm.photos.length >= 6 ? 'opacity-50 cursor-not-allowed border-border-soft' : 'border-border-soft hover:border-primary-red/30'
-                                }`}
-                            >
-                                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform">
-                                    <Camera size={24} className="text-primary-red" />
-                                </div>
-                                <p className="text-[10px] font-bold text-primary-navy uppercase tracking-widest">Transmit Site Media</p>
-                                <p className="text-[9px] text-text-muted mt-1.5 font-medium">
-                                    {proofForm.photos.length > 0
-                                        ? `${proofForm.photos.length}/6 photos selected — click to add more`
-                                        : 'Click to select up to 6 installation photos'
-                                    }
-                                </p>
+                        <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1 mb-2 block">Upload Installation Photos</label>
+                                <div 
+                                    onClick={() => proofForm.photos.length < 6 && document.getElementById('proof-upload').click()}
+                                    className={`p-6 bg-bg-soft rounded-2xl border-2 border-dashed transition-all text-center group cursor-pointer flex flex-col items-center justify-center py-8 ${
+                                        proofForm.photos.length >= 6 ? 'opacity-50 cursor-not-allowed border-border-soft' : 'border-border-soft hover:border-primary-red/30'
+                                    }`}
+                                >
+                                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform">
+                                        <Camera size={24} className="text-primary-red" />
+                                    </div>
+
+                                    <p className="text-[9px] text-text-muted mt-1.5 font-medium">
+                                        {proofForm.photos.length > 0
+                                            ? `${proofForm.photos.length}/6 photos selected — click to add more`
+                                            : 'Upload up to 6 photos of the completed installation'
+                                        }
+                                    </p>
                                 <input 
                                     id="proof-upload"
                                     type="file" 
@@ -1104,29 +1093,31 @@ const EmployeeDashboard = () => {
                                 />
                             </div>
 
-                            {/* Image previews grid */}
+                            {/* Image previews grid with scrollable container */}
                             {proofForm.photos.length > 0 && (
-                                <div className="grid grid-cols-3 gap-2">
-                                    {proofForm.photos.map((photo, idx) => (
-                                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-border-soft aspect-square">
-                                            <img src={photo} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
-                                            <button
-                                                onClick={() => setProofForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
-                                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
-                                            >
-                                                ×
-                                            </button>
-                                            <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">{idx + 1}</div>
-                                        </div>
-                                    ))}
+                                <div className="max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {proofForm.photos.map((photo, idx) => (
+                                            <div key={idx} className="relative group rounded-xl overflow-hidden border border-border-soft aspect-square bg-bg-soft">
+                                                <img src={photo} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => setProofForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
+                                                    className="absolute top-1 right-1 w-6 h-6 bg-red-500/90 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold shadow-md hover:bg-red-600"
+                                                >
+                                                    ×
+                                                </button>
+                                                <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">{idx + 1}</div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Terminal Report</label>
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Work Notes</label>
                                 <textarea 
                                     className="zoho-input min-h-[100px] resize-none py-4 text-xs font-medium"
-                                    placeholder="Detail all hardware deployments..."
+                                    placeholder=""
                                     value={proofForm.notes}
                                     onChange={e => setProofForm({...proofForm, notes: e.target.value})}
                                 ></textarea>
@@ -1148,13 +1139,36 @@ const EmployeeDashboard = () => {
                                     onClick={() => handleJobAction(selectedJob.bookingId, 'complete', { proofPhoto: proofForm.photos[0], proofPhotos: proofForm.photos, workNotes: proofForm.notes })}
                                     className="flex-1 zoho-btn-primary py-3.5 text-[10px] rounded-xl shadow-lg shadow-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Finalize Work
+                                    UPLOAD IMAGE
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            {showImageViewer && (
+                <div className="fixed inset-0 bg-navy-dark/95 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
+                    <button 
+                        onClick={() => setShowImageViewer(false)}
+                        className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all z-[210] group"
+                    >
+                        <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                    </button>
+                    
+                    <div className="max-w-5xl w-full h-[80vh] flex items-center justify-center relative animate-in zoom-in-95 duration-500">
+                        <img 
+                            src={viewerImageUrl} 
+                            alt="Compliance Evidence" 
+                            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border border-white/10" 
+                        />
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/5 text-white/80 text-[10px] font-bold uppercase tracking-[0.3em] mb-[-60px]">
+                            SecureVision Compliance Evidence
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {renderLeaveModal()}
         </div>
     );

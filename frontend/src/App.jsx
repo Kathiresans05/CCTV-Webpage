@@ -20,7 +20,7 @@ import { Toaster } from 'react-hot-toast';
 
 // Helper component to handle scrolling to hash
 const ScrollToHash = () => {
-  const { hash } = useLocation();
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
     if (hash) {
@@ -31,7 +31,7 @@ const ScrollToHash = () => {
     } else {
       window.scrollTo(0, 0);
     }
-  }, [hash]);
+  }, [pathname, hash]);
 
   return null;
 };

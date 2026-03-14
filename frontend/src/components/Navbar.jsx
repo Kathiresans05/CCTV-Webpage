@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin, Menu, X, ShieldCheck, LogOut, User as UserIcon, ShoppingCart, Heart, RotateCw, Search, LayoutDashboard } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,41 @@ const Navbar = () => {
     const [tempSearchQuery, setTempSearchQuery] = useState('');
     const { user, logout, isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    const accountDropdownRef = useRef(null);
+
+    // Close all overlays on route change
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+        setIsAccountDropdownOpen(false);
+    }, [location.pathname, location.search]);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setIsMobileMenuOpen(false);
+                setIsAccountDropdownOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Outside click for Account Dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
+                setIsAccountDropdownOpen(false);
+            }
+        };
+
+        if (isAccountDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isAccountDropdownOpen]);
 
     const [bookingsCount, setBookingsCount] = useState(0);
     const [cartCount, setCartCount] = useState(0);
@@ -249,7 +284,7 @@ const Navbar = () => {
                             </Link>
 
                             {/* My Account Dropdown */}
-                            <div className="relative">
+                            <div className="relative" ref={accountDropdownRef}>
                                 <button
                                     onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
                                     className="flex items-center space-x-1.5 hover:text-red-700 transition-colors py-2 uppercase text-[13px] font-bold tracking-wider"

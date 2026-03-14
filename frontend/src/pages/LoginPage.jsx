@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
-import loginBg from '../assets/cctv_login_bg.png';
+import { Mail, Lock, RotateCw, AlertCircle } from 'lucide-react';
 
 
 const LoginPage = () => {
@@ -21,6 +20,13 @@ const LoginPage = () => {
 
         const result = await login(email, password);
         if (result.success) {
+            const pendingAction = sessionStorage.getItem('pendingAction');
+            const returnUrl = sessionStorage.getItem('returnUrl');
+            if (pendingAction === 'bookNow' && returnUrl) {
+                navigate(returnUrl);
+                return;
+            }
+
             // Check for admin role to redirect accordingly
             const savedUser = JSON.parse(localStorage.getItem('secureVisionUser'));
             if (savedUser?.role === 'admin') {
@@ -37,84 +43,69 @@ const LoginPage = () => {
     };
 
     return (
-        <div
-            className="min-h-screen flex items-center justify-center px-4 py-12"
-            style={{
-                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url(${loginBg})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed'
-            }}
-        >
+        <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center px-4 py-12">
+            <div className="max-w-md w-full text-center mb-6">
+                <h1 className="text-2xl font-bold text-[#111827] mb-1">Login/Register</h1>
+                <p className="text-gray-500 text-base font-medium">Great to have you back!</p>
+            </div>
 
-
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/10 animate-in fade-in zoom-in-95 duration-700">
-
-                <div className="bg-[#800000] p-8 text-center text-white">
-                    <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
-                    <p className="text-white/80 text-sm">Log in to manage your bookings and inquiries</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <form onSubmit={handleSubmit} className="p-10 space-y-7">
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
+                        <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl flex items-center gap-3 text-[13px] font-semibold">
                             <AlertCircle size={18} />
                             <span>{error}</span>
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Email Address</label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <div className="space-y-2">
+                        <label className="block text-[13px] font-bold text-gray-700 uppercase tracking-widest ml-1">Email Address</label>
+                        <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#E11D48] transition-colors" size={18} />
                             <input
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[#B91C1C] transition-colors"
+                                type="email" required
+                                value={email} onChange={(e) => setEmail(e.target.value)}
+                                className="w-full pl-12 pr-4 py-4 bg-[#F9FAFB] border border-gray-200 rounded-2xl focus:outline-none focus:border-[#E11D48] transition-all text-[#111827] placeholder:text-gray-400 font-medium"
                                 placeholder="name@example.com"
                             />
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Password</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-0.5">
+                            <label className="block text-[13px] font-bold text-gray-700 uppercase tracking-widest ml-1">Password</label>
+                        </div>
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#E11D48] transition-colors" size={18} />
                             <input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[#B91C1C] transition-colors"
+                                type="password" required
+                                value={password} onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-12 pr-4 py-4 bg-[#F9FAFB] border border-gray-200 rounded-2xl focus:outline-none focus:border-[#E11D48] transition-all text-[#111827] placeholder:text-gray-400 font-medium"
                                 placeholder="••••••••"
                             />
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-3 py-1">
+                        <input type="checkbox" id="remember" className="w-5 h-5 rounded border-gray-300 text-[#E11D48] focus:ring-[#E11D48]" />
+                        <label htmlFor="remember" className="text-sm font-bold text-gray-400 cursor-pointer">Remember</label>
+                    </div>
+
                     <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-[#800000] hover:bg-red-900 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
+                        type="submit" disabled={loading}
+                        className="w-full bg-[#E11D48] text-white font-bold py-3.5 rounded-2xl uppercase tracking-wider text-[13px] flex items-center justify-center gap-3 disabled:opacity-70"
                     >
                         {loading ? (
-                            <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                            </svg>
-                        ) : (
-                            <>
-                                <LogIn size={18} />
-                                Log In
-                            </>
-                        )}
+                            <RotateCw className="animate-spin" size={18} />
+                        ) : 'Sign in to your account'}
                     </button>
 
-                    <p className="text-center text-gray-500 text-sm">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="text-[#B91C1C] font-bold hover:underline">Sign Up</Link>
-                    </p>
+                    <div className="text-center pt-4">
+                        <p className="text-gray-400 text-sm font-bold">
+                            Don't have an account?{' '}
+                            <Link to="/signup" className="text-[#E11D48] hover:underline">Sign Up</Link>
+                        </p>
+                    </div>
                 </form>
             </div>
         </div>

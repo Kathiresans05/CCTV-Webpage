@@ -34,8 +34,11 @@ import {
     User,
     Camera,
     Play,
-    Check
+    Check,
+    Download,
+    FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import {
     BarChart,
     Bar,
@@ -90,8 +93,31 @@ const AdminDashboard = () => {
 
     const handleTabChange = (tabId) => {
         setActiveTab(tabId);
+        // Clear all open modals/overlays on tab change
+        setShowEmployeeModal(false);
+        setShowProductModal(false);
+        setShowBookingModal(false);
+        setShowStockModal(false);
+        setEditingEmployee(null);
+        setEditingProduct(null);
+        setEditingBooking(null);
         navigate(tabToPath[tabId]);
     };
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setShowEmployeeModal(false);
+                setShowProductModal(false);
+                setShowBookingModal(false);
+                setShowStockModal(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     const [bookings, setBookings] = useState([]);
     const [stocks, setStocks] = useState([]);
     const [employees, setEmployees] = useState([]);
@@ -106,6 +132,20 @@ const AdminDashboard = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [bookingsFilter, setBookingsFilter] = useState('All');
+    
+    // Attendance History State
+    const [selectedAttendanceEmployee, setSelectedAttendanceEmployee] = useState('all');
+    const [selectedAttendanceMonth, setSelectedAttendanceMonth] = useState(new Date().getMonth());
+    const [selectedAttendanceYear, setSelectedAttendanceYear] = useState(new Date().getFullYear());
+    const [attendanceSubTab, setAttendanceSubTab] = useState('today');
+    const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
+    const [reportSearchQuery, setReportSearchQuery] = useState('');
+    const [reportStartDate, setReportStartDate] = useState(
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+    );
+    const [reportEndDate, setReportEndDate] = useState(
+        new Date().toISOString().split('T')[0]
+    );
     
     // Modal & Form State
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
@@ -123,7 +163,8 @@ const AdminDashboard = () => {
         companyName: 'SecureVision CCTV',
         email: 'admin@securevision.com',
         phone: '+91 98765 43210',
-        address: '123 Secure Tower, IT Corridor, Chennai'
+        address: '123 Secure Tower, IT Corridor, Chennai',
+        logo: ''
     });
 
     useEffect(() => {
@@ -393,7 +434,32 @@ const AdminDashboard = () => {
 
     const handleSettingsUpdate = async (e) => {
         e.preventDefault();
-        toast.success('Configuration synchronized with enterprise vault (Demo)');
+        toast.success('Business configuration updated successfully');
+    };
+
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('images', file);
+
+        try {
+            const res = await fetch('/api/upload-multiple', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                setSettings({ ...settings, logo: data.urls[0] });
+                toast.success('Company logo uploaded successfully');
+            } else {
+                toast.error(`Logo Upload Failed: ${data.message || 'Unknown Error'}`);
+            }
+        } catch (error) {
+            console.error('Error uploading logo:', error);
+            toast.error(`Error uploading logo: ${error.message}`);
+        }
     };
 
     const renderOverview = () => {
@@ -493,7 +559,7 @@ const AdminDashboard = () => {
                 {/* Operations Alerts & Activity */}
                 <div className="space-y-8">
 
-                    <div className="bg-primary-navy p-8 rounded-[16px] text-white shadow-xl shadow-navy-dark/40 relative overflow-hidden">
+                    <div className="bg-primary-navy p-8 rounded-[16px] text-white relative overflow-hidden">
                         <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
                             <LayoutDashboard size={100} />
                         </div>
@@ -519,12 +585,6 @@ const AdminDashboard = () => {
 };
     const renderBookings = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="crm-section-title">Booking Registry</h3>
-                     <p className="crm-label mt-1">Operational Installation Queue</p>
-                </div>
-            </div>
 
             <div className="zoho-card overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white flex-wrap gap-4">
@@ -535,7 +595,7 @@ const AdminDashboard = () => {
                                 onClick={() => setBookingsFilter(f)}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                                     bookingsFilter === f 
-                                    ? 'bg-primary-navy text-white shadow-md' 
+                                    ? 'bg-primary-navy text-white' 
                                     : 'bg-bg-soft text-text-muted hover:bg-white border border-transparent hover:border-border-soft'
                                 }`}
                             >
@@ -659,12 +719,6 @@ const AdminDashboard = () => {
 
     const renderTracking = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-             <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="crm-section-title">Tracked Operations</h3>
-                     <p className="crm-label mt-1">Live Deployment Status</p>
-                </div>
-            </div>
 
             <div className="zoho-card overflow-hidden">
                 <div className="overflow-x-auto">
@@ -751,101 +805,448 @@ const AdminDashboard = () => {
         </div>
     );
 
-    const renderAttendance = () => (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Attendance Logs</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Personnel Presence Audit</p>
-                </div>
-            </div>
+    const renderAttendance = () => {
+        // 1. Generate date range
+        const start = new Date(reportStartDate);
+        const end = new Date(reportEndDate);
+        const reportDays = [];
+        let current = new Date(start);
+        
+        // Safety break for invalid dates
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return <div className="p-10 text-center text-text-muted">Invalid Date Range Selected</div>;
+        }
 
-            <div className="zoho-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="zoho-table">
-                        <thead>
-                            <tr className="zoho-table-header">
-                                <th className="px-6 py-4">Personnel</th>
-                                <th className="px-6 py-4">Audit Date</th>
-                                <th className="px-6 py-4">Clock In</th>
-                                <th className="px-6 py-4">Clock Out</th>
-                                <th className="px-6 py-4">Session Duration</th>
-                                <th className="px-6 py-4 text-right">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-soft">
-                            {attendance.map((a, i) => (
-                                <tr key={i} className="hover:bg-bg-soft/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-[10px]">
-                                                {a.employeeId?.name?.[0] || 'E'}
-                                            </div>
-                                            <p className="text-sm font-bold text-primary-navy">{a.employeeId?.name || 'Unknown Staff'}</p>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-text-muted tracking-tight">{new Date(a.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-status-success-text">
-                                            <Clock size={12} />
-                                            <p className="text-sm font-bold tracking-tight">{a.checkIn ? new Date(a.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}</p>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {a.checkOut ? (
-                                            <div className="flex items-center gap-2 text-primary-red">
-                                                <Clock size={12} />
-                                                <p className="text-sm font-bold tracking-tight">{new Date(a.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] font-black uppercase text-text-muted bg-bg-soft px-2 py-0.5 rounded border border-border-soft tracking-wider">Active</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-extrabold text-primary-navy">
-                                            {a.checkOut 
-                                                ? (a.totalHours || '0.00') 
-                                                : ((currentTime - new Date(a.checkIn)) / (1000 * 60 * 60)).toFixed(2)
-                                            } Hours
-                                        </p>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <span className={`status-chip ${a.status === 'FULL_DAY' ? 'bg-status-success-bg text-status-success-text' : 'bg-status-warning-bg text-status-warning-text'}`}>
-                                            {a.status?.replace('_', ' ') || 'ACTIVE'}
-                                        </span>
-                                    </td>
+        while (current <= end) {
+            reportDays.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+        // Show newest dates first
+        reportDays.reverse();
+
+        // 2. Filter employees by search query
+        const filteredEmployees = employees.filter(emp => 
+            (emp.name || '').toLowerCase().includes(reportSearchQuery.toLowerCase())
+        );
+
+        // 3. Prepare report data
+        const reportRows = [];
+        filteredEmployees.forEach(emp => {
+            reportDays.forEach(day => {
+                const record = attendance.find(a => 
+                    a.employeeId?._id === emp._id && 
+                    new Date(a.date).toDateString() === day.toDateString()
+                );
+                
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const status = record ? (record.checkOut ? 'Present' : 'Active') : 'Absent';
+                
+                reportRows.push({
+                    id: `${emp._id}-${day.getTime()}`,
+                    employeeName: emp.name,
+                    empRole: emp.role,
+                    date: day,
+                    login: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+                    logout: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : (record ? 'Active' : '—'),
+                    workingHours: record?.totalHours || '0.0',
+                    status: status,
+                    isWeekend: isWeekend
+                });
+            });
+        });
+
+        const handleExport = () => {
+            if (reportRows.length === 0) {
+                toast.error("No data to export");
+                return;
+            }
+            
+            const excelData = reportRows.map(row => ({
+                'Employee Name': row.employeeName,
+                'Designation': row.empRole,
+                'Date': row.date.toLocaleDateString(),
+                'Day': row.date.toLocaleDateString(undefined, { weekday: 'long' }),
+                'Login Time': row.login,
+                'Logout Time': row.logout,
+                'Working Hours': row.workingHours,
+                'Status': row.status
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
+            
+            // Auto-size columns (rough approximation)
+            const wscols = [
+                {wch: 25}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}
+            ];
+            worksheet['!cols'] = wscols;
+
+            XLSX.writeFile(workbook, `Attendance_Report_${reportStartDate}_to_${reportEndDate}.xlsx`);
+            toast.success("Excel report generated");
+        };
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-700">
+                {/* Compact Report Controls */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-[24px] border border-border-soft shadow-sm">
+                    <div className="flex flex-wrap items-center gap-4 flex-grow">
+                        <div className="zoho-search-bar w-full lg:w-72 group">
+                            <Search className="text-gray-400 group-focus-within:text-primary-navy transition-colors" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search by employee name..." 
+                                value={reportSearchQuery}
+                                onChange={(e) => setReportSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                             <div className="flex items-center gap-3 bg-bg-soft px-4 py-2.5 rounded-2xl border border-border-soft">
+                                <Calendar size={14} className="text-primary-navy" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-text-muted uppercase leading-none mb-1">From Date</span>
+                                    <input 
+                                        type="date" 
+                                        value={reportStartDate}
+                                        onChange={(e) => setReportStartDate(e.target.value)}
+                                        className="bg-transparent text-xs font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
+                                    />
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-3 bg-bg-soft px-4 py-2.5 rounded-2xl border border-border-soft">
+                                <Calendar size={14} className="text-primary-navy" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-text-muted uppercase leading-none mb-1">To Date</span>
+                                    <input 
+                                        type="date" 
+                                        value={reportEndDate}
+                                        onChange={(e) => setReportEndDate(e.target.value)}
+                                        className="bg-transparent text-xs font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
+                                    />
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleExport}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-2xl text-[11px] font-bold transition-all shadow-lg shadow-emerald-200/50 uppercase tracking-wider"
+                    >
+                        <FileSpreadsheet size={16} />
+                        Export Excel
+                    </button>
+                </div>
+
+                {/* Report Table */}
+                <div className="zoho-card overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="zoho-table">
+                            <thead>
+                                <tr className="zoho-table-header uppercase">
+                                    <th className="px-6 py-4">Employee Name</th>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">Login</th>
+                                    <th className="px-6 py-4">Logout</th>
+                                    <th className="px-6 py-4 text-center">Working Hours</th>
+                                    <th className="px-6 py-4 text-right">Status</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-border-soft">
+                                {reportRows.length > 0 ? reportRows.map((row) => (
+                                    <tr key={row.id} className={`hover:bg-bg-soft/50 transition-colors ${row.isWeekend ? 'bg-bg-soft/10' : ''}`}>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-xs uppercase">
+                                                    {row.employeeName[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-primary-navy">{row.employeeName}</p>
+                                                    <p className="text-[10px] text-text-muted font-semibold uppercase">{row.empRole}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <p className="text-xs font-bold text-primary-navy">{row.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                                <p className="text-[9px] text-text-muted font-bold uppercase">{row.date.getFullYear()}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs font-bold text-primary-navy">{row.login}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className={`text-xs font-bold ${row.logout === 'Active' ? 'text-emerald-600 animate-pulse' : 'text-primary-navy'}`}>{row.logout}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <p className="text-xs font-black text-primary-navy">
+                                                {row.workingHours} <span className="text-[9px] text-text-muted font-bold uppercase">hrs</span>
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`status-chip pointer-events-none ${
+                                                row.status === 'Absent' ? 'bg-status-danger-bg text-primary-red border border-primary-red/20' :
+                                                row.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                                                'bg-status-success-bg text-status-success-text border border-emerald-100'
+                                            }`}>
+                                                {row.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-20 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <Search size={40} className="text-text-muted opacity-20 mb-4" />
+                                                <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-xs">No records matching your search or range</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const renderTodayAttendance = () => {
+        const today = new Date();
+        const todayStr = today.toDateString();
+        
+        // Match employees with today's attendance
+        const todayData = employees.map(emp => {
+            const record = attendance.find(a => 
+                a.employeeId?._id === emp._id && 
+                new Date(a.date).toDateString() === todayStr
+            );
+            return { employee: emp, record };
+        });
+
+        // KPI Calculations
+        const presentToday = todayData.filter(d => d.record).length;
+        const absentToday = todayData.length - presentToday;
+        const activeEmployees = todayData.filter(d => d.record && !d.record.checkOut).length;
+        const lateArrivals = todayData.filter(d => {
+            if (!d.record) return false;
+            const checkIn = new Date(d.record.checkIn);
+            return checkIn.getHours() > 9 || (checkIn.getHours() === 9 && checkIn.getMinutes() > 15);
+        }).length;
+
+        const filteredTodayData = todayData.filter(d => 
+            (d.employee?.name || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase())
+        );
+
+        return (
+            <div className="space-y-8 animate-in fade-in duration-700">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-xl font-bold text-primary-navy uppercase tracking-tight">Today Attendance</h3>
+                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Real-time Personnel Status Registry</p>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-xl border border-border-soft shadow-sm">
+                        <p className="text-xs font-bold text-primary-navy">{today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                </div>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="zoho-card p-6 border-l-4 border-status-success-text">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-status-success-bg flex items-center justify-center text-status-success-text">
+                                <UserCheck size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Present Today</p>
+                                <h4 className="text-2xl font-black text-primary-navy mt-1">{presentToday}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="zoho-card p-6 border-l-4 border-primary-red">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-status-danger-bg flex items-center justify-center text-primary-red">
+                                <XCircle size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Absent Today</p>
+                                <h4 className="text-2xl font-black text-primary-navy mt-1">{absentToday}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="zoho-card p-6 border-l-4 border-status-warning-text">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-status-warning-bg flex items-center justify-center text-status-warning-text">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Late Arrivals</p>
+                                <h4 className="text-2xl font-black text-primary-navy mt-1">{lateArrivals}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="zoho-card p-6 border-l-4 border-blue-500">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                <Users size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Active Shifts</p>
+                                <h4 className="text-2xl font-black text-primary-navy mt-1">{activeEmployees}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table Content with Box Layout */}
+                <div className="zoho-card overflow-hidden">
+                    {/* Integrated Search Bar */}
+                    <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
+                        <div className="zoho-search-bar w-96 group">
+                            <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search by employee name..." 
+                                value={attendanceSearchQuery}
+                                onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="zoho-table">
+                            <thead>
+                                <tr className="zoho-table-header uppercase">
+                                    <th className="px-6 py-4">Employee Name</th>
+                                    <th className="px-6 py-4">Login Time</th>
+                                    <th className="px-6 py-4">Logout Time</th>
+                                    <th className="px-6 py-4 text-center">Working Hours</th>
+                                    <th className="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-soft">
+                                {filteredTodayData.length > 0 ? filteredTodayData.map((d, idx) => {
+                                    const { employee: emp, record } = d;
+                                    const isLate = record && (new Date(record.checkIn).getHours() > 9 || (new Date(record.checkIn).getHours() === 9 && new Date(record.checkIn).getMinutes() > 15));
+                                    const isActive = record && !record.checkOut;
+                                    
+                                    // Calculate dynamic working hours if active
+                                    let displayHours = record ? (record.totalHours || '0.0') : '0.0';
+                                    if (isActive && record.checkIn) {
+                                        const now = new Date();
+                                        const checkInTime = new Date(record.checkIn);
+                                        const diff = (now - checkInTime) / (1000 * 60 * 60);
+                                        displayHours = diff.toFixed(2);
+                                    }
+
+                                    return (
+                                        <tr key={emp._id} className="hover:bg-bg-soft/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold text-sm">
+                                                        {emp.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-primary-navy">{emp.name}</p>
+                                                        <p className="text-[10px] text-text-muted font-semibold uppercase">{emp.role}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {record?.checkIn ? (
+                                                    <div className="flex items-center gap-2 text-primary-navy">
+                                                        <Clock size={12} className="text-emerald-500" />
+                                                        <p className="text-sm font-bold">{new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                    </div>
+                                                ) : <span className="text-text-muted/40 font-bold">—</span>}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {record?.checkOut ? (
+                                                    <div className="flex items-center gap-2 text-primary-navy">
+                                                        <Clock size={12} className="text-rose-500" />
+                                                        <p className="text-sm font-bold">{new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                    </div>
+                                                ) : (isActive ? <span className="text-emerald-600 font-black animate-pulse uppercase text-[10px] tracking-widest bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">Live Active</span> : <span className="text-text-muted/40 font-bold">—</span>)}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <p className="text-sm font-black text-primary-navy">
+                                                    {displayHours} <span className="text-[10px] text-text-muted">hrs</span>
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className={`status-chip ${
+                                                    !record ? 'bg-status-danger-bg text-status-danger-text' :
+                                                    isActive ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200' :
+                                                    isLate ? 'bg-status-warning-bg text-status-warning-text' :
+                                                    'bg-status-success-bg text-status-success-text'
+                                                }`}>
+                                                    {!record ? 'Absent' : isActive ? 'Active / Open Shift' : isLate ? 'Late Arrival' : 'Present'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-12 text-center">
+                                            <p className="text-text-muted font-bold uppercase tracking-widest text-xs">No personnel records found</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderAttendanceView = () => {
+        return (
+            <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Sub-tab Navigation */}
+                <div className="flex items-center gap-2 p-1 bg-white inline-flex rounded-2xl border border-border-soft shadow-sm mb-2">
+                    <button 
+                        onClick={() => setAttendanceSubTab('today')}
+                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'today' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                    >
+                        Today
+                    </button>
+                    <button 
+                        onClick={() => setAttendanceSubTab('monthly')}
+                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'monthly' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                    >
+                        Monthly
+                    </button>
+                    <button 
+                        onClick={() => setAttendanceSubTab('leave')}
+                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'leave' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                    >
+                        Leave
+                    </button>
+                </div>
+
+                {attendanceSubTab === 'today' ? renderTodayAttendance() : 
+                 attendanceSubTab === 'monthly' ? renderAttendance() : 
+                 renderLeaves()}
+            </div>
+        );
+    };
 
     const renderEnquiries = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="text-xl font-bold text-primary-navy">Customer Enquiries</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Communication Registry</p>
-                </div>
-            </div>
 
             <div className="zoho-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="zoho-table">
                         <thead>
                             <tr className="zoho-table-header">
-                                <th className="px-6 py-4">Inquirer</th>
-                                <th className="px-6 py-4 uppercase">Credentials</th>
-                                <th className="px-6 py-4 uppercase">Inquiry Focus</th>
-                                <th className="px-6 py-4 uppercase">Interaction</th>
-                                <th className="px-6 py-4 uppercase">Registry Date</th>
-                                <th className="px-6 py-4 uppercase text-center">Disposition</th>
-                                <th className="px-6 py-4 uppercase text-right">Clearance</th>
+                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4 uppercase">Contact</th>
+                                <th className="px-6 py-4 uppercase">Product</th>
+                                <th className="px-6 py-4 uppercase">Request</th>
+                                <th className="px-6 py-4 uppercase">Date</th>
+                                <th className="px-6 py-4 uppercase text-center">Status</th>
+                                <th className="px-6 py-4 uppercase text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-soft">
@@ -874,13 +1275,14 @@ const AdminDashboard = () => {
                                         <div className="flex justify-end items-center gap-2">
                                             <button 
                                                 onClick={() => updateEnquiryStatus(q._id, 'Processed')}
-                                                className="zoho-btn-secondary px-4 py-2 rounded-xl text-[10px]"
+                                                className="zoho-btn-secondary px-4 py-3 rounded-xl text-[10px] font-bold"
                                             >
-                                                Update Status
+                                                Process
                                             </button>
                                             <button 
                                                 onClick={() => updateEnquiryStatus(q._id, 'Closed')}
-                                                className="p-2 text-text-muted hover:text-primary-red bg-bg-soft hover:bg-white rounded-lg transition-all border border-transparent hover:border-border-soft"
+                                                className="p-2.5 text-text-muted hover:text-primary-red bg-bg-soft hover:bg-white rounded-xl transition-all border border-transparent hover:border-border-soft"
+                                                title="Close Enquiry"
                                             >
                                                 <CheckCircle2 size={18} />
                                             </button>
@@ -944,14 +1346,14 @@ const AdminDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <div className="lg:col-span-7 zoho-card p-10 space-y-8">
-                    <div className="flex items-center gap-3 border-b border-border-soft pb-6">
+                    <div className="flex items-center gap-3 border-b border-gray-100 pb-6">
                         <Settings size={20} className="text-primary-red" />
-                        <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Enterprise Profile</h4>
+                        <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Company Settings</h4>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Entity Identity</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Name</label>
                             <input 
                                 type="text" 
                                 value={settings.companyName} 
@@ -960,7 +1362,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Support Channel</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Support Email</label>
                             <input 
                                 type="email" 
                                 value={settings.email}
@@ -969,7 +1371,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operations Contact</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
                             <input 
                                 type="text" 
                                 value={settings.phone}
@@ -978,15 +1380,42 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Command Center Address</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Office Address</label>
                             <textarea 
                                 value={settings.address}
                                 onChange={(e) => setSettings({...settings, address: e.target.value})}
                                 className="zoho-input min-h-[100px] py-4" 
                             />
                         </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Logo</label>
+                            <div className="flex items-center gap-4 mt-2">
+                                {settings.logo ? (
+                                    <div className="relative group">
+                                        <img src={settings.logo} alt="Company Logo" className="w-16 h-16 rounded-xl object-cover border-2 border-border-soft" />
+                                        <button 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setSettings({...settings, logo: ''});
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-primary-red text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 rounded-xl border-2 border-dashed border-border-soft flex items-center justify-center bg-bg-soft">
+                                        <Camera size={24} className="text-text-muted opacity-30" />
+                                    </div>
+                                )}
+                                <label className="zoho-btn-secondary px-6 py-2.5 rounded-xl cursor-pointer text-xs font-bold hover:bg-bg-soft transition-all">
+                                    <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
+                                    {settings.logo ? 'Change Logo' : 'Upload Logo'}
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <button onClick={handleSettingsUpdate} className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">Commit Configuration Changes</button>
+                    <button onClick={handleSettingsUpdate} className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">Save Business Settings</button>
                 </div>
 
                 <div className="lg:col-span-5 space-y-10">
@@ -994,8 +1423,7 @@ const AdminDashboard = () => {
                         <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] border-b border-border-soft pb-6 mb-8 text-center">Authorized Administrator</h4>
                         <div className="flex flex-col items-center">
                             <div className="relative group">
-                                <div className="absolute inset-0 bg-primary-red rounded-[32px] blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                                <div className="w-24 h-24 rounded-[32px] bg-primary-navy text-white flex items-center justify-center font-extrabold text-3xl border-4 border-white shadow-2xl relative z-10 transition-transform group-hover:scale-105 duration-500">
+                                <div className="w-24 h-24 rounded-[32px] bg-primary-navy text-white flex items-center justify-center font-extrabold text-3xl border-4 border-white relative z-10 transition-transform group-hover:scale-105 duration-500">
                                     {user?.name?.[0]}
                                 </div>
                             </div>
@@ -1008,20 +1436,20 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="zoho-card p-10 space-y-6">
-                        <div className="flex items-center gap-3 border-b border-border-soft pb-6">
+                        <div className="flex items-center gap-3 border-b border-gray-100 pb-6">
                             <ShieldCheck size={20} className="text-primary-red" />
-                            <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Security Override</h4>
+                            <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Security & Login</h4>
                         </div>
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">New Access Token</label>
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">New Password</label>
                                 <input type="password" placeholder="••••••••" className="zoho-input" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Confirm Authorization</label>
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Confirm Password</label>
                                 <input type="password" placeholder="••••••••" className="zoho-input" />
                             </div>
-                            <button className="zoho-btn-secondary w-full py-4 text-xs font-black">Update Security Credentials</button>
+                            <button className="zoho-btn-secondary w-full py-4 text-xs font-black">Update Password</button>
                         </div>
                     </div>
                 </div>
@@ -1029,44 +1457,42 @@ const AdminDashboard = () => {
         </div>
     );
 
-    const renderLeaves = () => (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="crm-page-title">Leave Approvals</h2>
-                    <p className="crm-body text-sm mt-0.5">Manage employee absence requests</p>
-                </div>
-            </div>
+    const renderLeaves = () => {
+        const filteredLeaves = leaves.filter(l => 
+            (l.employeeName || '').toLowerCase().includes((searchQuery || '').toLowerCase())
+        );
 
-            <div className="zoho-card overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
-                    <div className="zoho-search-bar w-96 group">
-                        <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
-                        <input 
-                            type="text" 
-                            placeholder="Search by employee name..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="zoho-card overflow-hidden">
+                    {/* Integrated Search Bar Header */}
+                    <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
+                        <div className="zoho-search-bar w-96 group">
+                            <Search className="text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search by employee name..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
                     </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="zoho-table">
-                        <thead className="zoho-table-header">
-                            <tr>
-                                <th className="px-6 py-4">Employee</th>
-                                <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4">Duration</th>
-                                <th className="px-6 py-4">Reason</th>
-                                <th className="px-6 py-4">Applied</th>
-                                <th className="px-6 py-4 text-center">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-soft">
-                            {leaves
-                                .filter(l => (l.employeeName || '').toLowerCase().includes((searchQuery || '').toLowerCase()))
-                                .map(l => (
+
+                    <div className="overflow-x-auto">
+                        <table className="zoho-table">
+                            <thead>
+                                <tr className="zoho-table-header uppercase">
+                                    <th className="px-6 py-4">Employee Name</th>
+                                    <th className="px-6 py-4">Type</th>
+                                    <th className="px-6 py-4">Duration</th>
+                                    <th className="px-6 py-4">Reason</th>
+                                    <th className="px-6 py-4">Applied</th>
+                                    <th className="px-6 py-4 text-center">Status</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-soft">
+                                {filteredLeaves.length > 0 ? filteredLeaves.map(l => (
                                     <tr key={l._id} className="hover:bg-bg-soft/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -1126,28 +1552,24 @@ const AdminDashboard = () => {
                                             )}
                                         </td>
                                     </tr>
-                                ))}
-                            {leaves.length === 0 && (
-                                <tr>
-                                    <td colSpan="7" className="py-24 text-center">
-                                        <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No pending leave requests</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="7" className="py-24 text-center">
+                                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No pending leave requests</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderEmployees = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="crm-section-title">Staff Management</h3>
-                     <p className="crm-label mt-1">Field Technicians & Office Personnel</p>
-                </div>
+            <div className="flex justify-end items-center">
                 <button 
                     onClick={() => {
                         setEditingEmployee(null);
@@ -1157,7 +1579,7 @@ const AdminDashboard = () => {
                     className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2"
                 >
                     <Plus size={18} />
-                    ADD EMPLYEE
+                    ADD EMPLOYEE
                 </button>
             </div>
 
@@ -1261,11 +1683,7 @@ const AdminDashboard = () => {
 
     const renderProducts = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-             <div className="flex justify-between items-center">
-                <div>
-                     <h3 className="crm-section-title">Product Catalog</h3>
-                     <p className="crm-label mt-1">CCTV Hardware & Registry</p>
-                </div>
+             <div className="flex justify-end items-center">
                 <button 
                     onClick={() => {
                         setEditingProduct(null);
@@ -1456,7 +1874,7 @@ const AdminDashboard = () => {
                 <form onSubmit={handleEmployeeSubmit} className="p-10 space-y-6">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Legal Name</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Employee Name</label>
                             <input required type="text" value={employeeForm.name} onChange={e => setEmployeeForm({...employeeForm, name: e.target.value})} className="zoho-input" placeholder="e.g. John Carter" />
                         </div>
                         <div className="space-y-2">
@@ -1468,12 +1886,8 @@ const AdminDashboard = () => {
                             <input required type="text" value={employeeForm.phone} onChange={e => setEmployeeForm({...employeeForm, phone: e.target.value})} className="zoho-input" placeholder="+91 00000 00000" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Access Token</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Password</label>
                             <input required={!editingEmployee} type="password" value={employeeForm.password} onChange={e => setEmployeeForm({...employeeForm, password: e.target.value})} className="zoho-input" placeholder={editingEmployee ? 'Unchanged' : 'Min 6 characters'} />
-                        </div>
-                        <div className="col-span-2 space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Area / Home Base</label>
-                            <textarea value={employeeForm.address} onChange={e => setEmployeeForm({...employeeForm, address: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Primary service area or residence address..." />
                         </div>
                     </div>
                     
@@ -1486,7 +1900,7 @@ const AdminDashboard = () => {
                             Cancel
                         </button>
                         <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
-                            {editingEmployee ? 'Commit Changes' : 'Execute Registration'}
+                            {editingEmployee ? 'Update Employee' : 'Register Employee'}
                         </button>
                     </div>
                 </form>
@@ -1637,7 +2051,7 @@ const AdminDashboard = () => {
                             Cancel
                         </button>
                         <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
-                            {editingProduct ? 'Commit Updates' : 'Execute Catalog Entry'}
+                            {editingProduct ? 'Update Product' : 'Add Product'}
                         </button>
                     </div>
                 </form>
@@ -1735,10 +2149,10 @@ const AdminDashboard = () => {
                 <div className="p-6 flex items-center justify-between border-b border-navy-light/20 h-20">
                     {!isSidebarCollapsed && (
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-primary-red rounded-lg flex items-center justify-center shadow-lg shadow-red-900/30">
+                            <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center shadow-lg shadow-slate-900/30">
                                 <TrendingUp size={18} className="text-white" />
                             </div>
-                            <span className="font-extrabold text-lg tracking-tight uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Secure<span className="text-primary-red">Vision</span></span>
+                            <span className="font-extrabold text-lg tracking-tight uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Secure<span className="text-slate-400">Vision</span></span>
                         </div>
                     )}
                     <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 hover:bg-navy-light/30 rounded-lg transition-colors text-slate-400">
@@ -1752,19 +2166,18 @@ const AdminDashboard = () => {
                         { id: 'bookings', label: 'Bookings', icon: Calendar },
                         { id: 'products', label: 'Products', icon: Package },
                         { id: 'employees', label: 'Employees', icon: Users },
-                        { id: 'attendance', label: 'Attendance', icon: UserCheck },
-                        { id: 'tracking', label: 'Tracked', icon: Truck },
+                        { id: 'tracking', label: 'Tracker', icon: Truck },
                         { id: 'enquiries', label: 'Enquiries', icon: Mail },
-                        { id: 'leaves', label: 'Leaves', icon: Calendar },
+                        { id: 'attendance', label: 'Attendance', icon: UserCheck },
                         { id: 'settings', label: 'Settings', icon: Settings },
                     ].map(item => (
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative border ${
                                 activeTab === item.id 
-                                ? 'bg-primary-red text-white shadow-lg shadow-red-900/40' 
-                                : 'text-slate-400 hover:bg-navy-light/20 hover:text-white'
+                                ? 'border-slate-500/50 text-white bg-slate-800/30' 
+                                : 'border-transparent text-slate-400 hover:bg-navy-light/20 hover:text-white'
                             }`}
                         >
                             <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'} />
@@ -1789,7 +2202,6 @@ const AdminDashboard = () => {
                 <header className="h-20 bg-white border-b border-border-soft flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                     <div className="flex flex-col">
                         <h2 className="text-2xl font-bold text-primary-navy capitalize tracking-tight" style={{fontFamily:"'Inter', sans-serif"}}>{activeTab.replace('-', ' ')}</h2>
-                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest mt-0.5" style={{fontFamily:"'Inter', sans-serif"}}>Operations Management Panel</span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -1828,10 +2240,10 @@ const AdminDashboard = () => {
                                 {activeTab === 'bookings' && renderBookings()}
                                 {activeTab === 'products' && renderProducts()}
                                 {activeTab === 'employees' && renderEmployees()}
-                                {activeTab === 'attendance' && renderAttendance()}
-                                {activeTab === 'tracking' && renderTracking()}
-                                {activeTab === 'enquiries' && renderEnquiries()}
-                                {activeTab === 'leaves' && renderLeaves()}
+                                { activeTab === 'attendance' && renderAttendanceView() }
+                                { activeTab === 'tracking' && renderTracking() }
+                                { activeTab === 'enquiries' && renderEnquiries() }
+                                { activeTab === 'leaves' && renderLeaves() }
                                 {activeTab === 'notifications' && renderNotifications()}
                                 {activeTab === 'settings' && renderSettings()}
                             </div>

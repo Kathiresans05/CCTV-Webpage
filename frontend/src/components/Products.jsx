@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Eye, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,28 @@ const Products = () => {
     const navigate = useNavigate();
     const [inquiryProduct, setInquiryProduct] = useState(null);
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            const pendingAction = sessionStorage.getItem('pendingAction');
+            if (pendingAction === 'bookNow') {
+                const pendingProductStr = sessionStorage.getItem('pendingProduct');
+                if (pendingProductStr) {
+                    try {
+                        const product = JSON.parse(pendingProductStr);
+                        const returnUrl = sessionStorage.getItem('returnUrl');
+                        if (returnUrl === window.location.pathname + window.location.search) {
+                            setInquiryProduct(product);
+                            sessionStorage.removeItem('pendingAction');
+                            sessionStorage.removeItem('pendingProduct');
+                            sessionStorage.removeItem('returnUrl');
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse pending product', e);
+                    }
+                }
+            }
+        }
+    }, [isAuthenticated]);
     const products = [
         {
             name: '4K Dome CCTV Camera',
@@ -90,7 +112,7 @@ const Products = () => {
                                     <button className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-700 shadow-lg transition-colors" title="Quick View">
                                         <Eye size={16} />
                                     </button>
-                                    <button className="w-9 h-9 bg-red-700 rounded-full flex items-center justify-center text-white hover:bg-red-800 shadow-lg transition-colors" title="Add to Cart">
+                                    <button className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-700 shadow-lg transition-colors" title="Add to Cart">
                                         <ShoppingCart size={16} />
                                     </button>
                                 </div>
@@ -122,7 +144,12 @@ const Products = () => {
                                     </button>
                                     <button 
                                         onClick={() => {
-                                            if (!isAuthenticated) navigate('/signup');
+                                            if (!isAuthenticated) {
+                                                sessionStorage.setItem('pendingAction', 'bookNow');
+                                                sessionStorage.setItem('returnUrl', window.location.pathname + window.location.search);
+                                                sessionStorage.setItem('pendingProduct', JSON.stringify(product));
+                                                navigate('/signup');
+                                            }
                                             else setInquiryProduct(product);
                                         }}
                                         className="bg-[#0b2239] hover:bg-black text-white py-2 rounded font-medium shadow-sm transition-colors text-sm flex items-center justify-center"

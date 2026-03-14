@@ -48,8 +48,41 @@ const ProductsListing = () => {
         setCurrentPage(1);
     }, [searchTerm, selectedCategories, priceRange, minRating, sortBy]);
 
-    // ── Modal state ──────────────────────────────────
     const [inquiryProduct, setInquiryProduct] = useState(null);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setInquiryProduct(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            const pendingAction = sessionStorage.getItem('pendingAction');
+            if (pendingAction === 'bookNow') {
+                const pendingProductStr = sessionStorage.getItem('pendingProduct');
+                if (pendingProductStr) {
+                    try {
+                        const product = JSON.parse(pendingProductStr);
+                        const returnUrl = sessionStorage.getItem('returnUrl');
+                        if (returnUrl === window.location.pathname + window.location.search) {
+                            setInquiryProduct(product);
+                            sessionStorage.removeItem('pendingAction');
+                            sessionStorage.removeItem('pendingProduct');
+                            sessionStorage.removeItem('returnUrl');
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse pending product', e);
+                    }
+                }
+            }
+        }
+    }, [isAuthenticated]);
 
     // ── Fetch products from backend ───────────────────
     useEffect(() => {
@@ -176,6 +209,9 @@ const ProductsListing = () => {
                             }}
                             onBookNow={(product) => {
                                 if (!isAuthenticated) {
+                                    sessionStorage.setItem('pendingAction', 'bookNow');
+                                    sessionStorage.setItem('returnUrl', window.location.pathname + window.location.search);
+                                    sessionStorage.setItem('pendingProduct', JSON.stringify(product));
                                     navigate('/signup');
                                 } else {
                                     setInquiryProduct(product);

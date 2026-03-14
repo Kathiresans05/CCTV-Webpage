@@ -9,11 +9,19 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         // Load user and token from localStorage on mount
-        const savedUser = localStorage.getItem('secureVisionUser');
+        const savedUserStr = localStorage.getItem('secureVisionUser');
         const savedToken = localStorage.getItem('secureVisionToken');
-        if (savedUser && savedToken) {
-            setUser(JSON.parse(savedUser));
+        if (savedUserStr && savedToken) {
+            const savedUser = JSON.parse(savedUserStr);
+            setUser(savedUser);
             setToken(savedToken);
+
+            if (savedUser.role === 'employee') {
+                fetch('/api/attendance/checkin', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${savedToken}` }
+                }).catch(err => console.error("Auto Check-in failed:", err));
+            }
         }
         setLoading(false);
     }, []);
@@ -31,6 +39,19 @@ export const AuthProvider = ({ children }) => {
                 setToken(data.token);
                 localStorage.setItem('secureVisionUser', JSON.stringify(data.user));
                 localStorage.setItem('secureVisionToken', data.token);
+
+                // Auto-Attendance Logic: Check-in Employee automatically on login
+                if (data.user.role === 'employee') {
+                    try {
+                        await fetch('/api/attendance/checkin', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${data.token}` }
+                        });
+                    } catch (err) {
+                        console.error("Auto Check-in failed:", err);
+                    }
+                }
+
                 return { success: true };
             } else {
                 return { success: false, message: data.message };
@@ -62,15 +83,32 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        // Auto-Attendance Logic: Check-out Employee automatically on logout
+        if (user && user.role === 'employee' && token) {
+            try {
+                await fetch('/api/attendance/checkout', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (err) {
+                console.error("Auto Check-out failed:", err);
+            }
+        }
+
         setUser(null);
         setToken(null);
         localStorage.removeItem('secureVisionUser');
         localStorage.removeItem('secureVisionToken');
     };
 
+    const updateProfile = (userData) => {
+        setUser(userData);
+        localStorage.setItem('secureVisionUser', JSON.stringify(userData));
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, signup, logout, loading }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, signup, logout, updateProfile, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
