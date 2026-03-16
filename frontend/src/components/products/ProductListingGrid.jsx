@@ -26,10 +26,10 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
                             backgroundSize: '1rem'
                         }}
                     >
-                        <option>Default Sorting</option>
-                        <option>Price: Low to High</option>
-                        <option>Price: High to Low</option>
-                        <option>Newest Arrivals</option>
+                        <option value="default">Default Sorting</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="newest">Newest Arrivals</option>
                     </select>
                 </div>
             </div>

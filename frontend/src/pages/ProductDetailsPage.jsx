@@ -123,6 +123,23 @@ const ProductDetailsPage = () => {
         ? product.productImages 
         : [product.image]).filter((url, index, self) => self.indexOf(url) === index);
 
+    // Prepare consolidated media items
+    const mediaItems = images.map(img => ({ type: 'image', url: img }));
+    if (product.videoUrl) {
+        const resolvedPoster = (product.videoPoster && (product.videoPoster.startsWith('http') || product.videoPoster.startsWith('/uploads')))
+            ? product.videoPoster
+            : (IMAGE_MAP[product.videoPoster] || images[0]);
+            
+        mediaItems.push({ 
+            type: 'video', 
+            url: product.videoUrl, 
+            poster: resolvedPoster 
+        });
+    }
+
+    const nextMedia = () => setActiveImageIndex((prev) => (prev + 1) % mediaItems.length);
+    const prevMedia = () => setActiveImageIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+
     return (
         <div className="min-h-screen bg-[#F5F7FA] pb-24">
             {/* Header/Breadcrumb Area */}
@@ -149,56 +166,98 @@ const ProductDetailsPage = () => {
                     {/* Left Column: Image Gallery Area */}
                     <div className="lg:w-3/5 p-6 md:p-10 bg-white flex flex-col md:flex-row gap-6 border-b lg:border-b-0 lg:border-r border-gray-100">
                         
-                        {/* Thumbnails list */}
-                        <div className="flex md:flex-col gap-3 order-2 md:order-1">
-                            {images.map((img, idx) => (
+                        {/* Thumbnails list (Amazon style - Vertical on Desktop) */}
+                        <div className="flex md:flex-col gap-3 order-2 md:order-1 overflow-x-auto md:overflow-y-auto scrollbar-hide py-1 md:pr-2 max-h-[500px]">
+                            {mediaItems.map((item, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setActiveImageIndex(idx)}
-                                    className={`w-16 h-16 md:w-20 md:h-24 rounded-xl overflow-hidden border-2 transition-all p-1 bg-gray-50 flex-shrink-0 ${
+                                    className={`relative w-16 h-16 md:w-20 md:h-24 rounded-xl overflow-hidden border-2 transition-all p-1 bg-gray-50 flex-shrink-0 ${
                                         activeImageIndex === idx ? 'border-primary-red ring-4 ring-red-50' : 'border-gray-100 hover:border-gray-300'
                                     }`}
                                 >
-                                    <img src={img} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain" />
+                                    {item.type === 'video' ? (
+                                        <div className="w-full h-full relative">
+                                            <img src={item.poster} alt="video thumb" className="w-full h-full object-contain opacity-60" />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                <PlayCircle size={24} className="text-white drop-shadow-md" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img src={item.url} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-contain" />
+                                    )}
                                 </button>
                             ))}
                         </div>
 
-                        {/* Main Preview Image */}
+                        {/* Main Preview */}
                         <div className="flex-1 order-1 md:order-2 relative group flex items-center justify-center bg-gray-50 rounded-2xl overflow-hidden min-h-[400px] md:min-h-[500px]">
                             <div className="absolute top-4 left-4 z-10 bg-primary-red text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                                 {product.category}
                             </div>
                             
-                            <div 
-                                className="relative w-full h-full flex items-center justify-center cursor-crosshair overflow-hidden"
-                                onMouseEnter={() => setIsZoomed(true)}
-                                onMouseLeave={() => setIsZoomed(false)}
-                                onMouseMove={handleMouseMove}
-                            >
-                                <img 
-                                    src={images[activeImageIndex]} 
-                                    alt={product.name} 
-                                    className={`max-h-[450px] w-auto object-contain transition-transform duration-300 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
-                                />
-                                
-                                {isZoomed && (
-                                    <div 
-                                        className="absolute inset-0 pointer-events-none z-20"
-                                        style={{
-                                            backgroundImage: `url(${images[activeImageIndex]})`,
-                                            backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                                            backgroundSize: '250%',
-                                            backgroundRepeat: 'no-repeat'
-                                        }}
-                                    ></div>
-                                )}
-                            </div>
-                            
-                            {/* Zoom Instructions */}
-                            <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-500 font-medium pointer-events-none">
-                                Roll over image to zoom
-                            </div>
+                            {/* Navigation Arrows */}
+                            {mediaItems.length > 1 && (
+                                <>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); prevMedia(); }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                    >
+                                        <ChevronRight size={20} className="rotate-180" />
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); nextMedia(); }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </>
+                            )}
+
+                            {mediaItems[activeImageIndex].type === 'video' ? (
+                                <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden shadow-inner">
+                                    <iframe 
+                                        className="w-full h-full max-h-[500px] aspect-video"
+                                        src={`${mediaItems[activeImageIndex].url}?autoplay=1&mute=1&controls=1&rel=0`}
+                                        title="Product Video" 
+                                        frameBorder="0" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            ) : (
+                                <div 
+                                    className="relative w-full h-full flex items-center justify-center cursor-crosshair overflow-hidden"
+                                    onMouseEnter={() => setIsZoomed(true)}
+                                    onMouseLeave={() => setIsZoomed(false)}
+                                    onMouseMove={handleMouseMove}
+                                >
+                                    <img 
+                                        src={mediaItems[activeImageIndex].url} 
+                                        alt={product.name} 
+                                        className={`max-h-[450px] w-auto object-contain transition-transform duration-300 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
+                                    />
+                                    
+                                    {isZoomed && (
+                                        <div 
+                                            className="absolute inset-0 pointer-events-none z-20"
+                                            style={{
+                                                backgroundImage: `url(${mediaItems[activeImageIndex].url})`,
+                                                backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                                                backgroundSize: '250%',
+                                                backgroundRepeat: 'no-repeat'
+                                            }}
+                                        ></div>
+                                    )}
+                                    
+                                    {/* Zoom Instructions */}
+                                    {!isZoomed && (
+                                        <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-500 font-medium pointer-events-none">
+                                            Roll over image to zoom
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 

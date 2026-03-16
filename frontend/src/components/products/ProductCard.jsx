@@ -30,6 +30,41 @@ const ProductCard = ({ product, onBookNow }) => {
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+    const [isHovered, setIsHovered] = useState(false);
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
+
+    // Minimum swipe distance (in px)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+        if (isLeftSwipe) {
+            nextSlide();
+        } else if (isRightSwipe) {
+            prevSlide();
+        }
+    };
+
+    const nextSlide = (e) => {
+        if (e) e.stopPropagation();
+        setActiveMediaIndex(prev => (prev + 1) % mediaItems.length);
+    };
+
+    const prevSlide = (e) => {
+        if (e) e.stopPropagation();
+        setActiveMediaIndex(prev => (prev - 1 + mediaItems.length) % mediaItems.length);
+    };
 
     // Compute media items combining images and video
     const mediaItems = [];
@@ -53,7 +88,15 @@ const ProductCard = ({ product, onBookNow }) => {
     });
 
     if (product.videoUrl) {
-        mediaItems.push({ type: 'video', url: product.videoUrl });
+        const resolvedPoster = (product.videoPoster && (product.videoPoster.startsWith('http') || product.videoPoster.startsWith('/uploads')))
+            ? product.videoPoster
+            : (IMAGE_MAP[product.videoPoster] || resolvedMainImage);
+            
+        mediaItems.push({ 
+            type: 'video', 
+            url: product.videoUrl, 
+            poster: resolvedPoster 
+        });
     }
 
     // Initial check for wishlist status
@@ -127,106 +170,111 @@ const ProductCard = ({ product, onBookNow }) => {
         }
     };
 
+
     return (
-        <div className="bg-white outline outline-1 outline-gray-200 hover:outline-2 hover:outline-gray-300 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl group h-full relative z-0 hover:z-10">
-            {/* Media Container */}
-            <div className="relative w-full bg-[#F7F8F9] flex flex-col">
-                {/* Main Viewer */}
-                <div className="relative w-full h-[240px] overflow-hidden flex items-center justify-center p-4">
-                    {mediaItems.length > 0 && mediaItems[activeMediaIndex].type === 'video' ? (
-                        <div className="w-full h-full bg-black flex items-center justify-center rounded-lg overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
-                            <iframe 
-                                className="w-full h-full pointer-events-none"
-                                src={`${mediaItems[activeMediaIndex].url}?autoplay=1&mute=1&controls=0&loop=1`} 
-                                title="Product Video" 
-                                frameBorder="0" 
-                                allow="autoplay; encrypted-media" 
-                            ></iframe>
+        <div 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={() => navigate(`/products/${product._id}`)}
+            className="bg-white outline outline-1 outline-gray-200 hover:outline-2 hover:outline-gray-300 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl group h-full relative z-0 hover:z-10 cursor-pointer"
+        >
+            {/* Media Slider Container */}
+            <div 
+                className="relative w-full h-[240px] bg-[#F7F8F9] overflow-hidden group/slider"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
+                {/* Slides Track */}
+                <div 
+                    className="flex w-full h-full transition-transform duration-500 ease-out"
+                    style={{ transform: `translateX(-${activeMediaIndex * 100}%)` }}
+                >
+                    {mediaItems.map((item, idx) => (
+                        <div key={idx} className="flex-shrink-0 w-full h-full flex items-center justify-center p-4">
+                            {item.type === 'video' ? (
+                                <div className="relative w-full h-full rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                                    <iframe 
+                                        className="w-full h-full pointer-events-none"
+                                        src={`${item.url}?autoplay=${activeMediaIndex === idx ? 1 : 0}&mute=1&controls=0&loop=1&playlist=${item.url.split('/').pop()}`} 
+                                        title="Product Video" 
+                                        frameBorder="0" 
+                                        allow="autoplay; encrypted-media" 
+                                    ></iframe>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <PlayCircle size={40} className="text-white opacity-70 drop-shadow-lg" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <img
+                                    src={item.url}
+                                    alt={`${product.name} - ${idx + 1}`}
+                                    className="w-full h-full object-contain"
+                                />
+                            )}
                         </div>
-                    ) : (
-                        <img
-                            src={mediaItems.length > 0 ? mediaItems[activeMediaIndex].url : resolvedMainImage}
-                            alt={product.name}
-                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                        />
-                    )}
-
-                    {/* Navigation Arrows */}
-                    {mediaItems.length > 1 && (
-                        <>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMediaIndex(prev => prev === 0 ? mediaItems.length - 1 : prev - 1);
-                                }}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
-                            >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMediaIndex(prev => prev === mediaItems.length - 1 ? 0 : prev + 1);
-                                }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
-                            >
-                                <ChevronRight size={18} />
-                            </button>
-                        </>
-                    )}
-
-                    {/* Hover Action Vertical Bar */}
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 flex flex-col gap-2 z-20">
-                        <button
-                            onClick={handleToggleWishlist}
-                            disabled={isTogglingWishlist}
-                            className={`p-2.5 rounded-full shadow-lg transition-all duration-300 ${isWishlisted ? 'bg-white text-red-500' : 'bg-white text-gray-400 hover:text-red-500'}`}
-                            title="Add to Wishlist"
-                        >
-                            {isTogglingWishlist ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} fill={isWishlisted ? "currentColor" : "none"} />}
-                        </button>
-
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={isAddingToCart}
-                            className="bg-white text-gray-400 p-2.5 rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-colors active:scale-95 disabled:opacity-50"
-                            title="Add to Cart"
-                        >
-                            {isAddingToCart ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                        </button>
-                    </div>
-
-                    {/* Subtle Overlay Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    ))}
                 </div>
 
-                {/* Thumbnails Row */}
+                {/* Slider Controls - Arrows */}
                 {mediaItems.length > 1 && (
-                    <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide py-1">
-                        {mediaItems.map((item, idx) => (
+                    <>
+                        <button
+                            onClick={prevSlide}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-20 border border-gray-100"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-20 border border-gray-100"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </>
+                )}
+
+                {/* Dot Indicators */}
+                {mediaItems.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                        {mediaItems.map((_, idx) => (
                             <button
                                 key={idx}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setActiveMediaIndex(idx);
                                 }}
-                                className={`relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all duration-200 ${
-                                    activeMediaIndex === idx ? 'border-primary-red shadow-sm transform scale-105' : 'border-gray-200 hover:border-gray-300 opacity-70 hover:opacity-100'
+                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                    activeMediaIndex === idx ? 'w-4 bg-[#B91C1C]' : 'w-1.5 bg-gray-300 hover:bg-gray-400'
                                 }`}
-                            >
-                                {item.type === 'video' ? (
-                                    <div className="w-full h-full bg-gray-900 flex items-center justify-center relative">
-                                        {/* Show simplified static thumbnail for video rather than nested iframe parsing for performance */}
-                                        <PlayCircle size={16} className="text-white absolute z-10 drop-shadow-md" />
-                                        {resolvedMainImage && <img src={resolvedMainImage} className="w-full h-full object-cover opacity-50 blur-[1px]" alt="video thumb" />}
-                                    </div>
-                                ) : (
-                                    <img src={item.url} alt={`thumb-${idx}`} className="w-full h-full object-contain bg-white" />
-                                )}
-                            </button>
+                            />
                         ))}
                     </div>
                 )}
+
+                {/* Hover Action Vertical Bar */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 flex flex-col gap-2 z-30">
+                    <button
+                        onClick={handleToggleWishlist}
+                        disabled={isTogglingWishlist}
+                        className={`p-2.5 rounded-full shadow-lg transition-all duration-300 ${isWishlisted ? 'bg-white text-red-500' : 'bg-white text-gray-400 hover:text-red-500'}`}
+                        title="Add to Wishlist"
+                    >
+                        {isTogglingWishlist ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} fill={isWishlisted ? "currentColor" : "none"} />}
+                    </button>
+
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isAddingToCart}
+                        className="bg-white text-gray-400 p-2.5 rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-colors active:scale-95 disabled:opacity-50"
+                        title="Add to Cart"
+                    >
+                        {isAddingToCart ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
+                    </button>
+                </div>
+
+                {/* Subtle Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             </div>
 
 

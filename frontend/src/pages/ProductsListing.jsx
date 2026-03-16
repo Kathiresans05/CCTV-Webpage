@@ -30,7 +30,7 @@ const ProductsListing = () => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [priceRange, setPriceRange] = useState(50000);
     const [minRating, setMinRating] = useState(0);
-    const [sortBy, setSortBy] = useState('Default Sorting');
+    const [sortBy, setSortBy] = useState('default');
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 9;
 
@@ -88,7 +88,8 @@ const ProductsListing = () => {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch('/api/products');
+                setLoading(true);
+                const res = await fetch(`/api/products?sort=${sortBy}`);
                 const data = await res.json();
                 if (data.success) {
                     // Resolve local image assets from the key returned by server
@@ -110,7 +111,7 @@ const ProductsListing = () => {
         };
 
         fetchProducts();
-    }, []);
+    }, [sortBy]);
 
     // ── Category counts for sidebar ─────────────────
     const categoryCounts = useMemo(() => {
@@ -130,14 +131,6 @@ const ProductsListing = () => {
             const matchesRating = product.rating >= minRating;
             return matchesSearch && matchesCategory && matchesPrice && matchesRating;
         });
-
-        if (sortBy === 'Price: Low to High') {
-            result.sort((a, b) => a.price - b.price);
-        } else if (sortBy === 'Price: High to Low') {
-            result.sort((a, b) => b.price - a.price);
-        } else if (sortBy === 'Newest Arrivals') {
-            result.sort((a, b) => b.id - a.id);
-        }
 
         return result;
     }, [allProducts, searchTerm, selectedCategories, priceRange, minRating, sortBy]);

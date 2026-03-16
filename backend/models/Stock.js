@@ -39,6 +39,26 @@ const stockSchema = mongoose.Schema({
         type: String,
         default: ''
     },
+    modelNumber: {
+        type: String,
+        default: ''
+    },
+    resolution: {
+        type: String,
+        default: ''
+    },
+    lensSize: {
+        type: String,
+        default: ''
+    },
+    nightVisionDistance: {
+        type: String,
+        default: ''
+    },
+    warranty: {
+        type: String,
+        default: ''
+    },
     productImage: {
         type: String,
         default: ''
@@ -46,6 +66,14 @@ const stockSchema = mongoose.Schema({
     productImages: {
         type: [String],
         default: []
+    },
+    videoUrl: {
+        type: String,
+        default: ''
+    },
+    videoPoster: {
+        type: String,
+        default: ''
     },
     status: {
         type: String,

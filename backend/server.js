@@ -189,7 +189,18 @@ app.put('/api/auth/profile', protect, async (req, res) => {
 // Get all products (from Stock)
 app.get('/api/products', async (req, res) => {
     try {
-        const stocks = await Stock.find({});
+        const { sort } = req.query;
+        let query = Stock.find({});
+        
+        if (sort === 'price_asc') {
+            query = query.sort('price');
+        } else if (sort === 'price_desc') {
+            query = query.sort('-price');
+        } else if (sort === 'newest') {
+            query = query.sort('-createdAt');
+        }
+
+        const stocks = await query;
         const products = stocks.map(s => ({
             _id: s._id,
             id: s.productId,
@@ -208,7 +219,9 @@ app.get('/api/products', async (req, res) => {
                 ? s.productImages 
                 : (s.category === 'Dome Camera' 
                     ? ['dome_1', 'dome_2', 'dome_3', 'dome_4'] 
-                    : ['bullet_1', 'bullet_2', 'bullet_3', 'bullet_4'])
+                    : ['bullet_1', 'bullet_2', 'bullet_3', 'bullet_4']),
+            videoUrl: s.videoUrl || (s.category === 'Dome Camera' ? 'https://www.youtube.com/embed/dQw4w9WgXcQ' : 'https://www.youtube.com/embed/dQw4w9WgXcQ'),
+            videoPoster: s.videoPoster || (s.category === 'Dome Camera' ? 'dome_1' : 'bullet_1')
         }));
         res.json({ success: true, data: products });
     } catch (error) {
@@ -241,9 +254,9 @@ app.get('/api/products/:id', async (req, res) => {
                 : (s.category === 'Dome Camera' 
                     ? ['dome_1', 'dome_2', 'dome_3', 'dome_4'] 
                     : ['bullet_1', 'bullet_2', 'bullet_3', 'bullet_4']),
-            // Mocking specifications and video for now as they are not in the database schema
             specs: s.specs || ['4K Ultra HD', 'Night Vision Up to 30m', 'Mobile App Integration', '360° Coverage', 'Vandal Proof Design', 'Cloud & Local Recording'],
-            videoUrl: s.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ' // Using a placeholder video, realistically would be a real CCTV demo
+            videoUrl: s.videoUrl || (s.category === 'Dome Camera' ? 'https://www.youtube.com/embed/dQw4w9WgXcQ' : 'https://www.youtube.com/embed/dQw4w9WgXcQ'),
+            videoPoster: s.videoPoster || (s.category === 'Dome Camera' ? 'dome_1' : 'bullet_1')
         };
         res.json({ success: true, data: product });
     } catch (error) {

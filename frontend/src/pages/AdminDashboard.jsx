@@ -156,7 +156,23 @@ const AdminDashboard = () => {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showStockModal, setShowStockModal] = useState(false);
     const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', phone: '', password: '', role: 'employee', address: '' });
-    const [productForm, setProductForm] = useState({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '', productImages: [] });
+    const initialProductForm = { 
+        name: '', 
+        sku: '', 
+        category: '', 
+        brand: '', 
+        price: '', 
+        quantity: '', 
+        productImage: '', 
+        productImages: [],
+        modelNumber: '',
+        resolution: '',
+        lensSize: '',
+        nightVisionDistance: '',
+        warranty: '',
+        description: ''
+    };
+    const [productForm, setProductForm] = useState(initialProductForm);
     const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '' });
     const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, type: 'add' });
     const [settings, setSettings] = useState({
@@ -294,7 +310,13 @@ const AdminDashboard = () => {
                 productName: productForm.name,
                 productId: productForm.sku || `PRD-${Date.now()}`, // Stock model requires productId
                 price: Number(productForm.price),
-                quantity: Number(productForm.quantity)
+                quantity: Number(productForm.quantity),
+                modelNumber: productForm.modelNumber,
+                resolution: productForm.resolution,
+                lensSize: productForm.lensSize,
+                nightVisionDistance: productForm.nightVisionDistance,
+                warranty: productForm.warranty,
+                description: productForm.description
             };
 
             const res = await fetch(url, {
@@ -310,7 +332,7 @@ const AdminDashboard = () => {
                 toast.success(editingProduct ? 'Hardware updated successfully' : 'New hardware added to catalog');
                 setShowProductModal(false);
                 setEditingProduct(null);
-                setProductForm({ name: '', sku: '', category: '', brand: '', price: '', quantity: '', productImage: '' });
+                setProductForm(initialProductForm);
                 fetchAllData();
             } else {
                 toast.error(`Catalog Entry Failed: ${data.message || 'Please check all required fields.'}`);
@@ -1911,148 +1933,240 @@ const AdminDashboard = () => {
     const renderProductModal = () => (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${showProductModal ? 'visible' : 'invisible'}`}>
             <div className={`absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md transition-opacity duration-500 ${showProductModal ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowProductModal(false)}></div>
-            <div className={`bg-white w-full max-w-xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform flex flex-col ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
+            <div className={`bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform flex flex-col ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
+                {/* Modal Header */}
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
-                    <div>
-                        <h3 className="text-xl font-bold text-primary-navy">{editingProduct ? 'Hardware Update' : 'New Hardware Entry'}</h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">CCTV Inventory Registry</p>
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary-navy text-white flex items-center justify-center shadow-lg shadow-primary-navy/20">
+                            {editingProduct ? <Edit size={24} /> : <Plus size={24} />}
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-primary-navy">CCTV Inventory Management</h3>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">
+                                {editingProduct ? 'Modify Security Hardware Record' : 'Register New Security Asset'}
+                            </p>
+                        </div>
                     </div>
                     <button onClick={() => setShowProductModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red hover:border-primary-red transition-all shadow-sm">
                         <X size={20} />
                     </button>
                 </div>
+
+                {/* Modal Form */}
                 <form onSubmit={handleProductSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <div className="flex-1 p-10 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-border-soft hover:scrollbar-thumb-text-muted transition-colors">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                        <div className="col-span-2 space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Hardware Label</label>
-                            <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="e.g. Sony 4K Bullet Camera" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">SKU Reference</label>
-                            <input required type="text" value={productForm.sku} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="zoho-input" placeholder="SV-CAM-001" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Classification</label>
-                            <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
-                                <option value="">Select Class</option>
-                                <option value="Bullet Cameras">Bullet Cameras</option>
-                                <option value="Dome Cameras">Dome Cameras</option>
-                                <option value="PTZ Cameras">PTZ Cameras</option>
-                                <option value="Fisheye Cameras">Fisheye Cameras</option>
-                                <option value="IP Cameras">IP Cameras</option>
-                                <option value="Wireless Cameras">Wireless Cameras</option>
-                                <option value="Night Vision Cameras">Night Vision Cameras</option>
-                                <option value="Thermal Cameras">Thermal Cameras</option>
-                                <option value="Panoramic Cameras">Panoramic Cameras</option>
-                                <option value="Hidden Cameras">Hidden Cameras</option>
-                                <option value="Solar Cameras">Solar Cameras</option>
-                                <option value="ANPR Cameras">ANPR Cameras</option>
-                                <option value="Explosion-Proof Cameras">Explosion-Proof Cameras</option>
-                                <option value="Varifocal Cameras">Varifocal Cameras</option>
-                            </select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Manufacturer</label>
-                            <input required type="text" value={productForm.brand} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="zoho-input" placeholder="Sony, Hikvision, etc." />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Unit Value (₹)</label>
-                            <input required type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="zoho-input" placeholder="0.00" />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Stock Balance</label>
-                            <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Initial quantity..." />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Image</label>
-                            <div className="relative">
-                                <input 
-                                    type="file" 
-                                    multiple
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={handleImageUpload} 
-                                    className="hidden" 
-                                    id="product-image-upload" 
-                                />
-                                <label 
-                                    htmlFor="product-image-upload"
-                                    className="zoho-input flex items-center justify-between cursor-pointer hover:border-primary-red transition-all group"
-                                >
-                                    <span className="text-sm text-text-muted truncate mr-2">
-                                        {productForm.productImage ? 'Change Image' : 'Select File (JPG, PNG, WEBP)'}
-                                    </span>
-                                    <div className="w-8 h-8 rounded-lg bg-bg-soft flex items-center justify-center text-text-muted group-hover:text-primary-red transition-colors">
-                                        <Package size={16} />
-                                    </div>
-                                </label>
+                    <div className="flex-1 p-10 space-y-8 overflow-y-auto custom-scrollbar">
+                        {/* Section 1: Basic Identity */}
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Package size={14} /> Basic Identification
+                            </h4>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="col-span-2 space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Name</label>
+                                    <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="Example – Hikvision 4MP Bullet Camera" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Model Number</label>
+                                    <input required type="text" value={productForm.modelNumber} onChange={e => setProductForm({...productForm, modelNumber: e.target.value})} className="zoho-input" placeholder="DS-2CD2043G0" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">SKU Reference</label>
+                                    <input required type="text" value={productForm.sku} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="zoho-input" placeholder="SV-CAM-001" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Camera Type</label>
+                                    <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
+                                        <option value="">Select Type</option>
+                                        <option value="Bullet Camera">Bullet Camera</option>
+                                        <option value="Dome Camera">Dome Camera</option>
+                                        <option value="PTZ Camera">PTZ Camera</option>
+                                        <option value="DVR">DVR</option>
+                                        <option value="NVR">NVR</option>
+                                        <option value="Accessories">Accessories</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Brand</label>
+                                    <input required type="text" value={productForm.brand} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="zoho-input" placeholder="Hikvision / Dahua / CP Plus" />
+                                </div>
                             </div>
                         </div>
 
-                        {((productForm.productImages && productForm.productImages.length > 0) || productForm.productImage) && (
-                            <div className="col-span-2 pt-2">
-                                <div className="flex items-center justify-between mb-4">
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Gallery Preview ({productForm.productImages?.length || (productForm.productImage ? 1 : 0)}/6)</p>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setProductForm({ ...productForm, productImage: '', productImages: [] })}
-                                        className="text-[10px] font-bold text-primary-red uppercase tracking-widest hover:underline"
-                                    >
-                                        Clear All
-                                    </button>
+                        {/* Section 2: Technical Specifications */}
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Settings size={14} /> Technical Specifications
+                            </h4>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Resolution</label>
+                                    <input type="text" value={productForm.resolution} onChange={e => setProductForm({...productForm, resolution: e.target.value})} className="zoho-input" placeholder="Example: 2MP / 4MP / 8MP" />
                                 </div>
-                                <div className="grid grid-cols-4 gap-3 bg-bg-soft/50 p-4 rounded-3xl border border-border-soft">
-                                    {/* Main Image Selection */}
-                                    {productForm.productImages?.map((img, idx) => (
-                                        <div key={idx} className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${productForm.productImage === img ? 'border-primary-red ring-4 ring-primary-red/10' : 'border-border-soft hover:border-text-muted'}`} onClick={() => setProductForm({ ...productForm, productImage: img })}>
-                                            <img src={img} className="h-full w-full object-cover" alt={`Preview ${idx + 1}`} />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <p className="text-white text-[8px] font-bold uppercase tracking-widest">{productForm.productImage === img ? 'Main Image' : 'Set as Main'}</p>
-                                            </div>
-                                            <button 
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newImages = productForm.productImages.filter((_, i) => i !== idx);
-                                                    setProductForm({ 
-                                                        ...productForm, 
-                                                        productImages: newImages,
-                                                        productImage: productForm.productImage === img ? (newImages[0] || '') : productForm.productImage
-                                                    });
-                                                }}
-                                                className="absolute top-1 right-1 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center text-primary-red shadow-sm hover:bg-white"
-                                            >
-                                                <X size={12} />
-                                            </button>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Lens Size</label>
+                                    <input type="text" value={productForm.lensSize} onChange={e => setProductForm({...productForm, lensSize: e.target.value})} className="zoho-input" placeholder="Example: 2.8mm / 3.6mm" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Night Vision Distance</label>
+                                    <input type="text" value={productForm.nightVisionDistance} onChange={e => setProductForm({...productForm, nightVisionDistance: e.target.value})} className="zoho-input" placeholder="Example: 30m / 40m" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Warranty</label>
+                                    <select value={productForm.warranty} onChange={e => setProductForm({...productForm, warranty: e.target.value})} className="zoho-input">
+                                        <option value="">Select Warranty</option>
+                                        <option value="1 Year">1 Year</option>
+                                        <option value="2 Years">2 Years</option>
+                                        <option value="3 Years">3 Years</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 3: Commercial Details */}
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <BarChart3 size={14} /> Commercial Details
+                            </h4>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Price (₹)</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            <span className="text-primary-navy/40 font-bold text-sm">₹</span>
                                         </div>
-                                    ))}
-                                    {/* Traditional logic if array is empty but singe image exists */}
-                                    {!productForm.productImages?.length && productForm.productImage && (
-                                         <div className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-primary-red ring-4 ring-primary-red/10">
-                                             <img src={productForm.productImage} className="h-full w-full object-cover" alt="Main Preview" />
-                                         </div>
-                                    )}
+                                        <input 
+                                            required 
+                                            type="number" 
+                                            value={productForm.price} 
+                                            onChange={e => setProductForm({...productForm, price: e.target.value})} 
+                                            className="zoho-input !pl-10 pr-4" 
+                                            placeholder="5000" 
+                                        />
+                                    </div>
                                 </div>
-                                <p className="text-[10px] text-text-muted mt-3 italic">* Click any thumbnail to set it as the primary display image.</p>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Available Stock</label>
+                                    <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Initial quantity..." />
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+
+                        {/* Section 4: Media & Description */}
+                        <div className="space-y-6">
+                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Camera size={14} /> Documentation & description
+                            </h4>
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Description</label>
+                                    <textarea rows="4" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="zoho-input resize-none py-4" placeholder="Enter detailed product biological and technical specifications..."></textarea>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-1">
+                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Product Visuals</label>
+                                        <div className="flex items-center gap-4">
+                                            <label htmlFor="image-upload" className="text-[10px] font-black text-primary-navy uppercase tracking-widest cursor-pointer hover:text-primary-red transition-colors flex items-center gap-1.5">
+                                                <Plus size={12} /> Add Images
+                                            </label>
+                                            {(productForm.productImages?.length > 0 || productForm.productImage) && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setProductForm({ ...productForm, productImage: '', productImages: [] })}
+                                                    className="text-[10px] font-black text-primary-red uppercase tracking-widest hover:underline flex items-center gap-1.5"
+                                                >
+                                                    <Trash2 size={12} /> Reset Gallery
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="relative group">
+                                        <input 
+                                            type="file" 
+                                            multiple
+                                            accept="image/jpeg,image/png,image/webp"
+                                            onChange={handleImageUpload} 
+                                            className="hidden" 
+                                            id="image-upload" 
+                                        />
+                                        
+                                        {!productForm.productImage && !productForm.productImages?.length ? (
+                                            <label 
+                                                htmlFor="image-upload"
+                                                className="w-full h-40 border-2 border-dashed border-border-soft rounded-[24px] flex flex-col items-center justify-center gap-3 bg-bg-soft/30 hover:bg-bg-soft/60 hover:border-primary-navy/20 cursor-pointer transition-all group"
+                                            >
+                                                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-text-muted group-hover:text-primary-navy transition-colors shadow-sm">
+                                                    <Camera size={20} />
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-xs font-bold text-primary-navy">Upload Product Images</p>
+                                                    <p className="text-[10px] text-text-muted mt-1 font-semibold uppercase tracking-tighter">JPG, PNG, WEBP • Multiple supported</p>
+                                                </div>
+                                            </label>
+                                        ) : (
+                                            <div className="grid grid-cols-4 gap-4 bg-bg-soft/50 p-4 rounded-[28px] border border-border-soft">
+                                                {productForm.productImages?.map((img, idx) => (
+                                                    <div key={idx} className={`relative group aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${productForm.productImage === img ? 'border-primary-red shadow-lg ring-4 ring-primary-red/10' : 'border-white hover:border-primary-navy/20 shadow-sm'}`} onClick={() => setProductForm({ ...productForm, productImage: img })}>
+                                                        <img src={img} className="h-full w-full object-cover" alt={`Preview ${idx + 1}`} />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <p className="text-white text-[8px] font-bold uppercase tracking-widest">{productForm.productImage === img ? 'Selected' : 'Set Main'}</p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newImages = productForm.productImages.filter((_, i) => i !== idx);
+                                                                setProductForm({ 
+                                                                    ...productForm, 
+                                                                    productImages: newImages,
+                                                                    productImage: productForm.productImage === img ? (newImages[0] || '') : productForm.productImage
+                                                                });
+                                                            }}
+                                                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center text-primary-red shadow-md hover:bg-white"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {productForm.productImages?.length < 6 && (
+                                                    <label htmlFor="image-upload" className="aspect-square rounded-2xl border-2 border-dashed border-border-soft flex flex-col items-center justify-center bg-white/50 hover:bg-white hover:border-primary-navy/20 cursor-pointer transition-all">
+                                                        <Plus size={16} className="text-text-muted" />
+                                                        <span className="text-[8px] font-bold text-text-muted uppercase mt-1">Add More</span>
+                                                    </label>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="p-8 border-t border-border-soft flex justify-end items-center gap-3 bg-bg-soft/20 mt-auto">
+                    {/* Modal Footer Actions */}
+                    <div className="p-8 border-t border-border-soft flex justify-between items-center bg-bg-soft/30">
                         <button 
                             type="button" 
-                            onClick={() => setShowProductModal(false)}
-                            className="px-6 py-3.5 text-sm font-bold text-text-muted hover:text-primary-navy transition-colors"
+                            onClick={() => setProductForm(initialProductForm)}
+                            className="flex items-center gap-2 px-6 py-3.5 text-xs font-black text-text-muted hover:text-primary-red transition-all uppercase tracking-widest"
                         >
-                            Cancel
+                            <Trash2 size={16} /> Clear Form
                         </button>
-                        <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
-                            {editingProduct ? 'Update Product' : 'Add Product'}
-                        </button>
+                        
+                        <div className="flex items-center gap-4">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowProductModal(false)}
+                                className="px-8 py-3.5 text-xs font-black text-text-muted hover:text-primary-navy transition-all uppercase tracking-widest"
+                            >
+                                Discard
+                            </button>
+                            <button type="submit" className="zoho-btn-secondary px-10 py-4 text-sm rounded-[20px] shadow-xl shadow-primary-navy/10 relative overflow-hidden group">
+                                <span className="relative z-10 flex items-center gap-2 uppercase font-black tracking-widest text-[11px]">
+                                    {editingProduct ? 'Update Inventory' : 'Add to Inventory'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

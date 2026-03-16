@@ -102,9 +102,9 @@ const Navbar = () => {
     }, [isAuthenticated, user]);
 
     const navLinks = [
-        { name: 'Home', path: '/', isExternal: false },
+        { name: 'Products', path: '/', isExternal: false },
         { name: 'About', path: '/about', isExternal: false },
-        { name: 'Products', path: '/products', isExternal: false },
+        { name: 'Home', path: '/home', isExternal: false },
         { name: 'Contact', path: '/contact', isExternal: false },
     ];
 

@@ -74,7 +74,8 @@ function App() {
           <main className="flex-grow">
             <Routes>
               {/* Main Site Routes with Legacy Background */}
-              <Route path="/" element={<div className="legacy-main-bg min-h-full"><Home /></div>} />
+              <Route path="/" element={<div className="legacy-main-bg min-h-full"><ProductsListing /></div>} />
+              <Route path="/home" element={<div className="legacy-main-bg min-h-full"><Home /></div>} />
               <Route path="/about" element={<div className="legacy-main-bg min-h-full"><AboutPage /></div>} />
               <Route path="/products" element={<div className="legacy-main-bg min-h-full"><ProductsListing /></div>} />
               <Route path="/products/:id" element={<div className="legacy-main-bg min-h-full"><ProductDetailsPage /></div>} />
