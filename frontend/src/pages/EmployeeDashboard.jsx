@@ -833,7 +833,7 @@ const EmployeeDashboard = () => {
                                     <Phone size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Inbound Line</p>
+                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Phone No</p>
                                     <p className="text-sm font-bold text-primary-navy mt-0.5">{user?.phone || 'Not Registered'}</p>
                                 </div>
                             </div>
@@ -842,7 +842,7 @@ const EmployeeDashboard = () => {
                                     <MapPin size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Base Operations</p>
+                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Location</p>
                                     <p className="text-sm font-bold text-primary-navy mt-0.5">SecureVision HQ, Chennai</p>
                                 </div>
                             </div>
@@ -853,7 +853,7 @@ const EmployeeDashboard = () => {
                                     <Calendar size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Enlistment Date</p>
+                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Joining Date</p>
                                     <p className="text-sm font-bold text-primary-navy mt-0.5">March 12, 2024</p>
                                 </div>
                             </div>
