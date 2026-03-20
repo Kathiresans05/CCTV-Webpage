@@ -668,8 +668,12 @@ const EmployeeDashboard = () => {
         const isCheckedIn = !!attendanceStatus;
         const isCheckedOut = !!attendanceStatus?.checkOut;
 
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
+        if (!fromDate || !toDate) return null;
+        const startParts = fromDate.split('-');
+        const endParts = toDate.split('-');
+        const start = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+        const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+        
         const todayAtMidnight = new Date();
         todayAtMidnight.setHours(0,0,0,0);
         
@@ -678,7 +682,11 @@ const EmployeeDashboard = () => {
         const monthDays = [];
         if (start <= end) {
             for (let d = new Date(start); d <= actualEnd; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${y}-${m}-${day}`;
+                
                 const record = attendanceHistory.find(h => h.date === dateStr);
                 
                 let status = 'Absent';
