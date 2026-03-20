@@ -21,7 +21,8 @@ import {
     Bell,
     User,
     LogOut,
-    Camera
+    Camera,
+    Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -103,8 +104,15 @@ const EmployeeDashboard = () => {
     const [showImageViewer, setShowImageViewer] = useState(false);
     const [viewerImageUrl, setViewerImageUrl] = useState(null);
     const [selectedJob, setSelectedJob] = useState(null);
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [fromDate, setFromDate] = useState(() => {
+        const d = new Date();
+        return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    });
+    const [toDate, setToDate] = useState(() => {
+        const d = new Date();
+        return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    });
+    const [attendanceSearchTerm, setAttendanceSearchTerm] = useState('');
     const [previewUrl, setPreviewUrl] = useState(null);
     const [proofForm, setProofForm] = useState({ photos: [], notes: '' });
 
@@ -660,72 +668,87 @@ const EmployeeDashboard = () => {
         const isCheckedIn = !!attendanceStatus;
         const isCheckedOut = !!attendanceStatus?.checkOut;
 
-        // Generate days for the selected month
-        const today = new Date();
-        const curYear = today.getFullYear();
-        const curMonth = today.getMonth();
-        const curDay = today.getDate();
-
-        let endDay;
-        if (selectedYear < curYear || (selectedYear === curYear && selectedMonth < curMonth)) {
-            // Past month - show full month
-            endDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        } else if (selectedYear === curYear && selectedMonth === curMonth) {
-            // Current month - show up to today
-            endDay = curDay;
-        } else {
-            // Future month - show nothing
-            endDay = 0;
-        }
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        const todayAtMidnight = new Date();
+        todayAtMidnight.setHours(0,0,0,0);
+        
+        const actualEnd = end > todayAtMidnight ? todayAtMidnight : end;
 
         const monthDays = [];
-        for (let i = 1; i <= endDay; i++) {
-            const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            const date = new Date(selectedYear, selectedMonth, i);
-            
-            // Find record in history
-            const record = attendanceHistory.find(h => h.date === dateStr);
-            
-            let status = 'Absent';
-            if (record) {
-                if (record.checkIn && !record.checkOut) status = 'Active / Open Shift';
-                else if (record.checkIn) status = 'Present';
-            }
+        if (start <= end) {
+            for (let d = new Date(start); d <= actualEnd; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                const record = attendanceHistory.find(h => h.date === dateStr);
+                
+                let status = 'Absent';
+                if (record) {
+                    if (record.checkIn && !record.checkOut) status = 'Active / Open Shift';
+                    else if (record.checkIn) status = 'Present';
+                }
 
-            monthDays.push({
-                date: dateStr,
-                displayDate: date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                checkIn: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
-                checkOut: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
-                totalHours: record?.totalHours ? `${Number(record.totalHours).toFixed(1)} hrs` : '—',
-                status: status,
-                _id: record?._id || `absent-${dateStr}`
-            });
+                monthDays.push({
+                    date: dateStr,
+                    displayDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    checkIn: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                    checkOut: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                    totalHours: record?.totalHours ? `${Number(record.totalHours).toFixed(1)} hrs` : '—',
+                    status: status,
+                    _id: record?._id || `absent-${dateStr}`
+                });
+            }
         }
 
-        const months = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ];
+        let filteredDays = monthDays.reverse();
+        if (attendanceSearchTerm) {
+            const term = attendanceSearchTerm.toLowerCase();
+            filteredDays = filteredDays.filter(h => 
+                h.displayDate.toLowerCase().includes(term) ||
+                h.status.toLowerCase().includes(term)
+            );
+        }
 
         return (
             <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-border-soft shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <select 
-                            value={selectedMonth} 
-                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                            className="zoho-input py-2 text-xs font-bold"
-                        >
-                            {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                        </select>
-                        <select 
-                            value={selectedYear} 
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="zoho-input py-2 text-xs font-bold"
-                        >
-                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border-soft mb-6">
+                    <div className="flex-grow w-full sm:w-auto">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search..." 
+                                value={attendanceSearchTerm}
+                                onChange={(e) => setAttendanceSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-border-soft rounded-lg text-sm bg-bg-soft/50 focus:bg-white focus:border-primary-navy/30 transition-all outline-none" 
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto">
+                        <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
+                            <Calendar size={18} className="text-text-muted shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest leading-tight">FROM DATE</span>
+                                <input 
+                                    type="date" 
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="bg-transparent text-sm font-bold text-primary-navy outline-none w-full min-w-[110px]" 
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
+                            <Calendar size={18} className="text-text-muted shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest leading-tight">TO DATE</span>
+                                <input 
+                                    type="date" 
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="bg-transparent text-sm font-bold text-primary-navy outline-none w-full min-w-[110px]" 
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -743,7 +766,7 @@ const EmployeeDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border-soft">
-                                {monthDays.reverse().map((h) => (
+                                {filteredDays.map((h) => (
                                     <tr key={h._id} className="hover:bg-bg-soft/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <span className="text-xs font-bold text-primary-navy">{h.displayDate}</span>
