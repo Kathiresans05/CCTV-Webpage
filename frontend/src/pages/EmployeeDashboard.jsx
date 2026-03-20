@@ -912,7 +912,7 @@ const EmployeeDashboard = () => {
                         { id: 'my-jobs', label: 'My Jobs', icon: Calendar },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
                         { id: 'leaves', label: 'APPLY LEAVE', icon: Calendar },
-                        { id: 'profile', label: 'Personnel Profile', icon: User },
+                        { id: 'profile', label: 'Profile', icon: User },
                     ].map(item => (
                         <button
                             key={item.id}
@@ -935,7 +935,7 @@ const EmployeeDashboard = () => {
                 <div className="p-4 border-t border-navy-light/20">
                     <button onClick={logout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-rose-500/10 text-rose-500 transition-all font-bold">
                         <LogOut size={20} />
-                        {!isSidebarCollapsed && <span className="text-xs uppercase tracking-widest">End Session</span>}
+                        {!isSidebarCollapsed && <span className="text-xs uppercase tracking-widest">Logout</span>}
                     </button>
                 </div>
             </aside>
