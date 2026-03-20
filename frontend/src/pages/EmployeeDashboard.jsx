@@ -850,15 +850,6 @@ const EmployeeDashboard = () => {
                         <div className="space-y-6">
                             <div className="flex items-center gap-4 group">
                                 <div className="p-3 bg-bg-soft rounded-xl text-text-muted transition-colors group-hover:text-primary-navy">
-                                    <Briefcase size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Certification</p>
-                                    <p className="text-sm font-bold text-primary-navy mt-0.5">Advanced CCTV Engineering</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 group">
-                                <div className="p-3 bg-bg-soft rounded-xl text-text-muted transition-colors group-hover:text-primary-navy">
                                     <Calendar size={18} />
                                 </div>
                                 <div>
