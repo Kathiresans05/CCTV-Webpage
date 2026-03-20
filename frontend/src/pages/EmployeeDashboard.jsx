@@ -106,6 +106,7 @@ const EmployeeDashboard = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [proofForm, setProofForm] = useState({ photos: [], notes: '' });
 
     // Leave Modal State
     const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -315,14 +316,14 @@ const EmployeeDashboard = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="crm-page-title">Leave Management</h2>
+                    <h2 className="crm-page-title">APPLY LEAVE</h2>
                     <p className="crm-body text-sm mt-0.5">Request and track your leave status</p>
                 </div>
                 <button 
                     onClick={() => setShowLeaveModal(true)}
                     className="zoho-btn-secondary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
                 >
-                    <Plus size={18} /> Request Leave
+                    <Plus size={18} /> APPLY LEAVE
                 </button>
             </div>
 
@@ -397,7 +398,7 @@ const EmployeeDashboard = () => {
                 <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
                     <div className="bg-primary-navy px-8 py-6 flex items-center justify-between">
                         <div>
-                            <h3 className="text-xl font-bold text-white tracking-tight">Request Leave</h3>
+                            <h3 className="text-xl font-bold text-white tracking-tight">APPLY LEAVE</h3>
                             <p className="text-rose-100/60 text-[10px] uppercase font-bold tracking-widest mt-1">Personnel Absence Directive</p>
                         </div>
                         <button onClick={() => setShowLeaveModal(false)} className="text-white/60 hover:text-white transition-colors">
@@ -896,7 +897,7 @@ const EmployeeDashboard = () => {
                         { id: 'new', label: 'New Requests', icon: Plus },
                         { id: 'my-jobs', label: 'My Jobs', icon: Calendar },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
-                        { id: 'leaves', label: 'Leave Center', icon: Calendar },
+                        { id: 'leaves', label: 'APPLY LEAVE', icon: Calendar },
                         { id: 'profile', label: 'Personnel Profile', icon: User },
                     ].map(item => (
                         <button
