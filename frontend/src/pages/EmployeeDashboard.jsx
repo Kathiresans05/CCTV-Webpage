@@ -911,7 +911,7 @@ const EmployeeDashboard = () => {
                         { id: 'new', label: 'New Requests', icon: Plus },
                         { id: 'my-jobs', label: 'My Jobs', icon: Calendar },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
-                        { id: 'leaves', label: 'APPLY LEAVE', icon: Calendar },
+                        { id: 'leaves', label: 'Apply Leave', icon: Calendar },
                         { id: 'profile', label: 'Profile', icon: User },
                     ].map(item => (
                         <button
