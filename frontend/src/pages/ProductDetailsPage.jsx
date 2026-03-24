@@ -301,7 +301,7 @@ const ProductDetailsPage = () => {
                                         sessionStorage.setItem('pendingAction', 'bookNow');
                                         sessionStorage.setItem('returnUrl', window.location.pathname + window.location.search);
                                         sessionStorage.setItem('pendingProduct', JSON.stringify(product));
-                                        navigate('/signup');
+                                        window.dispatchEvent(new Event('openAuthModal'));
                                     } else {
                                         setIsBookingModalOpen(true);
                                     }

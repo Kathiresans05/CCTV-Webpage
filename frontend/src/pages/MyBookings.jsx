@@ -10,14 +10,22 @@ import { useAuth } from '../context/AuthContext';
 
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-    Pending: { color: 'text-amber-600', bg: 'bg-[#FFFBEB]', border: 'border-amber-100', dot: 'bg-amber-500', icon: Clock },
-    Confirmed: { color: 'text-blue-600', bg: 'bg-[#EFF6FF]', border: 'border-blue-100', dot: 'bg-blue-500', icon: CheckCircle },
-    'In Progress': { color: 'text-purple-600', bg: 'bg-[#F5F3FF]', border: 'border-purple-100', dot: 'bg-purple-500', icon: Wrench },
-    Completed: { color: 'text-green-600', bg: 'bg-[#F0FDF4]', border: 'border-green-100', dot: 'bg-green-500', icon: BadgeCheck },
-    Cancelled: { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', dot: 'bg-red-400', icon: XCircle },
+    pending_schedule: { color: 'text-amber-600', bg: 'bg-[#FFFBEB]', border: 'border-amber-100', dot: 'bg-amber-500', icon: Clock },
+    schedule_sent: { color: 'text-amber-600', bg: 'bg-[#FFFBEB]', border: 'border-amber-100', dot: 'bg-amber-500', icon: Clock },
+    reschedule_requested: { color: 'text-amber-600', bg: 'bg-[#FFFBEB]', border: 'border-amber-100', dot: 'bg-amber-500', icon: Clock },
+    scheduled_confirmed: { color: 'text-blue-600', bg: 'bg-[#EFF6FF]', border: 'border-blue-100', dot: 'bg-blue-500', icon: CheckCircle },
+    in_progress: { color: 'text-purple-600', bg: 'bg-[#F5F3FF]', border: 'border-purple-100', dot: 'bg-purple-500', icon: Wrench },
+    completed: { color: 'text-green-600', bg: 'bg-[#F0FDF4]', border: 'border-green-100', dot: 'bg-green-500', icon: BadgeCheck },
+    cancelled: { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', dot: 'bg-red-400', icon: XCircle },
 };
 
-const TABS = ['All', 'Pending', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'];
+// Map legacy statuses just in case
+STATUS_CONFIG['Pending'] = STATUS_CONFIG.pending_schedule;
+STATUS_CONFIG['Confirmed'] = STATUS_CONFIG.scheduled_confirmed;
+STATUS_CONFIG['In Progress'] = STATUS_CONFIG.in_progress;
+STATUS_CONFIG['Completed'] = STATUS_CONFIG.completed;
+
+const TABS = ['All', 'pending_schedule', 'schedule_sent', 'scheduled_confirmed', 'in_progress', 'completed'];
 
 const StatCard = ({ label, count, config }) => {
     const Icon = config.icon;
@@ -48,11 +56,11 @@ const StatusBadge = ({ status }) => {
 };
 
 // ── Booking Card ─────────────────────────────────────────────────────────────
-const BookingCard = ({ booking }) => {
+const BookingCard = ({ booking, onScheduleResponse, isResponding }) => {
     const date = new Date(booking.createdAt);
     const formattedDate = date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
     const formattedTime = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    const cfg = STATUS_CONFIG[booking.status] || STATUS_CONFIG.Pending;
+    const cfg = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending_schedule;
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 p-5 group">
@@ -81,16 +89,16 @@ const BookingCard = ({ booking }) => {
                             <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 font-medium">
                                 <span className="uppercase tracking-wider">CCTV Solutions</span>
                                 <span>•</span>
-                                <span className="font-mono">#{booking.orderId}</span>
+                                <span className="font-mono">#{booking.bookingId}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${cfg.bg} ${cfg.color}`}>
-                                {booking.status}
+                                {booking.status.replace(/_/g, ' ')}
                             </span>
                             <div className="text-right">
                                 <p className="text-xl font-bold text-gray-900 leading-none">₹{booking.productPrice || 0}</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{booking.status}</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{booking.status.replace(/_/g, ' ')}</p>
                             </div>
                         </div>
                     </div>
@@ -99,15 +107,17 @@ const BookingCard = ({ booking }) => {
                     <div className="flex flex-wrap items-center gap-y-2 gap-x-6 border-t border-gray-50 pt-4 mt-1">
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium whitespace-nowrap">
                             <Calendar size={14} className="text-gray-300" />
-                            {booking.preferredDate ? new Date(booking.preferredDate).toLocaleDateString('en-IN') : formattedDate}
+                            {booking.proposedDate ? new Date(booking.proposedDate).toLocaleDateString('en-IN') : formattedDate}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium whitespace-nowrap">
                             <Clock size={14} className="text-gray-300" />
-                            {booking.preferredTime || formattedTime}
+                            {booking.proposedTimeSlot || 'Not assigned'}
                         </div>
-                        <div className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-lg">
-                            SCHEDULED
-                        </div>
+                        {['scheduled_confirmed', 'in_progress', 'completed'].includes(booking.status) && (
+                            <div className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-lg">
+                                SCHEDULED
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium flex-1 min-w-0">
                             <MapPin size={14} className="text-gray-300 flex-shrink-0" />
                             <span className="truncate">{booking.address || 'N/A'}</span>
@@ -115,8 +125,58 @@ const BookingCard = ({ booking }) => {
                         <button className="text-[#B91C1C] text-xs font-bold hover:underline py-1 flex items-center gap-1">
                             View Details <ArrowRight size={12} />
                         </button>
-
                     </div>
+
+                    {/* Schedule Response Row (Premium Version) */}
+                    {booking.status === 'schedule_sent' && (
+                        <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] border border-amber-200/50 shadow-sm relative overflow-hidden group/alert">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 rounded-full -mr-16 -mt-16 transition-transform group-hover/alert:scale-110 duration-700" />
+                            
+                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-white/80 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm">
+                                        <Calendar size={20} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest">Action Required: Confirm Schedule</h4>
+                                        <p className="text-xs text-amber-800/80 mt-1 font-medium leading-relaxed">
+                                            The technician has proposed a visit for <span className="text-amber-900 font-bold">{booking.proposedDate ? new Date(booking.proposedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Next Available Date'}</span> at <span className="text-amber-900 font-bold">{booking.proposedTimeSlot}</span>.
+                                        </p>
+                                        {booking.adminNote && (
+                                            <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-white/50 border border-amber-200/50">
+                                                <AlertCircle size={14} className="text-amber-600 mt-0.5" />
+                                                <p className="text-[11px] text-amber-900/70 font-bold italic tracking-tight">"{booking.adminNote}"</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 w-full md:w-auto self-end md:self-center">
+                                    <button 
+                                        onClick={() => onScheduleResponse(booking._id, 'reschedule')}
+                                        disabled={isResponding === booking._id}
+                                        className="flex-1 md:flex-none px-6 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-amber-700 bg-white/80 border border-amber-200 rounded-xl hover:bg-white hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        Change Time
+                                    </button>
+                                    <button 
+                                        onClick={() => onScheduleResponse(booking._id, 'accept')}
+                                        disabled={isResponding === booking._id}
+                                        className="flex-1 md:flex-none px-8 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white bg-[#D97706] rounded-xl shadow-lg shadow-amber-600/20 hover:bg-[#B45309] hover:shadow-amber-600/30 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {isResponding === booking._id ? (
+                                            <>
+                                                <RefreshCw size={14} className="animate-spin" /> Confirming
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={14} strokeWidth={3} /> Accept Schedule
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -125,15 +185,44 @@ const BookingCard = ({ booking }) => {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 const MyBookings = ({ isDashboardComponent = false }) => {
-    const { token } = useAuth();
+    const { token, isAuthenticated, loading: authLoading } = useAuth();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('All');
     const [lastRefreshed, setLastRefreshed] = useState(null);
+    const [isResponding, setIsResponding] = useState(null);
+
+    const handleScheduleResponse = async (bookingId, action) => {
+        setIsResponding(bookingId);
+        try {
+            const res = await fetch(`/api/bookings/${bookingId}/schedule`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchBookings();
+            } else {
+                const debugInfo = data.debug ? `\n\nUser: ${data.debug.userEmail}\nBooking: ${data.debug.bookingEmail}` : '';
+                alert(data.message + debugInfo);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Cannot connect to server.');
+        } finally {
+            setIsResponding(null);
+        }
+    };
 
     const fetchBookings = useCallback(async () => {
+        if (!token) return; // Wait for token to be available
+        
         setLoading(true);
         setError(null);
         try {
@@ -142,6 +231,15 @@ const MyBookings = ({ isDashboardComponent = false }) => {
                     'Authorization': `Bearer ${token}`
                 }
             });
+
+            if (res.status === 401) {
+                // Token is invalid or expired
+                localStorage.removeItem('secureVisionUser');
+                localStorage.removeItem('secureVisionToken');
+                window.location.href = '/login';
+                return;
+            }
+
             const data = await res.json();
             if (data.success) {
                 setBookings(data.data);
@@ -154,29 +252,55 @@ const MyBookings = ({ isDashboardComponent = false }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [token]);
 
     useEffect(() => {
-        fetchBookings();
-    }, [fetchBookings]);
+        if (token) {
+            fetchBookings();
+        } else if (!authLoading && !isAuthenticated) {
+            setLoading(false);
+            setBookings([]);
+        }
+    }, [fetchBookings, token, authLoading, isAuthenticated]);
 
     // ── Stats ──────────────────────────────────────────────────────────────
     const stats = {
-        Pending: bookings.filter(b => b.status === 'Pending').length,
-        Confirmed: bookings.filter(b => b.status === 'Confirmed').length,
-        'In Progress': bookings.filter(b => b.status === 'In Progress').length,
-        Completed: bookings.filter(b => b.status === 'Completed').length,
+        Pending: bookings.filter(b => ['Pending', 'pending_schedule', 'schedule_sent', 'reschedule_requested'].includes(b.status)).length,
+        Confirmed: bookings.filter(b => ['Confirmed', 'scheduled_confirmed'].includes(b.status)).length,
+        'In Progress': bookings.filter(b => ['In Progress', 'in_progress'].includes(b.status)).length,
+        Completed: bookings.filter(b => ['Completed', 'completed'].includes(b.status)).length,
     };
 
     // ── Filter ─────────────────────────────────────────────────────────────
     const filtered = bookings.filter(b => {
-        const tabMatch = activeTab === 'All' || b.status === activeTab;
-        const search = searchTerm.toLowerCase();
-        const textMatch = !search ||
-            b.orderId.toLowerCase().includes(search) ||
-            b.name.toLowerCase().includes(search) ||
-            b.productName.toLowerCase().includes(search) ||
-            b.email.toLowerCase().includes(search);
+        // Tab Match Logic (Grouped)
+        let tabMatch = activeTab === 'All';
+        if (activeTab === 'Pending') {
+            tabMatch = ['Pending', 'pending_schedule', 'schedule_sent', 'reschedule_requested'].includes(b.status);
+        } else if (activeTab === 'Confirmed') {
+            tabMatch = ['Confirmed', 'scheduled_confirmed'].includes(b.status);
+        } else if (activeTab === 'In Progress') {
+            tabMatch = ['In Progress', 'in_progress'].includes(b.status);
+        } else if (activeTab === 'Completed') {
+            tabMatch = ['Completed', 'completed'].includes(b.status);
+        } else if (activeTab === b.status) {
+            tabMatch = true;
+        }
+
+        const search = searchTerm.toLowerCase().trim();
+        if (!search) return tabMatch;
+
+        const bId = b.bookingId || '';
+        const cName = b.customerName || '';
+        const pName = b.productName || '';
+        const cEmail = b.customerEmail || '';
+
+        const textMatch = 
+            bId.toLowerCase().includes(search) ||
+            cName.toLowerCase().includes(search) ||
+            pName.toLowerCase().includes(search) ||
+            cEmail.toLowerCase().includes(search);
+            
         return tabMatch && textMatch;
     });
 
@@ -261,7 +385,7 @@ const MyBookings = ({ isDashboardComponent = false }) => {
                                 className="flex-1 md:w-48 appearance-none bg-white border border-gray-100 px-4 py-3 rounded-xl text-sm font-medium text-gray-700 outline-none focus:border-blue-300 transition-colors cursor-pointer"
                             >
                                 {TABS.map(tab => (
-                                    <option key={tab} value={tab}>{tab === 'All' ? 'All Status' : tab}</option>
+                                    <option key={tab} value={tab}>{tab === 'All' ? 'All Status' : tab.replace(/_/g, ' ')}</option>
                                 ))}
                             </select>
                         </div>
@@ -308,7 +432,12 @@ const MyBookings = ({ isDashboardComponent = false }) => {
                     {!loading && !error && filtered.length > 0 && (
                         <div className="space-y-4">
                             {filtered.map(booking => (
-                                <BookingCard key={booking.orderId} booking={booking} />
+                                <BookingCard 
+                                    key={booking._id} 
+                                    booking={booking} 
+                                    onScheduleResponse={handleScheduleResponse}
+                                    isResponding={isResponding}
+                                />
                             ))}
                         </div>
                     )}

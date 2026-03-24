@@ -46,4 +46,20 @@ const employee = (req, res, next) => {
     }
 };
 
-export { protect, admin, employee };
+const optionalAuth = async (req, res, next) => {
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            const token = req.headers.authorization.split(' ')[1];
+            if (token && token !== 'null' && token !== 'undefined') {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'securevision_secret_key');
+                req.user = await User.findById(decoded.id).select('-password');
+            }
+        } catch (error) {
+            console.error('Optional auth token error:', error.message);
+            // Ignore error and proceed as guest
+        }
+    }
+    next();
+};
+
+export { protect, admin, employee, optionalAuth };

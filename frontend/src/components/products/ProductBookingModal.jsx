@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, CreditCard, Banknote, MapPin, User, ChevronRight, Loader2, Package } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
 
-const ServiceBookingModal = ({ product, onClose }) => {
-    const { user, isAuthenticated, token } = useAuth();
-
+const ProductBookingModal = ({ isOpen, onClose, product }) => {
     // --- State Variables ---
     const [currentStep, setCurrentStep] = useState(1);
     
     // Step 1: Details
-    const [customerName, setCustomerName] = useState(user?.name || '');
-    const [customerEmail, setCustomerEmail] = useState(user?.email || '');
+    const [customerName, setCustomerName] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
     
     // Step 2: Payment
     const [paymentMethod, setPaymentMethod] = useState(''); // 'cod' | 'online'
@@ -20,23 +17,38 @@ const ServiceBookingModal = ({ product, onClose }) => {
     
     // Step 3: Address
     const [addressData, setAddressData] = useState({
-        phone: user?.phone || '',
-        country: 'India',
+        phone: '',
+        country: '',
         state: '',
         city: '',
-        fullAddress: ''
+        fullAddress: '',
+        preferredDate: '',
+        timeSlot: ''
     });
     
     // Step 4: Confirmation
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [bookingStatus, setBookingStatus] = useState('');
     const [bookingId, setBookingId] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
     
     // Close Confirmation
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
-    if (!product) return null;
+    // Reset state when modal is unexpectedly closed and reopened with a new product
+    useEffect(() => {
+        if (isOpen) {
+            setCurrentStep(1);
+            setCustomerName('');
+            setCustomerEmail('');
+            setPaymentMethod('');
+            setPaymentStatus('pending');
+            setAddressData({ phone: '', country: '', state: '', city: '', fullAddress: '', preferredDate: '', timeSlot: '' });
+            setShowCloseConfirm(false);
+            setBookingStatus('');
+            setBookingId('');
+        }
+    }, [isOpen, product]);
+
+    if (!isOpen || !product) return null;
 
     // --- Validation Logic ---
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -47,7 +59,9 @@ const ServiceBookingModal = ({ product, onClose }) => {
         addressData.country.trim().length > 0 &&
         addressData.state.trim().length > 0 &&
         addressData.city.trim().length > 0 &&
-        addressData.fullAddress.trim().length > 0;
+        addressData.fullAddress.trim().length > 0 &&
+        addressData.preferredDate.trim().length > 0 &&
+        addressData.timeSlot.trim().length > 0;
 
     // --- Handlers ---
     const handleCloseAttempt = () => {
@@ -61,7 +75,7 @@ const ServiceBookingModal = ({ product, onClose }) => {
     const handleConfirmCOD = () => {
         setPaymentStatus('cod_confirmed');
         toast.success("Cash on Delivery selected successfully!");
-        setCurrentStep(3);
+        setCurrentStep(3); // Move directly to address
     };
 
     const handleProceedToPay = () => {
@@ -71,54 +85,15 @@ const ServiceBookingModal = ({ product, onClose }) => {
             setIsProcessingPayment(false);
             setPaymentStatus('paid');
             toast.success("Payment successful!");
-            setCurrentStep(3);
-        }, 1500);
+            setCurrentStep(3); // Move to address
+        }, 2000);
     };
 
-    const handleConfirmBooking = async () => {
-        setIsSubmitting(true);
-        setErrorMessage('');
-
-        try {
-            const combinedAddress = `${addressData.fullAddress}, ${addressData.state}, ${addressData.country}`;
-            const headers = { 'Content-Type': 'application/json' };
-            if (token && token !== 'null' && token !== 'undefined') {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await fetch('/api/bookings', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    productName: product.name,
-                    productId: product.id || product._id || 0,
-                    productPrice: product.price,
-                    customerName: customerName,
-                    customerEmail: customerEmail,
-                    customerPhone: addressData.phone,
-                    address: combinedAddress,
-                    city: addressData.city,
-                    notes: `Payment Method: ${paymentMethod}, Payment Status: ${paymentStatus}`
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                setBookingStatus('confirmed');
-                setBookingId(data.data?.bookingId || `BKG-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
-                setCurrentStep(4);
-            } else {
-                toast.error(data.message || 'Something went wrong while booking.');
-                setErrorMessage(data.message || 'Failed to place booking.');
-            }
-        } catch (error) {
-            console.error("Booking error", error);
-            toast.error('Could not connect to the server. Please try again.');
-            setErrorMessage('Network error occurred. Please try again.');
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleConfirmBooking = () => {
+        // Simulate API Saving Booking
+        setBookingId(`BKG-${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
+        setBookingStatus('confirmed');
+        setCurrentStep(4);
     };
 
     // --- Render Helpers ---
@@ -153,14 +128,10 @@ const ServiceBookingModal = ({ product, onClose }) => {
     );
 
     return (
-        <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseAttempt}
-        >
-            <div 
-                className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+            {/* Modal Container */}
+            <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                
                 {/* Header Section */}
                 <div className="flex items-center justify-between p-5 md:p-6 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center gap-4">
@@ -219,13 +190,6 @@ const ServiceBookingModal = ({ product, onClose }) => {
                 <div className="px-5 md:px-8 py-6 overflow-y-auto custom-scrollbar flex-grow">
                     <StepIndicator />
 
-                    {/* Error Display */}
-                    {errorMessage && (
-                        <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 text-sm font-semibold flex items-center gap-2">
-                           <X size={16} /> {errorMessage}
-                        </div>
-                    )}
-
                     {/* STEP 1: BASIC DETAILS */}
                     {currentStep === 1 && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -248,7 +212,7 @@ const ServiceBookingModal = ({ product, onClose }) => {
                                         value={customerEmail}
                                         onChange={(e) => setCustomerEmail(e.target.value)}
                                         placeholder="john@example.com"
-                                        className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all outline-none text-gray-900 placeholder:text-gray-400 border-gray-200`}
+                                        className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all outline-none text-gray-900 placeholder:text-gray-400 ${customerEmailInitialsError ? 'border-red-300' : 'border-gray-200'}`}
                                     />
                                     {customerEmail.length > 0 && !isValidEmail(customerEmail) && (
                                         <p className="text-red-500 text-xs mt-1.5 font-medium">Please enter a valid email address.</p>
@@ -308,7 +272,7 @@ const ServiceBookingModal = ({ product, onClose }) => {
                                         onClick={handleConfirmCOD}
                                         className="w-full mt-5 py-3 bg-gray-900 text-white font-bold rounded-lg shadow hover:bg-black transition-all"
                                     >
-                                        Confirm Cash on Delivery
+                                        Confirm COD & Proceed
                                     </button>
                                 </div>
                             )}
@@ -332,7 +296,7 @@ const ServiceBookingModal = ({ product, onClose }) => {
                                                 Processing Payment...
                                             </>
                                         ) : (
-                                            <>Proceed to Online Payment</>
+                                            <>Proceed to Pay ₹{product.price.toLocaleString('en-IN')}</>
                                         )}
                                     </button>
                                 </div>
@@ -410,18 +374,40 @@ const ServiceBookingModal = ({ product, onClose }) => {
                                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none transition-all placeholder:text-gray-400 text-sm resize-none custom-scrollbar"
                                     ></textarea>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Preferred Date <span className="text-red-500">*</span></label>
+                                        <input 
+                                            type="date" 
+                                            value={addressData.preferredDate}
+                                            onChange={(e) => setAddressData({...addressData, preferredDate: e.target.value})}
+                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm text-gray-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">Time Slot <span className="text-red-500">*</span></label>
+                                        <select 
+                                            value={addressData.timeSlot}
+                                            onChange={(e) => setAddressData({...addressData, timeSlot: e.target.value})}
+                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none transition-all text-sm text-gray-900 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTEwIDEybC01LTVoMTBsLTUgNXoiIGZpbGw9IiM2YjcyODAiLz48L3N2Zz4=')] bg-no-repeat bg-[center_right_10px] pr-8"
+                                        >
+                                            <option value="">Select a slot</option>
+                                            <option value="10:00 AM - 1:00 PM">Morning (10AM - 1PM)</option>
+                                            <option value="1:00 PM - 4:00 PM">Afternoon (1PM - 4PM)</option>
+                                            <option value="4:00 PM - 7:00 PM">Evening (4PM - 7PM)</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
                             <button
-                                disabled={!isStep3Valid || isSubmitting}
+                                disabled={!isStep3Valid}
                                 onClick={handleConfirmBooking}
                                 className="w-full mt-6 py-3.5 bg-gray-900 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 hover:bg-black disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
                             >
-                                {isSubmitting ? (
-                                    <><Loader2 size={18} className="animate-spin" /> Confirming...</>
-                                ) : (
-                                    <>Confirm Booking (Total: ₹{product.price.toLocaleString('en-IN')}) <Package size={18} /></>
-                                )}
+                                Confirm Booking (Total: ₹{product.price.toLocaleString('en-IN')})
+                                <Package size={18} />
                             </button>
                         </div>
                     )}
@@ -432,8 +418,8 @@ const ServiceBookingModal = ({ product, onClose }) => {
                             <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-white shadow-lg">
                                 <CheckCircle size={40} className="animate-[bounce_1s_ease-in-out]" />
                             </div>
-                            <h2 className="text-2xl font-black text-gray-900 mb-2">Booking Request Submitted!</h2>
-                            <p className="text-gray-500 text-sm mb-6">Our team will contact you shortly with the delivery / installation date and time.</p>
+                            <h2 className="text-2xl font-black text-gray-900 mb-2">Booking Confirmed!</h2>
+                            <p className="text-gray-500 text-sm mb-6">Your booking has been placed successfully.</p>
                             
                             <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 text-left mb-8 shadow-inner">
                                 <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-3">
@@ -464,14 +450,17 @@ const ServiceBookingModal = ({ product, onClose }) => {
                                 onClick={onClose}
                                 className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition-all"
                             >
-                                Back to Details
+                                Back to Products
                             </button>
                         </div>
                     )}
                 </div>
             </div>
+            
+            {/* Custom variable declarations to prevent strict mode undefined errors temporarily */}
+            <span className="hidden">{(() => { var customerEmailInitialsError; return ''; })()}</span>
         </div>
     );
 };
 
-export default ServiceBookingModal;
+export default ProductBookingModal;

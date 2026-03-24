@@ -11,16 +11,24 @@ export const AuthProvider = ({ children }) => {
         // Load user and token from localStorage on mount
         const savedUserStr = localStorage.getItem('secureVisionUser');
         const savedToken = localStorage.getItem('secureVisionToken');
-        if (savedUserStr && savedToken) {
-            const savedUser = JSON.parse(savedUserStr);
-            setUser(savedUser);
-            setToken(savedToken);
+        
+        // Prevent generic string null from passing
+        if (savedUserStr && savedUserStr !== 'null' && savedToken && savedToken !== 'null' && savedToken !== 'undefined') {
+            try {
+                const savedUser = JSON.parse(savedUserStr);
+                setUser(savedUser);
+                setToken(savedToken);
 
-            if (savedUser.role === 'employee') {
-                fetch('/api/attendance/checkin', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${savedToken}` }
-                }).catch(err => console.error("Auto Check-in failed:", err));
+                if (savedUser.role === 'employee') {
+                    fetch('/api/attendance/checkin', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${savedToken}` }
+                    }).catch(err => console.error("Auto Check-in failed:", err));
+                }
+            } catch (e) {
+                console.error("Failed to parse user session", e);
+                localStorage.removeItem('secureVisionUser');
+                localStorage.removeItem('secureVisionToken');
             }
         }
         setLoading(false);
@@ -83,6 +91,45 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // MOCK OTP LOGIN FUNCTIONS
+    const requestOTP = async (phone) => {
+        try {
+            await new Promise(r => setTimeout(r, 500));
+            console.log(`Mock OTP sent to ${phone}`);
+            return { success: true, message: "OTP Sent" };
+        } catch (error) {
+            return { success: false, message: 'Could not connect to server.' };
+        }
+    };
+
+    const verifyOTP = async (phone, otp) => {
+        try {
+            // Mock network delay for realism
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Call the real backend endpoint to fetch an actual JWT
+            const response = await fetch('/api/auth/otp-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                setUser(data.user);
+                setToken(data.token);
+                localStorage.setItem('secureVisionUser', JSON.stringify(data.user));
+                localStorage.setItem('secureVisionToken', data.token);
+                return { success: true };
+            } else {
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            console.error("OTP login error:", error);
+            return { success: false, message: 'Could not connect to server.' };
+        }
+    };
+
     const logout = async () => {
         // Auto-Attendance Logic: Check-out Employee automatically on logout
         if (user && user.role === 'employee' && token) {
@@ -108,7 +155,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, signup, logout, updateProfile, loading }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, login, signup, requestOTP, verifyOTP, logout, updateProfile, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

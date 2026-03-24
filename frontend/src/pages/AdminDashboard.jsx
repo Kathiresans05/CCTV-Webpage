@@ -11,6 +11,7 @@ import {
     Search,
     Filter,
     CheckCircle2,
+    History,
     Clock,
     X,
     XCircle,
@@ -36,7 +37,10 @@ import {
     Play,
     Check,
     Download,
-    FileSpreadsheet
+    FileSpreadsheet,
+    MessageSquare,
+    Receipt,
+    ClipboardList
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
@@ -47,7 +51,9 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    Legend
 } from 'recharts';
+import Chat from '../components/Chat';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -66,7 +72,10 @@ const AdminDashboard = () => {
         '/admin/attendance': 'attendance',
         '/admin/reports': 'reports',
         '/admin/settings': 'settings',
-        '/admin/notifications': 'notifications'
+        '/admin/notifications': 'notifications',
+        '/admin/chat': 'chat',
+        '/admin/expenses': 'expenses',
+        '/admin/tasks': 'tasks'
     };
 
     // Reverse mapping for navigation
@@ -79,7 +88,10 @@ const AdminDashboard = () => {
         'attendance': '/admin/attendance',
         'reports': '/admin/reports',
         'settings': '/admin/settings',
-        'notifications': '/admin/notifications'
+        'notifications': '/admin/notifications',
+        'chat': '/admin/chat',
+        'expenses': '/admin/expenses',
+        'tasks': '/admin/tasks'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
@@ -132,6 +144,17 @@ const AdminDashboard = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [bookingsFilter, setBookingsFilter] = useState('All');
+    const [selectedChatEmployee, setSelectedChatEmployee] = useState(null);
+    const [adminExpenses, setAdminExpenses] = useState([]);
+    const [expensesFilter, setExpensesFilter] = useState('Pending');
+    const [showExpenseApprovalModal, setShowExpenseApprovalModal] = useState(false);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [selectedExpense, setSelectedExpense] = useState(null);
+    const [expenseActionNote, setExpenseActionNote] = useState('');
+    const [adminTasks, setAdminTasks] = useState([]);
+    const [tasksFilter, setTasksFilter] = useState('All');
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedTo: '', employeeName: '', priority: 'Medium', dueDate: '' });
     
     // Attendance History State
     const [selectedAttendanceEmployee, setSelectedAttendanceEmployee] = useState('all');
@@ -173,7 +196,7 @@ const AdminDashboard = () => {
         description: ''
     };
     const [productForm, setProductForm] = useState(initialProductForm);
-    const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '' });
+    const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '', proposedDate: '', proposedTimeSlot: '', adminNote: '' });
     const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, type: 'add' });
     const [settings, setSettings] = useState({
         companyName: 'SecureVision CCTV',
@@ -214,6 +237,18 @@ const AdminDashboard = () => {
             if (aData.success) setAttendance(aData.data);
             if (lData.success) setLeaves(lData.data);
             if (nData.success) setNotifications(nData.data);
+
+            const expRes = await fetch('/api/admin/expenses', { headers });
+            const expData = await expRes.json();
+            if (expData.success) {
+                setAdminExpenses(expData.data);
+            } else {
+                console.error('Failed to fetch expenses:', expData.message);
+            }
+
+            const taskRes = await fetch('/api/admin/tasks', { headers });
+            const taskData = await taskRes.json();
+            if (taskData.success) setAdminTasks(taskData.data);
         } catch (error) {
             console.error('Error fetching admin data:', error);
         } finally {
@@ -489,9 +524,9 @@ const AdminDashboard = () => {
         const kpis = {
             operations: [
                 { label: 'Total Bookings', value: bookings.length, icon: Calendar, color: 'text-primary-navy', bg: 'bg-primary-navy/10', trend: '+12%', onClick: () => { setActiveTab('bookings'); setBookingsFilter('All'); } },
-                { label: 'Pending', value: bookings.filter(b => b.status === 'Pending').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', trend: 'Needs action', onClick: () => { setActiveTab('bookings'); setBookingsFilter('Pending'); } },
-                { label: 'In Progress', value: bookings.filter(b => b.status === 'In Progress').length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10', trend: 'Active', onClick: () => { setActiveTab('bookings'); setBookingsFilter('In Progress'); } },
-                { label: 'Completed', value: bookings.filter(b => b.status === 'Completed').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: '+5%', onClick: () => { setActiveTab('bookings'); setBookingsFilter('Completed'); } }
+                { label: 'Pending', value: bookings.filter(b => ['Pending', 'pending_schedule', 'reschedule_requested'].includes(b.status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', trend: 'Needs action', onClick: () => { setActiveTab('bookings'); setBookingsFilter('pending_schedule'); } },
+                { label: 'In Progress', value: bookings.filter(b => ['In Progress', 'in_progress'].includes(b.status)).length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10', trend: 'Active', onClick: () => { setActiveTab('bookings'); setBookingsFilter('in_progress'); } },
+                { label: 'Completed', value: bookings.filter(b => ['Completed', 'completed'].includes(b.status)).length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10', trend: '+5%', onClick: () => { setActiveTab('bookings'); setBookingsFilter('completed'); } }
             ],
             staff: [
                 { label: 'Total Employees', value: employees.length, icon: Users, color: 'text-primary-navy', bg: 'bg-bg-soft', trend: 'Stable' },
@@ -611,7 +646,7 @@ const AdminDashboard = () => {
             <div className="zoho-card overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white flex-wrap gap-4">
                     <div className="flex items-center gap-2">
-                        {['All', 'Pending', 'In Progress', 'Completed'].map(f => (
+                        {['All', 'pending_schedule', 'schedule_sent', 'in_progress', 'completed'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setBookingsFilter(f)}
@@ -711,17 +746,23 @@ const AdminDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`status-chip inline-block ${
-                                            b.status === 'Completed' ? 'bg-status-success-bg text-status-success-text' : 
-                                            b.status === 'Pending' ? 'bg-status-warning-bg text-status-warning-text' : 
+                                            ['Completed', 'completed'].includes(b.status) ? 'bg-status-success-bg text-status-success-text' : 
+                                            ['Pending', 'pending_schedule', 'reschedule_requested'].includes(b.status) ? 'bg-status-warning-bg text-status-warning-text' : 
                                             'bg-status-info-bg text-status-info-text'
-                                        }`}>{b.status}</span>
+                                        }`}>{b.status.replace('_', ' ')}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end items-center gap-2">
                                             <button 
                                                 onClick={() => {
                                                     setEditingBooking(b);
-                                                    setBookingForm({ status: b.status, assignedEmployee: b.assignedEmployee?._id || '' });
+                                                    setBookingForm({ 
+                                                        status: b.status, 
+                                                        assignedEmployee: b.assignedEmployee?._id || '',
+                                                        proposedDate: b.proposedDate ? new Date(b.proposedDate).toISOString().split('T')[0] : '',
+                                                        proposedTimeSlot: b.proposedTimeSlot || '',
+                                                        adminNote: b.adminNote || ''
+                                                    });
                                                     setShowBookingModal(true);
                                                 }}
                                                 className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px] shrink-0"
@@ -758,7 +799,7 @@ const AdminDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-soft">
-                            {bookings.filter(b => ['Accepted', 'In Progress', 'Completed'].includes(b.status)).map(b => (
+                            {bookings.filter(b => ['Accepted', 'In Progress', 'Completed', 'scheduled_confirmed', 'in_progress', 'completed'].includes(b.status)).map(b => (
                                 <tr key={b._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <p className="text-[10px] font-black text-text-muted uppercase">#SV-{b.bookingId.substring(0,8).toUpperCase()}</p>
@@ -789,8 +830,8 @@ const AdminDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`status-chip ${
-                                            b.status === 'Completed' ? 'bg-status-success-bg text-status-success-text' : 'bg-status-info-bg text-status-info-text'
-                                        }`}>{b.status}</span>
+                                            ['Completed', 'completed'].includes(b.status) ? 'bg-status-success-bg text-status-success-text' : 'bg-status-info-bg text-status-info-text'
+                                        }`}>{b.status.replace('_', ' ')}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         {b.proofPhotos && b.proofPhotos.length > 0 ? (
@@ -1356,6 +1397,438 @@ const AdminDashboard = () => {
                     )}
                 </div>
              </div>
+        </div>
+    );
+
+    const handleExpenseAction = async (status) => {
+        try {
+            const res = await fetch(`/api/admin/expenses/${selectedExpense._id}`, {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status, adminNote: expenseActionNote })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(`Expense ${status.toLowerCase()} successfully`);
+                setShowExpenseApprovalModal(false);
+                setExpenseActionNote('');
+                fetchAllData();
+            }
+        } catch (error) {
+            toast.error('Action failed');
+        }
+    };
+
+    const renderExpenses = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Financial Claims</h2>
+                    <p className="text-sm text-text-muted mt-1">Review and process staff expense reimbursements</p>
+                </div>
+                <div className="flex gap-4">
+                    <button 
+                        onClick={fetchAllData}
+                        className="p-2 text-text-muted hover:text-primary-navy transition-colors bg-white rounded-lg border border-border-soft"
+                        title="Refresh Data"
+                    >
+                        <History size={18} />
+                    </button>
+                    {['Pending', 'Approved', 'Rejected', 'All'].map(f => (
+                        <button 
+                            key={f}
+                            onClick={() => setExpensesFilter(f)}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                expensesFilter === f 
+                                ? 'bg-primary-navy text-white shadow-md' 
+                                : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
+                            }`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="zoho-card overflow-hidden">
+                <table className="zoho-table">
+                    <thead>
+                        <tr className="zoho-table-header uppercase">
+                            <th className="px-6 py-4">Employee</th>
+                            <th className="px-6 py-4">Submission</th>
+                            <th className="px-6 py-4">Category</th>
+                            <th className="px-6 py-4">Amount</th>
+                            <th className="px-6 py-4 text-center">Status</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-soft">
+                        {adminExpenses.filter(e => expensesFilter === 'All' || e.status === expensesFilter).length > 0 ? (
+                            adminExpenses.filter(e => expensesFilter === 'All' || e.status === expensesFilter).map(exp => (
+                                <tr key={exp._id} className="hover:bg-bg-soft/50 transition-colors">
+                                    <td className="px-6 py-4 font-bold text-primary-navy text-sm">
+                                        {exp.employeeName}
+                                    </td>
+                                    <td className="px-6 py-4 text-xs text-text-muted">
+                                        {new Date(exp.createdAt).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-[10px] font-bold text-text-dark uppercase tracking-wider bg-bg-soft px-2 py-1 rounded border border-border-soft">
+                                            {exp.category}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 font-extrabold text-primary-navy">
+                                        ₹{exp.amount.toLocaleString()}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`status-chip ${
+                                            exp.status === 'Approved' ? 'bg-status-success-bg text-status-success-text' :
+                                            exp.status === 'Rejected' ? 'bg-status-danger-bg text-status-danger-text' :
+                                            'bg-status-warning-bg text-status-warning-text'
+                                        }`}>
+                                            {exp.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            {exp.receiptImage && (
+                                                <button 
+                                                    onClick={() => { setSelectedExpense(exp); setShowReceiptModal(true); }}
+                                                    className="p-2 text-primary-navy hover:bg-bg-soft rounded-lg transition-colors"
+                                                    title="View Receipt"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            )}
+                                            {exp.status === 'Pending' && (
+                                                <button 
+                                                    onClick={() => { setSelectedExpense(exp); setShowExpenseApprovalModal(true); }}
+                                                    className="p-2 text-primary-navy hover:bg-primary-navy hover:text-white border border-border-soft rounded-lg transition-all"
+                                                >
+                                                    <Check size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="6" className="py-24 text-center">
+                                    <div className="flex flex-col items-center gap-3 opacity-30">
+                                        <Receipt size={48} />
+                                        <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No financial claims found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {showExpenseApprovalModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md transition-opacity duration-500 opacity-100" onClick={() => setShowExpenseApprovalModal(false)}></div>
+                    <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                            <div>
+                                <h3 className="text-xl font-bold text-primary-navy">Expense Audit</h3>
+                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Status Finalization</p>
+                            </div>
+                            <button onClick={() => setShowExpenseApprovalModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-10 space-y-8">
+                            <div className="p-4 bg-bg-soft rounded-2xl border border-border-soft space-y-1">
+                                <p className="text-[10px] text-text-muted font-bold uppercase">Claimant</p>
+                                <p className="font-bold text-primary-navy">{selectedExpense?.employeeName}</p>
+                                <p className="text-lg font-black text-primary-navy mt-2">₹{selectedExpense?.amount.toLocaleString()}</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Audit Note</label>
+                                <textarea 
+                                    value={expenseActionNote}
+                                    onChange={e => setExpenseActionNote(e.target.value)}
+                                    className="zoho-input h-24 resize-none py-3" 
+                                    placeholder="Add reason for approval or rejection..."
+                                />
+                            </div>
+                            <div className="flex gap-4">
+                                <button 
+                                    onClick={() => handleExpenseAction('Rejected')}
+                                    className="flex-1 py-4 bg-rose-50 text-rose-600 rounded-2xl font-bold hover:bg-rose-100 transition-all border border-rose-200"
+                                >
+                                    Reject
+                                </button>
+                                <button 
+                                    onClick={() => handleExpenseAction('Approved')}
+                                    className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                                >
+                                    Approve
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showReceiptModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-[#0B1739]/80 backdrop-blur-md transition-opacity duration-500 opacity-100" onClick={() => setShowReceiptModal(false)}></div>
+                    <div className="bg-white max-w-4xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
+                        <div className="p-6 border-b border-border-soft flex justify-between items-center bg-white">
+                            <div>
+                                <h3 className="text-xl font-bold text-primary-navy">Receipt Verification</h3>
+                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Claim ID: {selectedExpense?._id}</p>
+                            </div>
+                            <button onClick={() => setShowReceiptModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-bg-soft p-4 flex items-center justify-center">
+                            <img 
+                                src={selectedExpense?.receiptImage} 
+                                alt="Expense Receipt" 
+                                className="max-w-full h-auto rounded-xl shadow-lg border border-border-soft"
+                                onError={(e) => { e.target.src = 'https://placehold.co/600x400?text=Receipt+Not+Found'; }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const handleTaskSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/admin/tasks', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(taskForm)
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Task assigned successfully');
+                setShowTaskModal(false);
+                setTaskForm({ title: '', description: '', assignedTo: '', employeeName: '', priority: 'Medium', dueDate: '' });
+                fetchAllData();
+            }
+        } catch (error) {
+            toast.error('Failed to assign task');
+        }
+    };
+
+    const handleDeleteTask = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this task?')) return;
+        try {
+            const res = await fetch(`/api/admin/tasks/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Task deleted');
+                fetchAllData();
+            }
+        } catch (error) {
+            toast.error('Delete failed');
+        }
+    };
+
+    const renderTasks = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Team Operations</h2>
+                    <p className="text-sm text-text-muted mt-1">Assign and track administrative tasks for staff</p>
+                </div>
+                <div className="flex gap-4">
+                    <button 
+                         onClick={() => setShowTaskModal(true)}
+                         className="flex items-center gap-2 bg-primary-navy text-white px-6 py-3 rounded-2xl font-bold hover:bg-navy-dark transition-all transform hover:scale-105 shadow-lg shadow-primary-navy/20"
+                    >
+                        <Plus size={18} /> Assign New Task
+                    </button>
+                    {['Pending', 'In Progress', 'Completed', 'All'].map(f => (
+                        <button 
+                            key={f}
+                            onClick={() => setTasksFilter(f)}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                tasksFilter === f 
+                                ? 'bg-primary-navy text-white shadow-md' 
+                                : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
+                            }`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {adminTasks.filter(t => tasksFilter === 'All' || t.status === tasksFilter).length > 0 ? (
+                    adminTasks.filter(t => tasksFilter === 'All' || t.status === tasksFilter).map(task => (
+                        <div key={task._id} className="zoho-card p-6 group hover:border-primary-navy transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
+                                    task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                    task.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                    'bg-bg-soft text-text-muted border-border-soft'
+                                }`}>
+                                    {task.priority}
+                                </span>
+                                <button onClick={() => handleDeleteTask(task._id)} className="opacity-0 group-hover:opacity-100 p-2 text-text-muted hover:text-primary-red transition-all">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                            <h3 className="font-bold text-primary-navy mb-2 line-clamp-1">{task.title}</h3>
+                            <p className="text-xs text-text-muted mb-4 line-clamp-2">{task.description}</p>
+                            <div className="space-y-3 pt-4 border-t border-border-soft">
+                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                    <span className="text-text-muted">Assigned To</span>
+                                    <span className="text-primary-navy">{task.employeeName}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                    <span className="text-text-muted">Due Date</span>
+                                    <span className="text-primary-navy">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                    <span className="text-text-muted">Status</span>
+                                    <span className={`status-chip ${
+                                        task.status === 'Completed' ? 'bg-status-success-bg text-status-success-text' :
+                                        task.status === 'In Progress' ? 'bg-status-warning-bg text-status-warning-text' :
+                                        'bg-status-info-bg text-status-info-text'
+                                    }`}>
+                                        {task.status}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
+                        <div className="flex flex-col items-center gap-3 opacity-30">
+                            <ClipboardList size={48} />
+                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No administrative tasks recorded</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {showTaskModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 text-left">
+                    <div className="absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md transition-opacity duration-500 opacity-100" onClick={() => setShowTaskModal(false)}></div>
+                    <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                            <div>
+                                <h3 className="text-xl font-bold text-primary-navy">Project Directive</h3>
+                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">New Task Assignment</p>
+                            </div>
+                            <button onClick={() => setShowTaskModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleTaskSubmit} className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Task Title</label>
+                                <input required type="text" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} className="zoho-input" placeholder="e.g. Audit Inventory" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Detail Description</label>
+                                <textarea value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Provide context..." />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign Staff</label>
+                                    <select required value={taskForm.assignedTo} onChange={e => {
+                                        const emp = employees.find(emp => emp._id === e.target.value);
+                                        setTaskForm({...taskForm, assignedTo: e.target.value, employeeName: emp ? emp.name : ''});
+                                    }} className="zoho-input">
+                                        <option value="">Select Staff</option>
+                                        {employees.map(emp => <option key={emp._id} value={emp._id}>{emp.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Priority</label>
+                                    <select required value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})} className="zoho-input">
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="High">High</option>
+                                        <option value="Urgent">Urgent</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Target Deadline</label>
+                                <input type="date" value={taskForm.dueDate} onChange={e => setTaskForm({...taskForm, dueDate: e.target.value})} className="zoho-input" />
+                            </div>
+                            <button type="submit" className="w-full py-4 bg-primary-navy text-white rounded-2xl font-bold hover:bg-navy-dark transition-all shadow-lg shadow-primary-navy/20 mt-4">
+                                Release Directive
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderChat = () => (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[700px]">
+            {/* Employee List */}
+            <div className="lg:col-span-1 bg-white border border-border-soft rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                <div className="p-4 border-b border-border-soft bg-bg-soft/30">
+                    <h3 className="font-bold text-primary-navy">Team Messages</h3>
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                    {employees.map(emp => (
+                        <div 
+                            key={emp._id} 
+                            onClick={() => setSelectedChatEmployee(emp)}
+                            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                                selectedChatEmployee?._id === emp._id 
+                                    ? 'bg-primary-navy text-white shadow-md' 
+                                    : 'hover:bg-bg-soft text-text-dark'
+                            }`}
+                        >
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                selectedChatEmployee?._id === emp._id ? 'bg-white/20' : 'bg-primary-navy/10 text-primary-navy'
+                            }`}>
+                                {emp.name[0]}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-bold text-sm truncate">{emp.name}</p>
+                                <p className={`text-[10px] ${selectedChatEmployee?._id === emp._id ? 'text-slate-300' : 'text-text-muted'} font-medium`}>{emp.role}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Chat Area */}
+            <div className="lg:col-span-3">
+                {selectedChatEmployee ? (
+                    <Chat 
+                        currentUser={user} 
+                        targetUser={selectedChatEmployee} 
+                        token={token} 
+                    />
+                ) : (
+                    <div className="h-full bg-white border border-border-soft rounded-2xl flex flex-col items-center justify-center text-text-muted space-y-4 shadow-sm">
+                        <div className="w-16 h-16 rounded-full bg-bg-soft flex items-center justify-center">
+                            <MessageSquare size={32} />
+                        </div>
+                        <p className="font-bold">Select a team member to start chatting</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 
@@ -2190,11 +2663,27 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Status</label>
                         <select value={bookingForm.status} onChange={e => setBookingForm({...bookingForm, status: e.target.value})} className="zoho-input">
-                            <option value="Pending">Pending Audit</option>
-                            <option value="Accepted">Accepted / Formalized</option>
-                            <option value="In Progress">Active Execution</option>
-                            <option value="Completed">Completed / Certified</option>
-                            <option value="Cancelled">Void / Cancelled</option>
+                            <option value="pending_schedule">Pending Schedule Request</option>
+                            <option value="schedule_sent">Schedule Proposed to Customer</option>
+                            <option value="scheduled_confirmed">Customer Accepted Schedule</option>
+                            <option value="reschedule_requested">Customer Requested Reschedule</option>
+                            <option value="in_progress">Active Execution</option>
+                            <option value="completed">Completed / Certified</option>
+                            <option value="cancelled">Void / Cancelled</option>
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Schedule Date</label>
+                        <input type="date" value={bookingForm.proposedDate} onChange={e => setBookingForm({...bookingForm, proposedDate: e.target.value})} className="zoho-input" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Time Slot</label>
+                        <select value={bookingForm.proposedTimeSlot} onChange={e => setBookingForm({...bookingForm, proposedTimeSlot: e.target.value})} className="zoho-input">
+                            <option value="">Select Time Slot</option>
+                            <option value="09:00 AM - 11:00 AM">09:00 AM - 11:00 AM</option>
+                            <option value="11:00 AM - 01:00 PM">11:00 AM - 01:00 PM</option>
+                            <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM</option>
+                            <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM</option>
                         </select>
                     </div>
                     <div className="space-y-2">
@@ -2205,6 +2694,10 @@ const AdminDashboard = () => {
                                 <option key={emp._id} value={emp._id}>{emp.name}</option>
                             ))}
                         </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Note / Customer Instruction</label>
+                        <input type="text" value={bookingForm.adminNote} onChange={e => setBookingForm({...bookingForm, adminNote: e.target.value})} className="zoho-input" placeholder="e.g. Please confirm if this slot works..." />
                     </div>
                     <div className="pt-4">
                         <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
@@ -2283,6 +2776,9 @@ const AdminDashboard = () => {
                         { id: 'tracking', label: 'Tracker', icon: Truck },
                         { id: 'enquiries', label: 'Enquiries', icon: Mail },
                         { id: 'attendance', label: 'Attendance', icon: UserCheck },
+                        { id: 'chat', label: 'Chat', icon: MessageSquare },
+                        { id: 'expenses', label: 'Expenses', icon: Receipt },
+                        { id: 'tasks', label: 'Tasks', icon: ClipboardList },
                         { id: 'settings', label: 'Settings', icon: Settings },
                     ].map(item => (
                         <button
@@ -2359,11 +2855,15 @@ const AdminDashboard = () => {
                                 { activeTab === 'enquiries' && renderEnquiries() }
                                 { activeTab === 'leaves' && renderLeaves() }
                                 {activeTab === 'notifications' && renderNotifications()}
+                                {activeTab === 'chat' && renderChat()}
+                                {activeTab === 'expenses' && renderExpenses()}
+                                {activeTab === 'tasks' && renderTasks()}
                                 {activeTab === 'settings' && renderSettings()}
                             </div>
                         )}
                     </div>
                 </div>
+                {/* Mock Modals */}
                 {renderEmployeeModal()}
                 {renderProductModal()}
                 {renderBookingModal()}

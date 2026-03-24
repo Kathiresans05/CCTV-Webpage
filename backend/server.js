@@ -11,9 +11,14 @@ import Notification from './models/Notification.js';
 import Leave from './models/Leave.js';
 import Cart from './models/Cart.js';
 import Wishlist from './models/Wishlist.js';
+import Message from './models/Message.js';
+import Expense from './models/Expense.js';
+import Task from './models/Task.js';
 import generateToken from './utils/generateToken.js';
-import { protect, admin, employee } from './middleware/authMiddleware.js';
+import { protect, admin, employee, optionalAuth } from './middleware/authMiddleware.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { Server } from 'socket.io';
+import http from 'http';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -179,6 +184,52 @@ app.put('/api/auth/profile', protect, async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Phone OTP Login/Register
+app.post('/api/auth/otp-login', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        
+        if (!phone) {
+            return res.status(400).json({ success: false, message: 'Phone number is required' });
+        }
+
+        // Check if user exists
+        let user = await User.findOne({ phone });
+
+        if (!user) {
+            // Create a new user with dummy data
+            user = await User.create({
+                name: 'User ' + phone.substring(0, 4),
+                email: `user${phone}@securevision.com`,
+                phone,
+                password: `OtpUser@${phone}`,
+                role: 'customer',
+                isActive: true
+            });
+        }
+
+        // Generate a real JWT
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                address: user.address
+            },
+            token
+        });
+    } catch (error) {
+        console.error('OTP login error:', error);
+        res.status(500).json({ success: false, message: 'Server error during OTP login' });
     }
 });
 
@@ -457,35 +508,38 @@ app.patch('/api/admin/products/:id/stock', protect, admin, async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Create Booking (Customer)
-app.post('/api/bookings', protect, async (req, res) => {
+app.post('/api/bookings', optionalAuth, async (req, res) => {
     try {
         const { 
             productName, productId, productPrice, 
-            address, city, preferredDate, preferredTime, 
+            address, city, paymentMethod, paymentStatus, 
             notes, customerName, customerPhone, customerEmail 
         } = req.body;
         const bookingId = `BK${Date.now()}`;
 
+        const bookingEmail = (customerEmail || (req.user ? req.user.email : 'guest@example.com')).toLowerCase().trim();
+
         const booking = await Booking.create({
             bookingId,
-            customerId: req.user._id,
-            customerName: customerName || req.user.name,
-            customerEmail: customerEmail || req.user.email,
-            customerPhone: customerPhone || req.user.phone,
+            customerId: req.user ? req.user._id : null,
+            customerName: customerName || (req.user ? req.user.name : 'Guest'),
+            customerEmail: bookingEmail,
+            customerPhone: customerPhone || (req.user ? req.user.phone : '0000000000'),
             productId: productId || 0,
             productName,
             productPrice: productPrice || 0,
             address: address || 'N/A',
             city: city || 'N/A',
-            preferredDate,
-            preferredTime,
+            paymentMethod: paymentMethod || 'cod',
+            paymentStatus: paymentStatus || 'pending',
+            status: 'pending_schedule',
             notes
         });
 
         await Notification.create({
             role: 'admin',
             title: 'New Booking Request',
-            message: `New booking for ${productName} by ${customerName || req.user.name}`,
+            message: `New booking for ${productName} by ${customerName || (req.user ? req.user.name : 'Guest')}`,
             type: 'booking',
             referenceId: bookingId
         });
@@ -539,11 +593,11 @@ app.get('/api/bookings', protect, async (req, res) => {
         console.log('User:', req.user.email, 'Role:', req.user.role);
         let query = {};
         if (req.user.role === 'customer') {
-            query = { customerEmail: req.user.email };
+            query = { customerEmail: req.user.email.toLowerCase().trim() };
         } else if (req.user.role === 'employee') {
             query = { 
                 $or: [
-                    { status: 'Pending' },
+                    { status: { $in: ['Pending', 'pending_schedule', 'reschedule_requested', 'schedule_sent'] } },
                     { assignedEmployee: req.user._id }
                 ]
             };
@@ -571,7 +625,7 @@ app.get('/api/admin/bookings', protect, admin, async (req, res) => {
 // Admin Update Booking
 app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
     try {
-        const { status, assignedEmployee } = req.body;
+        const { status, assignedEmployee, proposedDate, proposedTimeSlot, adminNote } = req.body;
         const booking = await Booking.findById(req.params.id);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
@@ -580,6 +634,9 @@ app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
 
         booking.status = status || booking.status;
         booking.assignedEmployee = assignedEmployee || booking.assignedEmployee;
+        if (proposedDate) booking.proposedDate = proposedDate;
+        if (proposedTimeSlot) booking.proposedTimeSlot = proposedTimeSlot;
+        if (adminNote) booking.adminNote = adminNote;
         
         // Sync employee name if assignedEmployee is updated
         if (assignedEmployee && String(assignedEmployee) !== String(oldAssignee)) {
@@ -590,7 +647,7 @@ app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
             }
         }
 
-        if (status === 'Accepted' && oldStatus !== 'Accepted') {
+        if ((status === 'Accepted' || status === 'scheduled_confirmed') && oldStatus !== status) {
             booking.acceptedAt = Date.now();
         }
 
@@ -607,6 +664,78 @@ app.put('/api/admin/bookings/:id', protect, admin, async (req, res) => {
                 referenceId: booking.bookingId
             });
         }
+
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Customer Response to Proposed Schedule
+app.patch('/api/bookings/:id/schedule', protect, async (req, res) => {
+    try {
+        const { action } = req.body; // 'accept' or 'reschedule'
+        const booking = await Booking.findById(req.params.id);
+        
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        const isOwnerById = booking.customerId && booking.customerId.toString() === req.user._id.toString();
+        const isOwnerByEmail = booking.customerEmail && booking.customerEmail.toLowerCase().trim() === req.user.email.toLowerCase().trim();
+
+        console.log('--- Auth Debug (Schedule) ---');
+        console.log('Booking ID:', booking.bookingId);
+        console.log('Booking Email:', booking.customerEmail);
+        console.log('User Email:', req.user.email);
+        console.log('Is Owner By ID:', isOwnerById);
+        console.log('Is Owner By Email:', isOwnerByEmail);
+
+        if (!isOwnerById && !isOwnerByEmail) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Not authorized to update this booking',
+                debug: {
+                    userEmail: req.user.email,
+                    bookingEmail: booking.customerEmail
+                }
+            });
+        }
+
+        if (action === 'accept') {
+            booking.status = 'scheduled_confirmed';
+            booking.customerScheduleResponse = 'accepted';
+            // Link if previously guest booking
+            if (!booking.customerId && req.user) {
+                booking.customerId = req.user._id;
+            }
+        } else if (action === 'reschedule') {
+            booking.status = 'reschedule_requested';
+            booking.customerScheduleResponse = 'reschedule_requested';
+        }
+        
+        await booking.save();
+
+        // Notify Technician if assigned
+        if (booking.assignedEmployee) {
+            await Notification.create({
+                userId: booking.assignedEmployee,
+                role: 'employee',
+                title: action === 'accept' ? 'Schedule Confirmed' : 'Reschedule Requested',
+                message: action === 'accept' 
+                    ? `Customer accepted your schedule for SV-${booking.bookingId.substring(0,8).toUpperCase()}`
+                    : `Customer requested a different time for SV-${booking.bookingId.substring(0,8).toUpperCase()}`,
+                type: 'booking',
+                referenceId: booking.bookingId
+            });
+        }
+
+        // Also notify Admin
+        await Notification.create({
+            role: 'admin',
+            title: action === 'accept' ? 'Customer Accepted Schedule' : 'Customer Requested Reschedule',
+            message: `Booking SV-${booking.bookingId.substring(0,8).toUpperCase()} is now ${booking.status.replace('_', ' ')}`,
+            type: 'booking',
+            referenceId: booking.bookingId
+        });
 
         res.json({ success: true, data: booking });
     } catch (error) {
@@ -885,13 +1014,13 @@ app.get('/api/attendance/history', protect, employee, async (req, res) => {
 // Job Lifecycle (Employee Actions)
 // ─────────────────────────────────────────────
 
-// Accept Job
+// Accept Job (Legacy, might still be used if unassigned)
 app.patch('/api/bookings/:id/accept', protect, async (req, res) => {
     try {
         const booking = await Booking.findOneAndUpdate(
-            { bookingId: req.params.id, status: 'Pending' },
+            { bookingId: req.params.id, status: { $in: ['Pending', 'pending_schedule', 'reschedule_requested'] } },
             {
-                status: 'Accepted',
+                status: 'scheduled_confirmed', // Keep it confirmed, just assign them
                 assignedEmployee: req.user._id,
                 assignedEmployeeName: req.user.name,
                 assignedEmployeePhone: req.user.phone,
@@ -915,12 +1044,62 @@ app.patch('/api/bookings/:id/accept', protect, async (req, res) => {
     }
 });
 
+// Employee Booking Directive (Manage Schedule)
+app.patch('/api/bookings/:id/directive', protect, async (req, res) => {
+    try {
+        const { status, proposedDate, proposedTimeSlot, adminNote } = req.body;
+        const booking = await Booking.findOne({ bookingId: req.params.id });
+        
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        // Ensure only unassigned or assigned to this employee
+        if (booking.assignedEmployee && String(booking.assignedEmployee) !== String(req.user._id)) {
+            return res.status(403).json({ success: false, message: 'Unauthorized: This job is assigned to another technician.' });
+        }
+
+        const oldStatus = booking.status;
+
+        // Apply updates
+        if (status) booking.status = status;
+        if (proposedDate) booking.proposedDate = proposedDate;
+        if (proposedTimeSlot) booking.proposedTimeSlot = proposedTimeSlot;
+        if (adminNote) booking.adminNote = adminNote;
+
+        // Auto-assign if not already
+        if (!booking.assignedEmployee) {
+            booking.assignedEmployee = req.user._id;
+            booking.assignedEmployeeName = req.user.name;
+            booking.assignedEmployeePhone = req.user.phone;
+        }
+
+        if ((status === 'Accepted' || status === 'scheduled_confirmed') && oldStatus !== status) {
+            booking.acceptedAt = Date.now();
+        }
+
+        await booking.save();
+
+        // Notify Admin of directive
+        await Notification.create({
+            role: 'admin',
+            title: 'Schedule Directive Applied',
+            message: `Technician ${req.user.name} updated SV-${booking.bookingId.substring(0,8).toUpperCase()} to ${status.replace('_', ' ')}`,
+            type: 'booking',
+            referenceId: booking._id
+        });
+
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        console.error('Directive Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Start Job
 app.patch('/api/bookings/:id/start', protect, async (req, res) => {
     try {
         const booking = await Booking.findOneAndUpdate(
             { bookingId: req.params.id },
-            { status: 'In Progress', startedAt: Date.now() },
+            { status: 'in_progress', startedAt: Date.now() },
             { new: true }
         );
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -937,7 +1116,7 @@ app.patch('/api/bookings/:id/complete', protect, async (req, res) => {
         const booking = await Booking.findOne({ bookingId: req.params.id });
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
         
-        booking.status = 'Completed';
+        booking.status = 'completed';
         booking.proofPhoto = proofPhoto || (proofPhotos && proofPhotos[0]);
         booking.proofPhotos = proofPhotos || (proofPhoto ? [proofPhoto] : []);
         booking.workNotes = workNotes;
@@ -1020,6 +1199,161 @@ app.patch('/api/notifications/:id/read', protect, async (req, res) => {
     }
 });
 
+// Get Admin user for chat targeting
+app.get('/api/users/role/admin', protect, async (req, res) => {
+    try {
+        const admin = await User.findOne({ role: 'admin' }).select('-password');
+        if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+        res.json({ success: true, data: { _id: admin._id, name: admin.name, role: admin.role } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- Chat History API ---
+app.get('/api/chat/history/:userId/:otherId', protect, async (req, res) => {
+    try {
+        const { userId, otherId } = req.params;
+        const messages = await Message.find({
+            $or: [
+                { sender: userId, receiver: otherId },
+                { sender: otherId, receiver: userId }
+            ]
+        }).sort({ createdAt: 1 });
+        res.json({ success: true, data: messages });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- Expense Management API ---
+
+// Submit Expense
+app.post('/api/expenses', protect, async (req, res) => {
+    try {
+        const { amount, category, description, receiptImage } = req.body;
+        const expense = await Expense.create({
+            employeeId: req.user._id,
+            employeeName: req.user.name,
+            amount,
+            category,
+            description,
+            receiptImage
+        });
+        res.status(201).json({ success: true, data: expense });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get My Expenses
+app.get('/api/expenses/my', protect, async (req, res) => {
+    try {
+        const expenses = await Expense.find({ employeeId: req.user._id }).sort({ createdAt: -1 });
+        res.json({ success: true, data: expenses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin: Get All Expenses
+app.get('/api/admin/expenses', protect, admin, async (req, res) => {
+    try {
+        const expenses = await Expense.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, data: expenses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin: Update Expense Status
+app.patch('/api/admin/expenses/:id', protect, admin, async (req, res) => {
+    try {
+        const { status, adminNote } = req.body;
+        const expense = await Expense.findById(req.params.id);
+        if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
+        
+        expense.status = status;
+        expense.adminNote = adminNote;
+        expense.processedAt = Date.now();
+        await expense.save();
+        
+        res.json({ success: true, data: expense });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- Task Management API ---
+
+// Create Task (Admin Only)
+app.post('/api/admin/tasks', protect, admin, async (req, res) => {
+    try {
+        const { title, description, assignedTo, employeeName, priority, dueDate } = req.body;
+        const task = await Task.create({
+            title,
+            description,
+            assignedTo,
+            employeeName,
+            assignedBy: req.user._id,
+            priority,
+            dueDate
+        });
+        res.status(201).json({ success: true, data: task });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get All Tasks (Admin Only)
+app.get('/api/admin/tasks', protect, admin, async (req, res) => {
+    try {
+        const tasks = await Task.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, data: tasks });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete Task (Admin Only)
+app.delete('/api/admin/tasks/:id', protect, admin, async (req, res) => {
+    try {
+        const task = await Task.findByIdAndDelete(req.params.id);
+        if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+        res.json({ success: true, message: 'Task deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get My Tasks (Employee)
+app.get('/api/tasks/my', protect, async (req, res) => {
+    try {
+        const tasks = await Task.find({ assignedTo: req.user._id }).sort({ createdAt: -1 });
+        res.json({ success: true, data: tasks });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update Task Status (Employee/Admin)
+app.patch('/api/tasks/:id/status', protect, async (req, res) => {
+    try {
+        const { status, adminNote } = req.body;
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+
+        task.status = status;
+        if (adminNote) task.adminNote = adminNote;
+        if (status === 'Completed') task.completedAt = Date.now();
+        
+        await task.save();
+        res.json({ success: true, data: task });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Global Error Handler for Multer and other errors
 app.use((err, req, res, next) => {
     console.error('SERVER ERROR:', err);
@@ -1032,9 +1366,34 @@ app.use((err, req, res, next) => {
 // Export app for Vercel serverless
 export default app;
 
-// Start server — always listen (Render needs this; Vercel ignores it as it uses export default)
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+// Start server
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
-export { server };
+// Socket.io logic
+io.on('connection', (socket) => {
+    socket.on('join', (userId) => {
+        socket.join(userId);
+    });
+
+    socket.on('send-message', async (data) => {
+        const { senderId, receiverId, content } = data;
+        const message = await Message.create({ sender: senderId, receiver: receiverId, content });
+        io.to(receiverId).to(senderId).emit('new-message', message);
+    });
+
+    socket.on('disconnect', () => {
+        // Handle disconnect if needed
+    });
+});
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT} with Socket.io`);
+});
+
+export { httpServer as server, io };

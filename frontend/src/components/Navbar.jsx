@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin, Menu, X, ShieldCheck, LogOut, User as UserIcon, ShoppingCart, Heart, RotateCw, Search, LayoutDashboard } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AuthModal from './AuthModal';
 
 const Navbar = () => {
     const location = useLocation();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [tempSearchQuery, setTempSearchQuery] = useState('');
     const { user, logout, isAuthenticated } = useAuth();
     const navigate = useNavigate();
@@ -17,7 +19,15 @@ const Navbar = () => {
     useEffect(() => {
         setIsMobileMenuOpen(false);
         setIsAccountDropdownOpen(false);
+        setIsAuthModalOpen(false);
     }, [location.pathname, location.search]);
+
+    // Listen for custom event to open AuthModal globally
+    useEffect(() => {
+        const handleOpenAuthModal = () => setIsAuthModalOpen(true);
+        window.addEventListener('openAuthModal', handleOpenAuthModal);
+        return () => window.removeEventListener('openAuthModal', handleOpenAuthModal);
+    }, []);
 
     // Close on Escape key
     useEffect(() => {
@@ -161,9 +171,9 @@ const Navbar = () => {
                             <div className="flex items-center space-x-4 text-xs font-medium text-white">
                                 <UserIcon size={16} className="text-red-400" />
                                 <div className="flex items-center space-x-1">
-                                    <Link to="/login" className="hover:text-red-400 transition-colors">Login</Link>
+                                    <button onClick={() => setIsAuthModalOpen(true)} className="hover:text-red-400 transition-colors">Login</button>
                                     <span className="text-white/20">/</span>
-                                    <Link to="/signup" className="hover:text-red-400 transition-colors">Register</Link>
+                                    <button onClick={() => setIsAuthModalOpen(true)} className="hover:text-red-400 transition-colors">Register</button>
                                 </div>
                             </div>
                         )}
@@ -342,20 +352,18 @@ const Navbar = () => {
                                                     </>
                                                 ) : (
                                                     <div className="px-2 py-2 space-y-1">
-                                                        <Link
-                                                            to="/login"
+                                                        <button
                                                             className="block w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-bold transition-all"
-                                                            onClick={() => setIsAccountDropdownOpen(false)}
+                                                            onClick={() => { setIsAccountDropdownOpen(false); setIsAuthModalOpen(true); }}
                                                         >
                                                             Log In
-                                                        </Link>
-                                                        <Link
-                                                            to="/signup"
+                                                        </button>
+                                                        <button
                                                             className="block w-full text-center py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-all shadow-md shadow-red-500/10"
-                                                            onClick={() => setIsAccountDropdownOpen(false)}
+                                                            onClick={() => { setIsAccountDropdownOpen(false); setIsAuthModalOpen(true); }}
                                                         >
                                                             Sign Up
-                                                        </Link>
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -432,25 +440,25 @@ const Navbar = () => {
                             </button>
                         ) : (
                             <div className="flex flex-col space-y-3 mt-6">
-                                <Link
-                                    to="/login"
+                                <button
                                     className="w-full text-center py-3 border border-gray-200 rounded font-medium text-gray-800"
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    onClick={() => { setIsMobileMenuOpen(false); setIsAuthModalOpen(true); }}
                                 >
                                     Login
-                                </Link>
-                                <Link
-                                    to="/signup"
+                                </button>
+                                <button
                                     className="w-full text-center py-3 bg-red-700 text-white rounded font-medium"
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    onClick={() => { setIsMobileMenuOpen(false); setIsAuthModalOpen(true); }}
                                 >
                                     Register
-                                </Link>
+                                </button>
                             </div>
                         )}
                     </div>
                 )}
             </header>
+
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
         </>
     );
 };

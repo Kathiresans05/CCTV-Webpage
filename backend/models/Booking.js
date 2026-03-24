@@ -42,19 +42,34 @@ const bookingSchema = mongoose.Schema({
     city: {
         type: String
     },
-    preferredDate: {
+    paymentMethod: {
+        type: String, // 'cod' or 'online'
+        default: 'cod'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'cod_confirmed', 'paid', 'failed'],
+        default: 'pending'
+    },
+    status: {
+        type: String,
+        enum: ['pending_schedule', 'schedule_sent', 'scheduled_confirmed', 'reschedule_requested', 'in_progress', 'completed', 'cancelled'],
+        default: 'pending_schedule'
+    },
+    proposedDate: {
         type: Date
     },
-    preferredTime: {
+    proposedTimeSlot: {
+        type: String
+    },
+    customerScheduleResponse: {
+        type: String
+    },
+    adminNote: {
         type: String
     },
     notes: {
         type: String
-    },
-    status: {
-        type: String,
-        enum: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled'],
-        default: 'Pending'
     },
     assignedEmployee: {
         type: mongoose.Schema.Types.ObjectId,

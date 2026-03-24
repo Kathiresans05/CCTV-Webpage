@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Star, Heart, Loader2, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Loader2, ChevronLeft, ChevronRight, PlayCircle, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -33,6 +33,7 @@ const ProductCard = ({ product, onBookNow }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
+    const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
     // Minimum swipe distance (in px)
     const minSwipeDistance = 50;
@@ -172,159 +173,193 @@ const ProductCard = ({ product, onBookNow }) => {
 
 
     return (
+        <>
         <div 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => navigate(`/products/${product._id}`)}
-            className="bg-white outline outline-1 outline-gray-200 hover:outline-2 hover:outline-gray-300 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl group h-full relative z-0 hover:z-10 cursor-pointer"
+            className="w-full bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100/80 overflow-hidden flex flex-col transition-all duration-300 group cursor-pointer relative"
         >
-            {/* Media Slider Container */}
+            {/* Wishlist Button */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleWishlist(e);
+                }}
+                disabled={isTogglingWishlist}
+                className="absolute top-3 right-3 z-30 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow hover:scale-110 transition-transform text-gray-400 hover:text-red-500"
+            >
+                {isTogglingWishlist ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} fill={isWishlisted ? "currentColor" : "none"} className={isWishlisted ? "text-red-500" : ""} />}
+            </button>
+
+            {/* Image Slider Container */}
             <div 
-                className="relative w-full h-[240px] bg-[#F7F8F9] overflow-hidden group/slider"
+                className="relative w-full h-[250px] bg-white overflow-hidden flex items-center justify-center p-4"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
             >
                 {/* Slides Track */}
                 <div 
-                    className="flex w-full h-full transition-transform duration-500 ease-out"
+                    className="flex w-full h-full transition-transform duration-500 ease-in-out"
                     style={{ transform: `translateX(-${activeMediaIndex * 100}%)` }}
                 >
                     {mediaItems.map((item, idx) => (
-                        <div key={idx} className="flex-shrink-0 w-full h-full flex items-center justify-center p-4">
+                        <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center">
                             {item.type === 'video' ? (
-                                <div className="relative w-full h-full rounded-lg overflow-hidden bg-black flex items-center justify-center">
-                                    <iframe 
-                                        className="w-full h-full pointer-events-none"
-                                        src={`${item.url}?autoplay=${activeMediaIndex === idx ? 1 : 0}&mute=1&controls=0&loop=1&playlist=${item.url.split('/').pop()}`} 
-                                        title="Product Video" 
-                                        frameBorder="0" 
-                                        allow="autoplay; encrypted-media" 
-                                    ></iframe>
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                        <PlayCircle size={40} className="text-white opacity-70 drop-shadow-lg" />
+                                <div 
+                                    className="relative w-full h-full flex items-center justify-center group/video cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsVideoModalOpen(true);
+                                    }}
+                                >
+                                    <img 
+                                        src={item.poster || resolvedMainImage || bulletDefault} 
+                                        alt={`${product.name} Video Thumbnail`}
+                                        className="w-full h-full object-contain mix-blend-multiply opacity-80 transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <PlayCircle size={48} className="text-gray-800 opacity-80 group-hover/video:scale-110 group-hover/video:text-red-600 transition-all duration-300 drop-shadow-md bg-white/50 rounded-full" />
                                     </div>
                                 </div>
                             ) : (
                                 <img
                                     src={item.url}
                                     alt={`${product.name} - ${idx + 1}`}
-                                    className="w-full h-full object-contain"
+                                    className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
                                 />
                             )}
                         </div>
                     ))}
                 </div>
 
-                {/* Slider Controls - Arrows */}
+                {/* Slider Controls */}
                 {mediaItems.length > 1 && (
                     <>
+                        {/* Arrows */}
                         <button
                             onClick={prevSlide}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-20 border border-gray-100"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                         >
                             <ChevronLeft size={18} />
                         </button>
                         <button
                             onClick={nextSlide}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white text-gray-800 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-20 border border-gray-100"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white/90 hover:bg-white rounded-full shadow text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                         >
                             <ChevronRight size={18} />
                         </button>
+
+                        {/* Dots */}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                            {mediaItems.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveMediaIndex(idx);
+                                    }}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${activeMediaIndex === idx ? 'w-4 bg-gray-800' : 'w-1.5 bg-gray-300 hover:bg-gray-400'}`}
+                                />
+                            ))}
+                        </div>
                     </>
                 )}
-
-                {/* Dot Indicators */}
-                {mediaItems.length > 1 && (
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                        {mediaItems.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMediaIndex(idx);
-                                }}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${
-                                    activeMediaIndex === idx ? 'w-4 bg-[#B91C1C]' : 'w-1.5 bg-gray-300 hover:bg-gray-400'
-                                }`}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Hover Action Vertical Bar */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 flex flex-col gap-2 z-30">
-                    <button
-                        onClick={handleToggleWishlist}
-                        disabled={isTogglingWishlist}
-                        className={`p-2.5 rounded-full shadow-lg transition-all duration-300 ${isWishlisted ? 'bg-white text-red-500' : 'bg-white text-gray-400 hover:text-red-500'}`}
-                        title="Add to Wishlist"
-                    >
-                        {isTogglingWishlist ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} fill={isWishlisted ? "currentColor" : "none"} />}
-                    </button>
-
-                    <button
-                        onClick={handleAddToCart}
-                        disabled={isAddingToCart}
-                        className="bg-white text-gray-400 p-2.5 rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-colors active:scale-95 disabled:opacity-50"
-                        title="Add to Cart"
-                    >
-                        {isAddingToCart ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                    </button>
-                </div>
-
-                {/* Subtle Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             </div>
 
-
-            {/* Product Info */}
-            <div className="p-5 flex flex-col flex-grow">
-                <div className="flex justify-between items-start mb-2 gap-2">
-                    <h3 className="text-[17px] font-semibold text-primary-navy leading-tight flex-grow">
-                        {product.name}
-                    </h3>
-                    <div className="flex items-center space-x-1 text-orange-400 flex-shrink-0 pt-0.5">
-                        <Star size={14} fill="currentColor" stroke="none" />
-                        <span className="text-sm font-medium text-gray-600">{product.rating}</span>
+            {/* Product Details Component */}
+            <div className="p-5 flex flex-col flex-grow bg-white z-10">
+                {/* Title */}
+                <h3 className="font-semibold text-gray-900 text-[15px] leading-snug line-clamp-2 mb-1">
+                    {product.name}
+                </h3>
+                
+                {/* Rating */}
+                <div className="flex items-center gap-1.5 mb-2">
+                    <div className="flex items-center bg-green-600 px-1.5 py-0.5 rounded text-white text-[11px] font-bold">
+                        {product.rating} <Star size={10} fill="currentColor" strokeWidth={0} className="ml-0.5" />
                     </div>
                 </div>
 
-                {/* Price + Buttons Section */}
-                <div className="mt-auto pt-4 flex flex-col gap-3">
-                    {/* Price */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-400 text-[11px] uppercase tracking-wider mb-0.5">Starting from</p>
-                            <span className="text-2xl font-bold text-[#B91C1C] leading-none">₹{product.price.toLocaleString('en-IN')}</span>
-                        </div>
-                        <span className="text-xs text-gray-400 line-through self-end mb-0.5">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
+                {/* Description */}
+                <p className="text-gray-500 text-[13px] line-clamp-2 mb-4 flex-grow">
+                    {product.description || "Professional CCTV surveillance camera."}
+                </p>
 
-                    {/* Buttons Row */}
-                    <div className="flex gap-2">
+                {/* Price */}
+                <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-xl font-bold text-gray-900">₹{product.price.toLocaleString('en-IN')}</span>
+                    <span className="text-[13px] text-gray-400 line-through">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-[12px] font-bold text-green-600 ml-auto">20% off</span>
+                </div>
+
+                {/* Buttons Row */}
+                <div className="flex gap-2 mt-auto">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/products/${product._id}`);
+                        }}
+                        className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium text-sm hover:border-gray-800 hover:text-gray-900 transition-colors"
+                    >
+                        View Details
+                    </button>
+                    {onBookNow ? (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/products/${product._id}`);
+                                onBookNow(product);
                             }}
-                            className="flex-1 bg-transparent border border-gray-300 text-gray-700 py-2.5 rounded-full font-bold text-[13px] hover:border-primary-red hover:text-primary-red transition-all duration-300 whitespace-nowrap"
-                        >
-                            View Details
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (onBookNow) onBookNow(product);
-                            }}
-                            className="flex-1 bg-[#0b0f1a] text-white py-2.5 rounded-full font-bold text-[13px] hover:bg-black transition-all duration-300 whitespace-nowrap"
+                            className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-black transition-colors"
                         >
                             Book Now
                         </button>
-                    </div>
+                    ) : (
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={isAddingToCart}
+                            className="flex-1 bg-[#ff9f00] text-white py-2.5 rounded-lg font-medium text-sm hover:bg-[#f39800] transition-colors flex items-center justify-center gap-1.5"
+                        >
+                            {isAddingToCart ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />} 
+                            Add to Cart
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
+
+        {/* Video Overlay Modal */}
+        {isVideoModalOpen && (
+            <div 
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" 
+                onClick={() => setIsVideoModalOpen(false)}
+            >
+                <div 
+                    className="relative w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button 
+                        onClick={() => setIsVideoModalOpen(false)}
+                        className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                    <div className="w-full aspect-video">
+                        {/* We use an iframe structure for the embedded video player url */}
+                        <iframe 
+                            className="w-full h-full"
+                            src={`${mediaItems.find(m => m.type === 'video')?.url}?autoplay=1`} 
+                            title="Product Video" 
+                            frameBorder="0" 
+                            allow="autoplay; fullscreen; encrypted-media"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 
