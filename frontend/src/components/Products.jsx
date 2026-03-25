@@ -87,7 +87,7 @@ const Products = () => {
 
                 <div className="flex flex-col md:flex-row justify-between items-end mb-12">
                     <div className="max-w-2xl">
-                        <span className="text-red-700 font-bold uppercase tracking-wider text-sm mb-2 block">Security Store</span>
+                        <span className="text-red-700 font-bold uppercase tracking-wider text-[14px] mb-2 block">Security Store</span>
                         <h2 className="text-3xl md:text-4xl font-bold text-[#0b2239] mb-4">Featured Products</h2>
                         <div className="h-1 w-20 bg-red-700 rounded"></div>
                     </div>
@@ -122,7 +122,7 @@ const Products = () => {
                             <div className="p-6 flex-grow flex flex-col">
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="font-bold text-lg text-[#0b2239] leading-tight flex-1 mr-4 hover:text-red-700 cursor-pointer">{product.name}</h3>
-                                    <div className="flex items-center space-x-1 text-amber-500 text-sm">
+                                    <div className="flex items-center space-x-1 text-amber-500 text-[14px]">
                                         <Star size={14} fill="currentColor" />
                                         <span className="font-medium">{product.rating}</span>
                                     </div>
@@ -130,7 +130,7 @@ const Products = () => {
 
                                 <p className="text-2xl font-bold text-red-700 mb-4">{product.price}</p>
 
-                                <ul className="text-sm text-gray-500 mb-6 space-y-2 flex-grow">
+                                <ul className="text-[14px] text-gray-500 mb-6 space-y-2 flex-grow">
                                     {product.specs.map((spec, sIdx) => (
                                         <li key={sIdx} className="flex items-center before:content-[''] before:w-1.5 before:h-1.5 before:bg-red-400 before:rounded-full before:mr-2">
                                             {spec}
@@ -139,7 +139,7 @@ const Products = () => {
                                 </ul>
 
                                 <div className="grid grid-cols-2 gap-3 mt-auto">
-                                    <button className="border border-red-700 text-red-700 hover:bg-red-50 py-2 rounded font-medium transition-colors text-sm text-center">
+                                    <button className="border border-red-700 text-red-700 hover:bg-red-50 py-2 rounded font-medium transition-colors text-[14px] text-center">
                                         View Details
                                     </button>
                                     <button 
@@ -152,7 +152,7 @@ const Products = () => {
                                             }
                                             else setInquiryProduct(product);
                                         }}
-                                        className="bg-[#0b2239] hover:bg-black text-white py-2 rounded font-medium shadow-sm transition-colors text-sm flex items-center justify-center"
+                                        className="bg-[#0b2239] hover:bg-black text-white py-2 rounded font-medium shadow-sm transition-colors text-[14px] flex items-center justify-center"
                                     >
                                         Book Now
                                     </button>

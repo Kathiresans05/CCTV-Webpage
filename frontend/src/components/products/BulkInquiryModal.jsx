@@ -97,7 +97,7 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                              <Package size={24} />
                         </div>
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary-red mb-0.5">Bulk Service Booking</p>
+                            <p className="text-[14px] uppercase tracking-[0.2em] font-black text-primary-red mb-0.5">Bulk Service Booking</p>
                             <h2 className="text-xl font-bold text-gray-900 tracking-tight">{items.length} Security Assets</h2>
                         </div>
                     </div>
@@ -116,12 +116,12 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                             <h3 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
                             <p className="text-gray-500 mb-8 font-medium">Our team will contact you shortly to schedule your installation.</p>
                             <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-8 max-w-sm mx-auto shadow-sm">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-1">Booking ID</p>
+                                <p className="text-[14px] text-gray-400 uppercase tracking-widest font-black mb-1">Booking ID</p>
                                 <p className="text-xl font-mono font-bold text-primary-red tracking-wider">{bookingId}</p>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="w-full bg-primary-navy text-white py-4 rounded-xl font-bold text-sm hover:bg-black transition-all"
+                                className="w-full bg-primary-navy text-white py-4 rounded-xl font-bold text-[14px] hover:bg-black transition-all"
                             >
                                 Done
                             </button>
@@ -130,12 +130,12 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                              {/* Items Breakdown Collapse-like view */}
                              <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pb-2 border-b border-gray-50">Items Breakdown</p>
+                                <p className="text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-2 pb-2 border-b border-gray-50">Items Breakdown</p>
                                 <div className="space-y-1.5 max-h-24 overflow-y-auto custom-scrollbar pr-2">
                                     {items.map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center text-xs">
+                                        <div key={idx} className="flex justify-between items-center text-[14px]">
                                             <span className="text-gray-600 font-medium line-clamp-1 flex-1 pr-4">{item.productDetails.name}</span>
-                                            <span className="text-gray-400 font-bold px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[10px]">x{item.quantity || 1}</span>
+                                            <span className="text-gray-400 font-bold px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[14px]">x{item.quantity || 1}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -144,25 +144,25 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                             {/* Full Name & Phone Number */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[13px] font-bold text-gray-500 ml-1">Full Name</label>
+                                    <label className="text-[14px] font-bold text-gray-500 ml-1">Full Name</label>
                                     <div className="relative">
                                         <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                         <input 
                                             type="text" name="customerName" required
                                             value={bookingData.customerName} onChange={handleInputChange}
-                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
+                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-[14px] font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
                                             placeholder="Enter your full name"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[13px] font-bold text-gray-500 ml-1">Phone Number</label>
+                                    <label className="text-[14px] font-bold text-gray-500 ml-1">Phone Number</label>
                                     <div className="relative">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                         <input 
                                             type="tel" name="customerPhone" required
                                             value={bookingData.customerPhone} onChange={handleInputChange}
-                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
+                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-[14px] font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
                                             placeholder="e.g. +91 98765 43210"
                                         />
                                     </div>
@@ -171,13 +171,13 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
 
                             {/* Email Address */}
                             <div className="space-y-2">
-                                <label className="text-[13px] font-bold text-gray-500 ml-1">Email Address</label>
+                                <label className="text-[14px] font-bold text-gray-500 ml-1">Email Address</label>
                                 <div className="relative">
                                     <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                     <input 
                                         type="email" name="customerEmail" required
                                         value={bookingData.customerEmail} onChange={handleInputChange}
-                                        className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
+                                        className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-[14px] font-medium text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-red/10 transition-all outline-none"
                                         placeholder="e.g. alex@example.com"
                                     />
                                 </div>
@@ -185,13 +185,13 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
 
                             {/* Visit Address */}
                             <div className="space-y-2">
-                                <label className="text-[13px] font-bold text-gray-500 ml-1">Visit Address</label>
+                                <label className="text-[14px] font-bold text-gray-500 ml-1">Visit Address</label>
                                 <div className="relative">
                                     <MapPin className="absolute left-4 top-4 text-gray-400" size={16} />
                                     <textarea 
                                         name="address" required rows={3}
                                         value={bookingData.address} onChange={handleInputChange}
-                                        className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-sm font-medium text-gray-700 placeholder:text-gray-400 transition-all outline-none resize-none"
+                                        className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-[14px] font-medium text-gray-700 placeholder:text-gray-400 transition-all outline-none resize-none"
                                         placeholder="Complete installation address..."
                                     />
                                 </div>
@@ -200,25 +200,25 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                             {/* Preferred Date & Time Slot */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[13px] font-bold text-gray-500 ml-1">Preferred Date</label>
+                                    <label className="text-[14px] font-bold text-gray-500 ml-1">Preferred Date</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                         <input 
                                             type="date" name="preferredDate" required
                                             value={bookingData.preferredDate} onChange={handleInputChange}
                                             min={new Date().toISOString().split('T')[0]}
-                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-sm font-medium text-gray-700 transition-all outline-none"
+                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-4 py-4 text-[14px] font-medium text-gray-700 transition-all outline-none"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[13px] font-bold text-gray-500 ml-1">Time Slot</label>
+                                    <label className="text-[14px] font-bold text-gray-500 ml-1">Time Slot</label>
                                     <div className="relative">
                                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                         <select 
                                             name="preferredTime" required
                                             value={bookingData.preferredTime} onChange={handleInputChange}
-                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-10 py-4 text-sm font-medium text-gray-700 transition-all outline-none appearance-none cursor-pointer"
+                                            className="w-full bg-[#EDF2F7] border-none rounded-xl pl-11 pr-10 py-4 text-[14px] font-medium text-gray-700 transition-all outline-none appearance-none cursor-pointer"
                                         >
                                             <option value="">Select slot</option>
                                             {timeSlots.map(slot => (
@@ -230,7 +230,7 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                             </div>
 
                             {status === 'error' && (
-                                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 text-xs font-bold">
+                                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 text-[14px] font-bold">
                                     <AlertCircle size={18} />
                                     {statusMessage}
                                 </div>
@@ -243,14 +243,14 @@ const BulkInquiryModal = ({ items, onClose, onSuccess }) => {
                 {status !== 'success' && (
                     <div className="bg-[#F8FAFC] px-8 py-6 flex items-center justify-between border-t border-gray-100">
                         <div>
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Total Amount</p>
+                            <p className="text-[14px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Total Amount</p>
                             <p className="text-2xl font-black text-gray-900 leading-none">₹{totalAmount.toLocaleString('en-IN')}</p>
                         </div>
                         
                         <button
                             onClick={handleSubmit}
                             disabled={status === 'loading' || !isFormValid}
-                            className={`px-10 py-4 rounded-xl font-bold text-sm transition-all flex items-center gap-3 ${
+                            className={`px-10 py-4 rounded-xl font-bold text-[14px] transition-all flex items-center gap-3 ${
                                 status === 'loading' || !isFormValid
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 : 'bg-[#0b0f1a] text-white hover:bg-black'

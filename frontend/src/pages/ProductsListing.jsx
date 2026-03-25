@@ -144,7 +144,7 @@ const ProductsListing = () => {
 
     // ── Render ──────────────────────────────────────
     return (
-        <div className="bg-white min-h-screen py-4 pl-[1%] pr-4 lg:pr-10">
+        <div className="bg-[#E9E9E9] min-h-screen py-4 pl-[1%] pr-4 lg:pr-10">
             <div className="w-full">
 
                 {/* Loading State */}
@@ -166,8 +166,8 @@ const ProductsListing = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                             </svg>
                             <h3 className="text-lg font-bold text-gray-800 mb-2">Could Not Load Products</h3>
-                            <p className="text-gray-500 text-sm">{fetchError}</p>
-                            <p className="text-gray-400 text-xs mt-3">Run <code className="bg-gray-100 px-1 py-0.5 rounded">node server.js</code> in your project folder.</p>
+                            <p className="text-gray-500 text-[14px]">{fetchError}</p>
+                            <p className="text-gray-400 text-[14px] mt-3">Run <code className="bg-gray-100 px-1 py-0.5 rounded">node server.js</code> in your project folder.</p>
                         </div>
                     </div>
                 )}

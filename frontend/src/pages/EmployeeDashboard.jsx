@@ -25,7 +25,10 @@ import {
     MessageSquare,
     Receipt,
     ClipboardList,
-    Award
+    Award,
+    FileSpreadsheet,
+    Search,
+    Eye
 } from 'lucide-react';
 import Chat from '../components/Chat';
 import toast from 'react-hot-toast';
@@ -47,7 +50,10 @@ const EmployeeDashboard = () => {
         '/employee/leaves': 'leaves',
         '/employee/chat': 'chat',
         '/employee/expenses': 'expenses',
-        '/employee/tasks': 'tasks'
+        '/employee/tasks': 'tasks',
+        '/employee/leads': 'leads',
+        '/employee/reports': 'reports',
+        '/employee/follow-ups': 'followups'
     };
 
     // Reverse mapping for navigation
@@ -61,7 +67,10 @@ const EmployeeDashboard = () => {
         'leaves': '/employee/leaves',
         'chat': '/employee/chat',
         'expenses': '/employee/expenses',
-        'tasks': '/employee/tasks'
+        'tasks': '/employee/tasks',
+        'leads': '/employee/leads',
+        'reports': '/employee/reports',
+        'followups': '/employee/follow-ups'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
@@ -111,6 +120,12 @@ const EmployeeDashboard = () => {
     const [adminUser, setAdminUser] = useState(null);
     const [expenses, setExpenses] = useState([]);
     const [myTasks, setMyTasks] = useState([]);
+    const [myLeads, setMyLeads] = useState([]);
+    const [myReports, setMyReports] = useState([]);
+    const [myFollowUps, setMyFollowUps] = useState([]);
+    const [leadsFilter, setLeadsFilter] = useState('All');
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportForm, setReportForm] = useState({ workSummary: '', tasksCompleted: '', hoursWorked: 8 });
     const [tasksFilter, setTasksFilter] = useState('All');
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [expenseForm, setExpenseForm] = useState({ amount: '', category: 'Travel', description: '', receiptImage: '' });
@@ -140,6 +155,12 @@ const EmployeeDashboard = () => {
     const [attendanceSearchTerm, setAttendanceSearchTerm] = useState('');
     const [previewUrl, setPreviewUrl] = useState(null);
     const [proofForm, setProofForm] = useState({ photos: [], notes: '' });
+
+    // Follow-up Modal State
+    const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+    const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState(null);
+    const [followUpForm, setFollowUpForm] = useState({ followUpDate: '', followUpTime: '10:00 AM', note: '' });
+    const [isSubmittingFollowUp, setIsSubmittingFollowUp] = useState(false);
 
     // Leave Modal State
     const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -188,7 +209,7 @@ const EmployeeDashboard = () => {
             const headers = { 'Authorization': `Bearer ${token}` };
             
             // Fetch everything including Admin details for chat and expenses
-            const [jRes, aRes, hRes, nRes, lRes, adminRes, expRes, taskRes] = await Promise.all([
+            const [jRes, aRes, hRes, nRes, lRes, adminRes, expRes, taskRes, leadRes, drRes] = await Promise.all([
                 fetch('/api/employee/jobs', { headers }),
                 fetch('/api/attendance/status', { headers }),
                 fetch('/api/attendance/history', { headers }),
@@ -196,21 +217,27 @@ const EmployeeDashboard = () => {
                 fetch('/api/leaves/my', { headers }),
                 fetch('/api/users/role/admin', { headers }),
                 fetch('/api/expenses/my', { headers }),
-                fetch('/api/tasks/my', { headers })
+                fetch('/api/tasks/my', { headers }),
+                fetch('/api/leads', { headers }),
+                fetch('/api/daily-reports/my', { headers }),
+                fetch('/api/follow-ups', { headers })
             ]);
 
-            const [jData, aData, hData, nData, lData, adminData, expData, taskData] = await Promise.all([
-                jRes.json(), aRes.json(), hRes.json(), nRes.json(), lRes.json(), adminRes.json(), expRes.json(), taskRes.json()
+            const [jData, aData, hData, nData, lData, adminData, expData, taskData, leadData, drData, fuData] = await Promise.all([
+                jRes.json(), aRes.json(), hRes.json(), nRes.json(), lRes.json(), adminRes.json(), expData.json(), taskRes.json(), leadRes.json(), drRes.json(), fuRes.json()
             ]);
 
-            if (jData.success) setJobs(jData.data);
-            if (aData.success) setAttendanceStatus(aData.data);
-            if (hData.success) setAttendanceHistory(hData.data);
-            if (nData.success) setNotifications(nData.data);
-            if (lData.success) setLeaves(lData.data);
-            if (adminData.success) setAdminUser(adminData.data);
-            if (expData.success) setExpenses(expData.data);
-            if (taskData.success) setMyTasks(taskData.data);
+            if (jData && jData.success) setJobs(jData.data || []);
+            if (aData && aData.success) setAttendanceStatus(aData.data || null);
+            if (hData && hData.success) setAttendanceHistory(hData.data || []);
+            if (nData && nData.success) setNotifications(nData.data || []);
+            if (lData && lData.success) setLeaves(lData.data || []);
+            if (adminData && adminData.success) setAdminUser(adminData.data || null);
+            if (expData && expData.success) setExpenses(expData.data || []);
+            if (taskData && taskData.success) setMyTasks(taskData.data || []);
+            if (leadData && leadData.success) setMyLeads(leadData.data || []);
+            if (drData && drData.success) setMyReports(drData.data || []);
+            if (fuData && fuData.success) setMyFollowUps(fuData.data || []);
 
         } catch (error) {
             console.error('Error fetching employee data:', error);
@@ -386,11 +413,11 @@ const EmployeeDashboard = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="crm-page-title">APPLY LEAVE</h2>
-                    <p className="crm-body text-sm mt-0.5">Request and track your leave status</p>
+                    <p className="crm-body text-[14px] mt-0.5">Request and track your leave status</p>
                 </div>
                 <button 
                     onClick={() => setShowLeaveModal(true)}
-                    className="zoho-btn-secondary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"
+                    className="zoho-btn-secondary px-6 py-2.5 rounded-xl text-[14px] font-bold flex items-center gap-2"
                 >
                     <Plus size={18} /> APPLY LEAVE
                 </button>
@@ -414,20 +441,20 @@ const EmployeeDashboard = () => {
                                     <tr key={l._id} className="hover:bg-bg-soft/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-primary-navy">{l.leaveType}</span>
-                                                <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1 max-w-[200px]">{l.reason}</span>
+                                                <span className="text-[14px] font-bold text-primary-navy">{l.leaveType}</span>
+                                                <span className="text-[14px] text-text-muted mt-0.5 line-clamp-1 max-w-[200px]">{l.reason}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex flex-col text-xs font-semibold text-text-dark">
+                                            <div className="flex flex-col text-[14px] font-semibold text-text-dark">
                                                 <span>{new Date(l.startDate).toLocaleDateString()}</span>
-                                                <span className="text-[10px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
+                                                <span className="text-[14px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-bold text-primary-navy">
+                                        <td className="px-6 py-4 text-[14px] font-bold text-primary-navy">
                                             {Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000 * 60 * 60 * 24)) + 1} Days
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-text-muted">
+                                        <td className="px-6 py-4 text-[14px] font-medium text-text-muted">
                                             {new Date(l.appliedAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -447,7 +474,7 @@ const EmployeeDashboard = () => {
                                         <div className="w-16 h-16 bg-bg-soft rounded-3xl flex items-center justify-center mx-auto mb-4 border border-border-soft">
                                             <Calendar size={24} className="text-text-muted" />
                                         </div>
-                                        <p className="text-text-muted font-bold uppercase tracking-widest text-[10px]">No leave records found</p>
+                                        <p className="text-text-muted font-bold uppercase tracking-widest text-[14px]">No leave records found</p>
                                     </td>
                                 </tr>
                             )}
@@ -468,7 +495,7 @@ const EmployeeDashboard = () => {
                     <div className="bg-primary-navy px-8 py-6 flex items-center justify-between">
                         <div>
                             <h3 className="text-xl font-bold text-white tracking-tight">APPLY LEAVE</h3>
-                            <p className="text-rose-100/60 text-[10px] uppercase font-bold tracking-widest mt-1">Personnel Absence Directive</p>
+                            <p className="text-rose-100/60 text-[14px] uppercase font-bold tracking-widest mt-1">Personnel Absence Directive</p>
                         </div>
                         <button onClick={() => setShowLeaveModal(false)} className="text-white/60 hover:text-white transition-colors">
                             <X size={24} />
@@ -477,7 +504,7 @@ const EmployeeDashboard = () => {
 
                     <form onSubmit={handleLeaveSubmit} className="p-8 space-y-5">
                         <div className="space-y-1.5">
-                            <label className="crm-label !text-[10px]">Leave Type</label>
+                            <label className="crm-label !text-[14px]">Leave Type</label>
                             <select 
                                 className="zoho-input w-full"
                                 value={leaveForm.leaveType}
@@ -494,7 +521,7 @@ const EmployeeDashboard = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="crm-label !text-[10px]">Start Date</label>
+                                <label className="crm-label !text-[14px]">Start Date</label>
                                 <input 
                                     type="date" 
                                     className="zoho-input w-full"
@@ -504,7 +531,7 @@ const EmployeeDashboard = () => {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="crm-label !text-[10px]">End Date</label>
+                                <label className="crm-label !text-[14px]">End Date</label>
                                 <input 
                                     type="date" 
                                     className="zoho-input w-full"
@@ -516,7 +543,7 @@ const EmployeeDashboard = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="crm-label !text-[10px]">Reason for Absence</label>
+                            <label className="crm-label !text-[14px]">Reason for Absence</label>
                             <textarea 
                                 className="zoho-input w-full h-24 resize-none"
                                 placeholder="State clearly the reason for leave..."
@@ -530,14 +557,14 @@ const EmployeeDashboard = () => {
                             <button 
                                 type="button"
                                 onClick={() => setShowLeaveModal(false)}
-                                className="zoho-btn-secondary flex-grow py-3 text-xs tracking-widest"
+                                className="zoho-btn-secondary flex-grow py-3 text-[14px] tracking-widest"
                             >
                                 Cancel
                             </button>
                             <button 
                                 type="submit"
                                 disabled={isSubmittingLeave}
-                                className="zoho-btn-primary flex-grow py-3 text-xs tracking-widest"
+                                className="zoho-btn-primary flex-grow py-3 text-[14px] tracking-widest"
                             >
                                 {isSubmittingLeave ? 'Transmitting...' : 'Submit Request'}
                             </button>
@@ -572,7 +599,7 @@ const EmployeeDashboard = () => {
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.bg} ${stat.color}`}>
                         <stat.icon size={16} strokeWidth={2.5} />
                     </div>
-                    <span className="text-[9px] font-black text-text-muted bg-bg-soft px-2 py-0.5 rounded-full tracking-wider uppercase">
+                    <span className="text-[14px] font-black text-text-muted bg-bg-soft px-2 py-0.5 rounded-full tracking-wider uppercase">
                         {stat.trend}
                     </span>
                 </div>
@@ -618,23 +645,23 @@ const EmployeeDashboard = () => {
                             filteredJobs.map(j => (
                                 <tr key={j._id} className="hover:bg-bg-soft/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">SV-{j.bookingId.substring(0,8).toUpperCase()}</span>
+                                        <span className="text-[14px] font-bold text-text-muted uppercase tracking-widest">SV-{j.bookingId.substring(0,8).toUpperCase()}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="crm-card-title leading-tight">{j.customerName}</span>
-                                            <span className="crm-label !text-[10px] mt-1">{j.customerPhone}</span>
-                                            <span className="crm-body !text-[10px] mt-0.5 truncate max-w-[180px]">{j.address}, {j.city}</span>
+                                            <span className="crm-label !text-[14px] mt-1">{j.customerPhone}</span>
+                                            <span className="crm-body !text-[14px] mt-0.5 truncate max-w-[180px]">{j.address}, {j.city}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-text-dark">{j.productName}</p>
-                                        <p className="text-[10px] text-primary-red font-bold uppercase tracking-tighter mt-1 italic">SecureVision Hardware</p>
+                                        <p className="text-[14px] font-bold text-text-dark">{j.productName}</p>
+                                        <p className="text-[14px] text-primary-red font-bold uppercase tracking-tighter mt-1 italic">SecureVision Hardware</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] text-primary-navy font-bold">{j.preferredDate ? new Date(j.preferredDate).toLocaleDateString() : 'IMMEDIATE'}</span>
-                                            <span className="text-[10px] text-text-muted font-bold uppercase tracking-tighter mt-1">{new Date(j.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="text-[14px] text-primary-navy font-bold">{j.preferredDate ? new Date(j.preferredDate).toLocaleDateString() : 'IMMEDIATE'}</span>
+                                            <span className="text-[14px] text-text-muted font-bold uppercase tracking-tighter mt-1">{new Date(j.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">
@@ -651,7 +678,7 @@ const EmployeeDashboard = () => {
                                             {(['Pending', 'pending_schedule', 'reschedule_requested', 'schedule_sent'].includes(j.status)) && (
                                                 <div className="flex justify-end items-center gap-2">
                                                     {j.status === 'schedule_sent' && (
-                                                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase tracking-widest mr-2">
+                                                        <span className="text-[14px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase tracking-widest mr-2">
                                                             Awaiting Customer
                                                         </span>
                                                     )}
@@ -666,14 +693,14 @@ const EmployeeDashboard = () => {
                                                             });
                                                             setShowBookingModal(true);
                                                         }}
-                                                        className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border-primary-navy/20 bg-white text-primary-navy hover:bg-bg-soft"
+                                                        className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-[14px] font-bold uppercase tracking-widest border-primary-navy/20 bg-white text-primary-navy hover:bg-bg-soft"
                                                     >
                                                         MANAGE SCHEDULE
                                                     </button>
                                                     {j.status === 'scheduled_confirmed' && (
                                                         <button 
                                                             onClick={() => handleJobAction(j.bookingId, 'start')}
-                                                            className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
+                                                            className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[14px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
                                                         >
                                                             START WORK
                                                         </button>
@@ -684,7 +711,7 @@ const EmployeeDashboard = () => {
                                                 <div className="flex justify-end items-center gap-2">
                                                     <button 
                                                         onClick={() => handleJobAction(j.bookingId, 'start')}
-                                                        className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
+                                                        className="bg-primary-navy text-white px-5 py-2.5 rounded-xl text-[14px] font-bold uppercase tracking-widest hover:bg-navy-dark transition-all"
                                                     >
                                                         START WORK
                                                     </button>
@@ -696,7 +723,7 @@ const EmployeeDashboard = () => {
                                                             setSelectedJob(j);
                                                             setShowProofModal(true);
                                                         }}
-                                                        className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 ml-auto"
+                                                        className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-[14px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 ml-auto"
                                                     >
                                                         <Camera size={12} /> UPLOAD IMAGE
                                                     </button>
@@ -727,7 +754,7 @@ const EmployeeDashboard = () => {
                                     <div className="w-16 h-16 bg-bg-soft rounded-3xl flex items-center justify-center mx-auto mb-4 border border-border-soft">
                                         <Briefcase size={24} className="text-text-muted" />
                                     </div>
-                                    <p className="text-text-muted font-bold uppercase tracking-widest text-[10px]">Zero operation directives located in registry</p>
+                                    <p className="text-text-muted font-bold uppercase tracking-widest text-[14px]">Zero operation directives located in registry</p>
                                 </td>
                             </tr>
                         )}
@@ -738,160 +765,234 @@ const EmployeeDashboard = () => {
     );
 
     const renderAttendance = () => {
-        const checkInTime = attendanceStatus?.checkIn
-            ? new Date(attendanceStatus.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : '—';
-        const checkOutTime = attendanceStatus?.checkOut
-            ? new Date(attendanceStatus.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : '—';
-        const totalHours = attendanceStatus?.totalHours
-            ? `${Number(attendanceStatus.totalHours).toFixed(1)} hrs`
-            : attendanceStatus?.checkIn && !attendanceStatus?.checkOut
-                ? `${((currentTime - new Date(attendanceStatus.checkIn)) / (1000 * 60 * 60)).toFixed(1)} hrs`
+        try {
+            const checkInTime = attendanceStatus?.checkIn
+                ? new Date(attendanceStatus.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : '—';
+            const checkOutTime = attendanceStatus?.checkOut
+                ? new Date(attendanceStatus.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '—';
+            const totalHours = attendanceStatus?.totalHours
+                ? `${Number(attendanceStatus.totalHours).toFixed(1)} hrs`
+                : attendanceStatus?.checkIn && !attendanceStatus?.checkOut
+                    ? `${((currentTime - new Date(attendanceStatus.checkIn)) / (1000 * 60 * 60)).toFixed(1)} hrs`
+                    : '—';
 
-        const isCheckedIn = !!attendanceStatus;
-        const isCheckedOut = !!attendanceStatus?.checkOut;
+            const isCheckedIn = !!attendanceStatus;
+            const isCheckedOut = !!attendanceStatus?.checkOut;
 
-        if (!fromDate || !toDate) return null;
-        const startParts = fromDate.split('-');
-        const endParts = toDate.split('-');
-        const start = new Date(startParts[0], startParts[1] - 1, startParts[2]);
-        const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-        
-        const todayAtMidnight = new Date();
-        todayAtMidnight.setHours(0,0,0,0);
-        
-        const actualEnd = end > todayAtMidnight ? todayAtMidnight : end;
+            if (!fromDate || !toDate || fromDate === '' || toDate === '') return null;
+            const startParts = (fromDate || '').split('-');
+            const endParts = (toDate || '').split('-');
+            if (startParts.length < 3 || endParts.length < 3) return null;
+            
+            const start = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+            const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+            
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+            
+            const todayAtMidnight = new Date();
+            todayAtMidnight.setHours(0,0,0,0);
+            
+            const actualEnd = end > todayAtMidnight ? todayAtMidnight : end;
 
-        const monthDays = [];
-        if (start <= end) {
-            for (let d = new Date(start); d <= actualEnd; d.setDate(d.getDate() + 1)) {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                const dateStr = `${y}-${m}-${day}`;
-                
-                const record = attendanceHistory.find(h => h.date === dateStr);
-                
-                let status = 'Absent';
-                if (record) {
-                    if (record.checkIn && !record.checkOut) status = 'Active / Open Shift';
-                    else if (record.checkIn) status = 'Present';
+            const monthDays = [];
+            if (start <= end) {
+                for (let d = new Date(start); d <= actualEnd; d.setDate(d.getDate() + 1)) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const dateStr = `${y}-${m}-${day}`;
+                    
+                    const record = attendanceHistory.find(h => h.date === dateStr);
+                    
+                    let status = 'Absent';
+                    if (record) {
+                        if (record.checkIn && !record.checkOut) status = 'Active / Open Shift';
+                        else if (record.checkIn) status = 'Present';
+                    }
+
+                    monthDays.push({
+                        date: dateStr,
+                        displayDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                        checkIn: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                        checkOut: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                        totalHours: record?.totalHours ? `${Number(record.totalHours).toFixed(1)} hrs` : '—',
+                        status: status,
+                        _id: record?._id || `absent-${dateStr}`
+                    });
                 }
-
-                monthDays.push({
-                    date: dateStr,
-                    displayDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                    checkIn: record?.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
-                    checkOut: record?.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
-                    totalHours: record?.totalHours ? `${Number(record.totalHours).toFixed(1)} hrs` : '—',
-                    status: status,
-                    _id: record?._id || `absent-${dateStr}`
-                });
             }
-        }
 
-        let filteredDays = monthDays.reverse();
-        if (attendanceSearchTerm) {
-            const term = attendanceSearchTerm.toLowerCase();
-            filteredDays = filteredDays.filter(h => 
-                h.displayDate.toLowerCase().includes(term) ||
-                h.status.toLowerCase().includes(term)
+            let filteredDays = monthDays.reverse();
+            if (attendanceSearchTerm) {
+                const term = attendanceSearchTerm.toLowerCase();
+                filteredDays = filteredDays.filter(h => 
+                    h.displayDate.toLowerCase().includes(term) ||
+                    h.status.toLowerCase().includes(term)
+                );
+            }
+
+            return (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border-soft mb-6">
+                        <div className="flex-grow w-full sm:w-auto">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search History..." 
+                                    value={attendanceSearchTerm}
+                                    onChange={(e) => setAttendanceSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-border-soft rounded-lg text-[14px] bg-bg-soft/50 focus:bg-white focus:border-primary-navy/30 transition-all outline-none font-medium" 
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                            <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
+                                <Calendar size={18} className="text-text-muted shrink-0" />
+                                <div className="flex flex-col">
+                                    <span className="text-[14px] font-black text-text-muted uppercase tracking-widest leading-tight">FROM DATE</span>
+                                    <input 
+                                        type="date" 
+                                        value={fromDate}
+                                        onChange={(e) => setFromDate(e.target.value)}
+                                        className="bg-transparent text-[14px] font-bold text-primary-navy outline-none w-full min-w-[110px]" 
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
+                                <Calendar size={18} className="text-text-muted shrink-0" />
+                                <div className="flex flex-col">
+                                    <span className="text-[14px] font-black text-text-muted uppercase tracking-widest leading-tight">TO DATE</span>
+                                    <input 
+                                        type="date" 
+                                        value={toDate}
+                                        onChange={(e) => setToDate(e.target.value)}
+                                        className="bg-transparent text-[14px] font-bold text-primary-navy outline-none w-full min-w-[110px]" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Status Card */}
+                        <div className="bg-white p-6 rounded-[28px] border border-border-soft shadow-sm hover:shadow-md transition-all h-28 flex items-center gap-5 relative group overflow-hidden">
+                            <div className="absolute top-3 right-4">
+                                <span className={`text-[14px] font-black px-2 py-0.5 rounded-full ring-1 ring-inset ${isCheckedIn && !isCheckedOut ? 'bg-emerald-50 text-emerald-600 ring-emerald-100' : 'bg-rose-50 text-rose-600 ring-rose-100'}`}>
+                                    {isCheckedIn && !isCheckedOut ? 'ACTIVE' : 'OFFLINE'}
+                                </span>
+                            </div>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300 ${isCheckedIn && !isCheckedOut ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                                <Clock size={24} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest mb-1">Today's Duration</p>
+                                <h3 className="text-xl font-black text-primary-navy leading-tight">{totalHours}</h3>
+                            </div>
+                        </div>
+
+                        {/* Entry Time */}
+                        <div className="bg-white p-6 rounded-[28px] border border-border-soft shadow-sm hover:shadow-md transition-all h-28 flex items-center gap-5 group">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
+                                <Play size={24} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest mb-1">Entry Time</p>
+                                <h3 className="text-xl font-black text-primary-navy leading-tight">{checkInTime}</h3>
+                            </div>
+                        </div>
+
+                        {/* Exit Time */}
+                        <div className="bg-white p-6 rounded-[28px] border border-border-soft shadow-sm hover:shadow-md transition-all h-28 flex items-center gap-5 group">
+                            <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
+                                <LogOut size={24} className="rotate-180" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest mb-1">Exit Time</p>
+                                <h3 className="text-xl font-black text-primary-navy leading-tight">{checkOutTime}</h3>
+                            </div>
+                        </div>
+
+                        {/* Month Completion */}
+                        <div className="bg-white p-6 rounded-[28px] border border-border-soft shadow-sm hover:shadow-md transition-all h-28 flex items-center gap-5 group">
+                            <div className="w-14 h-14 rounded-2xl bg-primary-navy text-white flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300 shadow-lg shadow-primary-navy/10">
+                                <History size={24} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest mb-1">Month Completion</p>
+                                <h3 className="text-xl font-black text-primary-navy leading-tight">{monthDays.filter(d => d.status === 'Present').length} Days</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl border border-border-soft shadow-sm overflow-hidden mt-8">
+                        <div className="p-6 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                            <h3 className="text-[14px] font-black text-primary-navy uppercase tracking-widest">Attendance History</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-bg-soft/50">
+                                    <tr className="border-b border-border-soft">
+                                        <th className="px-6 py-4 text-[14px] font-black text-text-muted uppercase tracking-widest">Date</th>
+                                        <th className="px-6 py-4 text-[14px] font-black text-text-muted uppercase tracking-widest">Login</th>
+                                        <th className="px-6 py-4 text-[14px] font-black text-text-muted uppercase tracking-widest">Logout</th>
+                                        <th className="px-6 py-4 text-[14px] font-black text-text-muted uppercase tracking-widest">Duration</th>
+                                        <th className="px-6 py-4 text-[14px] font-black text-text-muted uppercase tracking-widest">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border-soft">
+                                    {filteredDays.length > 0 ? filteredDays.map((day, idx) => (
+                                        <tr key={idx} className="hover:bg-bg-soft/30 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <p className="text-[14px] font-bold text-primary-navy">{day.displayDate}</p>
+                                            </td>
+                                            <td className="px-6 py-4 text-[14px] font-medium text-text-dark italic">{day.checkIn}</td>
+                                            <td className="px-6 py-4 text-[14px] font-medium text-text-dark italic">{day.checkOut}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-[14px] font-bold text-primary-navy">{day.totalHours}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-[14px] font-black uppercase tracking-widest border ${
+                                                    day.status === 'Present' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                    day.status.includes('Active') ? 'bg-sky-50 text-sky-600 border-sky-100 animate-pulse' :
+                                                    'bg-rose-50 text-rose-500 border-rose-100 opacity-60'
+                                                }`}>
+                                                    {day.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-12 text-center text-text-muted text-[14px] font-medium italic">No attendance records found for this period.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        } catch (error) {
+            console.error('Attendance Failure:', error);
+            return (
+                <div className="p-10 text-center bg-white rounded-3xl border border-rose-100 shadow-xl shadow-rose-900/5">
+                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="text-rose-500" size={32} />
+                    </div>
+                    <h4 className="text-lg font-bold text-primary-navy">Attendance Unavailable</h4>
+                    <p className="text-[14px] text-text-muted mt-2 max-w-xs mx-auto">We encountered an error loading your history. Please check back in a few moments.</p>
+                </div>
             );
         }
-
-        return (
-            <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-border-soft mb-6">
-                    <div className="flex-grow w-full sm:w-auto">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                            <input 
-                                type="text" 
-                                placeholder="Search..." 
-                                value={attendanceSearchTerm}
-                                onChange={(e) => setAttendanceSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-border-soft rounded-lg text-sm bg-bg-soft/50 focus:bg-white focus:border-primary-navy/30 transition-all outline-none" 
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto">
-                        <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
-                            <Calendar size={18} className="text-text-muted shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest leading-tight">FROM DATE</span>
-                                <input 
-                                    type="date" 
-                                    value={fromDate}
-                                    onChange={(e) => setFromDate(e.target.value)}
-                                    className="bg-transparent text-sm font-bold text-primary-navy outline-none w-full min-w-[110px]" 
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 border border-border-soft rounded-xl px-4 py-2 bg-bg-soft/50 flex-1 sm:flex-none">
-                            <Calendar size={18} className="text-text-muted shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest leading-tight">TO DATE</span>
-                                <input 
-                                    type="date" 
-                                    value={toDate}
-                                    onChange={(e) => setToDate(e.target.value)}
-                                    className="bg-transparent text-sm font-bold text-primary-navy outline-none w-full min-w-[110px]" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Attendance History Table */}
-                <div className="zoho-card overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="zoho-table">
-                            <thead className="zoho-table-header">
-                                <tr>
-                                    <th className="px-6 py-4">Date</th>
-                                    <th className="px-6 py-4">Login</th>
-                                    <th className="px-6 py-4">Logout</th>
-                                    <th className="px-6 py-4">Working Hours</th>
-                                    <th className="px-6 py-4 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-soft">
-                                {filteredDays.map((h) => (
-                                    <tr key={h._id} className="hover:bg-bg-soft/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <span className="text-xs font-bold text-primary-navy">{h.displayDate}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-text-dark">{h.checkIn}</td>
-                                        <td className="px-6 py-4 text-xs font-medium text-text-dark">{h.checkOut}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-xs font-bold text-primary-navy">{h.totalHours}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`status-chip ${
-                                                h.status === 'Present' ? 'bg-emerald-100 text-emerald-700' :
-                                                h.status === 'Active / Open Shift' ? 'bg-amber-100 text-amber-700 font-bold animate-pulse' :
-                                                'bg-rose-50 text-rose-500 opacity-60'
-                                            }`}>
-                                                {h.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        );
     };
 
     const renderNotifications = () => (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
               <div className="flex justify-end items-center mb-6">
-                  <button onClick={markAllAsRead} className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-xs">Acknowledge All</button>
+                  <button onClick={markAllAsRead} className="zoho-btn-secondary px-5 py-2.5 rounded-xl text-[14px]">Acknowledge All</button>
               </div>
             {notifications.length > 0 ? notifications.map(n => (
                 <div 
@@ -904,10 +1005,10 @@ const EmployeeDashboard = () => {
                     </div>
                     <div className="flex-grow">
                         <div className="flex justify-between items-center">
-                            <h4 className="font-bold text-sm text-primary-navy uppercase tracking-tight">{n.title}</h4>
-                            <span className="text-[10px] font-bold text-text-muted tracking-tight bg-bg-soft px-3 py-1 rounded-full">{new Date(n.createdAt).toLocaleString()}</span>
+                            <h4 className="font-bold text-[14px] text-primary-navy uppercase tracking-tight">{n.title}</h4>
+                            <span className="text-[14px] font-bold text-text-muted tracking-tight bg-bg-soft px-3 py-1 rounded-full">{new Date(n.createdAt).toLocaleString()}</span>
                         </div>
-                        <p className="text-xs text-text-muted mt-2 leading-relaxed font-medium">{n.message}</p>
+                        <p className="text-[14px] text-text-muted mt-2 leading-relaxed font-medium">{n.message}</p>
                     </div>
                 </div>
             )) : (
@@ -915,7 +1016,7 @@ const EmployeeDashboard = () => {
                     <div className="w-20 h-20 bg-bg-soft rounded-full flex items-center justify-center mx-auto mb-6">
                         <Bell size={32} className="text-text-muted" />
                     </div>
-                    <p className="text-text-muted font-bold uppercase tracking-widest text-[10px]">Registry clear: No intelligence bulletins found</p>
+                    <p className="text-text-muted font-bold uppercase tracking-widest text-[14px]">Registry clear: No intelligence bulletins found</p>
                 </div>
             )}
         </div>
@@ -939,7 +1040,7 @@ const EmployeeDashboard = () => {
                         <div>
                             <h3 className="text-2xl font-bold text-primary-navy tracking-tight">{user?.name}</h3>
                         </div>
-                        <div className="status-chip bg-emerald-100 text-emerald-700">ACTIVE SERVICE</div>
+                        <div className="status-chip bg-emerald-100 text-emerald-700 text-[14px]">ACTIVE SERVICE</div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 pt-12 border-t border-border-soft">
@@ -949,8 +1050,8 @@ const EmployeeDashboard = () => {
                                     <Phone size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Phone No</p>
-                                    <p className="text-sm font-bold text-primary-navy mt-0.5">{user?.phone || 'Not Registered'}</p>
+                                    <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Phone No</p>
+                                    <p className="text-[14px] font-bold text-primary-navy mt-0.5">{user?.phone || 'Not Registered'}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 group">
@@ -958,8 +1059,8 @@ const EmployeeDashboard = () => {
                                     <MapPin size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Location</p>
-                                    <p className="text-sm font-bold text-primary-navy mt-0.5">SecureVision HQ, Chennai</p>
+                                    <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Location</p>
+                                    <p className="text-[14px] font-bold text-primary-navy mt-0.5">SecureVision HQ, Chennai</p>
                                 </div>
                             </div>
                         </div>
@@ -969,8 +1070,8 @@ const EmployeeDashboard = () => {
                                     <Calendar size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Joining Date</p>
-                                    <p className="text-sm font-bold text-primary-navy mt-0.5">March 12, 2024</p>
+                                    <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Joining Date</p>
+                                    <p className="text-[14px] font-bold text-primary-navy mt-0.5">March 12, 2024</p>
                                 </div>
                             </div>
                         </div>
@@ -1001,7 +1102,7 @@ const EmployeeDashboard = () => {
                     </div>
                     <div>
                         <p className="font-bold text-lg text-primary-navy">Chat Unavailable</p>
-                        <p className="text-sm mt-2">Could not connect to the administration system. Please try again later.</p>
+                        <p className="text-[14px] mt-2">Could not connect to the administration system. Please try again later.</p>
                     </div>
                 </div>
             )}
@@ -1015,7 +1116,7 @@ const EmployeeDashboard = () => {
                     <button 
                         key={f}
                         onClick={() => setMyJobsFilter(f)}
-                        className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+                        className={`px-4 py-2 text-[14px] font-bold uppercase tracking-widest rounded-lg transition-all ${
                             myJobsFilter === f 
                             ? 'bg-primary-navy text-white shadow-md' 
                             : 'bg-bg-soft text-text-muted hover:bg-bg-soft/80'
@@ -1066,14 +1167,14 @@ const EmployeeDashboard = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Administrative Tasks</h2>
-                    <p className="text-sm text-text-muted mt-1">Manage and complete tasks assigned by administration</p>
+                    <p className="text-[14px] text-text-muted mt-1">Manage and complete tasks assigned by administration</p>
                 </div>
                 <div className="flex gap-4">
                     {['Pending', 'In Progress', 'Completed', 'All'].map(f => (
                         <button 
                             key={f}
                             onClick={() => setTasksFilter(f)}
-                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                            className={`px-4 py-2 text-[14px] font-black uppercase tracking-widest rounded-lg transition-all ${
                                 tasksFilter === f 
                                 ? 'bg-primary-navy text-white shadow-md' 
                                 : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
@@ -1090,7 +1191,7 @@ const EmployeeDashboard = () => {
                     myTasks.filter(t => tasksFilter === 'All' || t.status === tasksFilter).map(task => (
                         <div key={task._id} className="zoho-card p-6 border-l-4 border-l-primary-navy group hover:shadow-xl transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
+                                <span className={`text-[14px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
                                     task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                                     task.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
                                     'bg-bg-soft text-text-muted border-border-soft'
@@ -1104,10 +1205,10 @@ const EmployeeDashboard = () => {
                                 )}
                             </div>
                             <h3 className="font-bold text-primary-navy mb-2">{task.title}</h3>
-                            <p className="text-xs text-text-muted mb-6 leading-relaxed">{task.description}</p>
+                            <p className="text-[14px] text-text-muted mb-6 leading-relaxed">{task.description}</p>
                             
                             <div className="space-y-4 pt-4 border-t border-border-soft">
-                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                <div className="flex justify-between items-center text-[14px] font-bold uppercase tracking-wider">
                                     <span className="text-text-muted italic">Deadline:</span>
                                     <span className="text-primary-navy">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</span>
                                 </div>
@@ -1115,7 +1216,7 @@ const EmployeeDashboard = () => {
                                     {task.status === 'Pending' && (
                                         <button 
                                             onClick={() => handleTaskStatusUpdate(task._id, 'In Progress')}
-                                            className="flex-1 py-3 bg-primary-navy text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-navy-dark transition-all shadow-lg shadow-primary-navy/20"
+                                            className="flex-1 py-3 bg-primary-navy text-white text-[14px] font-bold uppercase tracking-widest rounded-xl hover:bg-navy-dark transition-all shadow-lg shadow-primary-navy/20"
                                         >
                                             Start Task
                                         </button>
@@ -1123,13 +1224,13 @@ const EmployeeDashboard = () => {
                                     {task.status === 'In Progress' && (
                                         <button 
                                             onClick={() => handleTaskStatusUpdate(task._id, 'Completed')}
-                                            className="flex-1 py-3 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                                            className="flex-1 py-3 bg-emerald-600 text-white text-[14px] font-bold uppercase tracking-widest rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
                                         >
                                             Mark Completed
                                         </button>
                                     )}
                                     {task.status === 'Completed' && (
-                                        <div className="flex-1 py-3 bg-bg-soft text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-xl text-center border border-emerald-100">
+                                        <div className="flex-1 py-3 bg-bg-soft text-emerald-600 text-[14px] font-bold uppercase tracking-widest rounded-xl text-center border border-emerald-100">
                                             Mission Accomplished
                                         </div>
                                     )}
@@ -1141,7 +1242,7 @@ const EmployeeDashboard = () => {
                     <div className="col-span-full py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
                         <div className="flex flex-col items-center gap-3 opacity-30">
                             <ClipboardList size={48} />
-                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">Clear for now. No pending directives.</p>
+                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">Clear for now. No pending directives.</p>
                         </div>
                     </div>
                 )}
@@ -1200,6 +1301,432 @@ const EmployeeDashboard = () => {
         }
     };
 
+    const handleLeadUpdate = async (id, status, notes) => {
+        try {
+            const res = await fetch(`/api/leads/${id}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status, notes })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Lead updated successfully');
+                fetchAllData();
+            } else {
+                toast.error(data.message || 'Update failed');
+            }
+        } catch (error) {
+            toast.error('Network error');
+        }
+    };
+
+    const handleFollowUpSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmittingFollowUp(true);
+        try {
+            const res = await fetch('/api/follow-ups', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...followUpForm,
+                    leadId: selectedLeadForFollowUp._id
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Follow-up scheduled');
+                setShowFollowUpModal(false);
+                setFollowUpForm({ followUpDate: '', followUpTime: '10:00 AM', note: '' });
+                fetchAllData();
+            } else {
+                toast.error(data.message || 'Scheduling failed');
+            }
+        } catch (error) {
+            toast.error('Network error');
+        } finally {
+            setIsSubmittingFollowUp(false);
+        }
+    };
+
+    const updateFollowUpStatus = async (id, status) => {
+        try {
+            const res = await fetch(`/api/follow-ups/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(`Follow-up marked as ${status}`);
+                fetchAllData();
+            }
+        } catch (error) {
+            toast.error('Network error');
+        }
+    };
+
+    const renderLeads = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-border-soft shadow-sm">
+                <div>
+                    <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Assigned Leads</h2>
+                    <p className="text-[14px] text-text-muted mt-1">Manage prospects and track sales conversions</p>
+                </div>
+                <div className="flex gap-4">
+                    {['New', 'Contacted', 'Qualified', 'All'].map(f => (
+                        <button 
+                            key={f}
+                            onClick={() => setLeadsFilter(f)}
+                            className={`px-4 py-2 text-[14px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                leadsFilter === f 
+                                ? 'bg-primary-navy text-white shadow-md' 
+                                : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
+                            }`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myLeads.filter(l => leadsFilter === 'All' || l.status === leadsFilter).length > 0 ? (
+                    myLeads.filter(l => leadsFilter === 'All' || l.status === leadsFilter).map(lead => (
+                        <div key={lead._id} className="zoho-card p-6 border-l-4 border-l-primary-navy group hover:shadow-xl transition-all h-full flex flex-col">
+                            <div className="flex justify-between items-start mb-4">
+                                <span className={`text-[14px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
+                                    lead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    lead.status === 'Lost' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                    'bg-blue-50 text-blue-600 border-blue-100'
+                                }`}>
+                                    {lead.status}
+                                </span>
+                                <div className="text-[14px] font-bold text-text-muted uppercase tracking-widest">
+                                    {new Date(lead.createdAt).toLocaleDateString()}
+                                </div>
+                            </div>
+                            
+                            <h3 className="font-bold text-primary-navy mb-1 text-[14px]">{lead.name}</h3>
+                            <p className="text-[14px] font-bold text-text-muted mb-4 truncate">{lead.company || 'Private Individual'}</p>
+                            
+                            <div className="space-y-3 mb-6 flex-grow">
+                                <div className="flex items-center gap-2 text-[14px] text-text-dark font-medium">
+                                    <Phone size={14} className="text-slate-400" />
+                                    {lead.phone}
+                                </div>
+                                <div className="flex items-center gap-2 text-[14px] text-text-dark font-medium">
+                                    <Bell size={14} className="text-slate-400" />
+                                    {lead.email}
+                                </div>
+                                <div className="mt-4 p-3 bg-bg-soft rounded-xl border border-border-soft">
+                                    <p className="text-[14px] font-black text-text-muted uppercase tracking-widest mb-1">Service Interest</p>
+                                    <p className="text-[14px] font-bold text-primary-navy">{lead.serviceInterest}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-border-soft">
+                                <div className="space-y-2">
+                                    <label className="text-[14px] font-black text-text-muted uppercase tracking-widest">Update Pipeline Status</label>
+                                    <select 
+                                        value={lead.status} 
+                                        onChange={(e) => handleLeadUpdate(lead._id, e.target.value, lead.notes)}
+                                        className="zoho-input text-[14px] h-10"
+                                    >
+                                        <option value="New">New</option>
+                                        <option value="Contacted">Contacted</option>
+                                        <option value="Qualified">Qualified</option>
+                                        <option value="Lost">Lost</option>
+                                        <option value="Converted">Converted</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[14px] font-black text-text-muted uppercase tracking-widest">Interaction Notes</label>
+                                    <textarea 
+                                        className="zoho-input text-[14px] h-20 py-2 resize-none"
+                                        placeholder="Add customer interaction notes..."
+                                        defaultValue={lead.notes}
+                                        onBlur={(e) => handleLeadUpdate(lead._id, lead.status, e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => {
+                                    setSelectedLeadForFollowUp(lead);
+                                    setShowFollowUpModal(true);
+                                }}
+                                className="mt-4 w-full py-3 bg-bg-soft hover:bg-white text-primary-navy text-[14px] font-black uppercase tracking-widest rounded-xl border border-border-soft transition-all flex items-center justify-center gap-2"
+                            >
+                                <Calendar size={14} />
+                                Schedule Follow-up
+                            </button>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
+                        <div className="flex flex-col items-center gap-3 opacity-30">
+                            <TrendingUp size={48} />
+                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">Pipeline empty. No leads assigned.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderFollowUps = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-border-soft shadow-sm">
+                <div>
+                    <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Scheduled Follow-ups</h2>
+                    <p className="text-[14px] text-text-muted mt-1">Don't miss a connection with your prospects</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                {myFollowUps.length > 0 ? myFollowUps.map(fu => (
+                    <div key={fu._id} className={`zoho-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-l-4 ${
+                        fu.status === 'Completed' ? 'border-l-emerald-500' : 
+                        new Date(fu.followUpDate) < new Date() && fu.status === 'Pending' ? 'border-l-rose-500' : 'border-l-blue-500'
+                    }`}>
+                        <div className="flex items-center gap-6">
+                            <div className="bg-bg-soft p-4 rounded-2xl border border-border-soft flex flex-col items-center min-w-[80px]">
+                                <span className="text-[14px] font-black text-text-muted uppercase tracking-widest">{new Date(fu.followUpDate).toLocaleString('default', { month: 'short' })}</span>
+                                <span className="text-2xl font-bold text-primary-navy">{new Date(fu.followUpDate).getDate()}</span>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-primary-navy text-[14px]">{fu.leadId?.name || 'Unknown Lead'}</h3>
+                                <div className="flex items-center gap-4 mt-1">
+                                    <div className="flex items-center gap-1.5 text-[14px] font-bold text-text-muted">
+                                        <Clock size={12} />
+                                        {fu.followUpTime}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[14px] font-bold text-text-muted">
+                                        <Phone size={12} />
+                                        {fu.leadId?.phone}
+                                    </div>
+                                </div>
+                                {fu.note && <p className="text-[14px] text-text-muted mt-2 italic">"{fu.note}"</p>}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end md:self-center">
+                            {fu.status === 'Pending' && (
+                                <>
+                                    <button 
+                                        onClick={() => updateFollowUpStatus(fu._id, 'Completed')}
+                                        className="px-6 py-2.5 bg-emerald-50 text-emerald-600 text-[14px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+                                    >
+                                        Mark Done
+                                    </button>
+                                    <button 
+                                        onClick={() => updateFollowUpStatus(fu._id, 'Missed')}
+                                        className="px-6 py-2.5 bg-rose-50 text-rose-600 text-[14px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
+                                    >
+                                        Missed
+                                    </button>
+                                </>
+                            )}
+                            {fu.status === 'Completed' && (
+                                <span className="flex items-center gap-1.5 text-[14px] font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-lg">
+                                    <CheckCircle2 size={14} />
+                                    Completed
+                                </span>
+                            )}
+                            {fu.status === 'Missed' && (
+                                <span className="flex items-center gap-1.5 text-[14px] font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-lg">
+                                    <AlertCircle size={14} />
+                                    Missed
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )) : (
+                    <div className="py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
+                        <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No follow-ups scheduled yet.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const handleReportSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/daily-reports', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...reportForm,
+                    tasksCompleted: reportForm.tasksCompleted.split(',').map(t => t.trim()).filter(t => t !== '')
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Daily report submitted successfully!');
+                setShowReportModal(false);
+                setReportForm({ workSummary: '', tasksCompleted: '', hoursWorked: 8 });
+                fetchAllData();
+            } else {
+                toast.error(data.message || 'Submission failed');
+            }
+        } catch (error) {
+            toast.error('Network error');
+        }
+    };
+
+    const renderDailyReports = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-border-soft shadow-sm">
+                <div>
+                    <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Daily Work Reports</h2>
+                    <p className="text-[14px] text-text-muted mt-1">Review your historical submissions and stay accountable</p>
+                </div>
+                <button 
+                    onClick={() => setShowReportModal(true)}
+                    className="zoho-btn-secondary px-6 py-3 rounded-xl flex items-center gap-2 text-[14px]"
+                >
+                    <Plus size={18} />
+                    SUBMIT TODAY'S REPORT
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myReports.length > 0 ? (
+                    myReports.map(report => (
+                        <div key={report._id} className="zoho-card p-6 border-t-4 border-t-primary-navy group hover:shadow-xl transition-all h-full flex flex-col">
+                            <div className="flex justify-between items-start mb-4">
+                                <span className="text-[14px] font-black px-2 py-1 rounded bg-bg-soft border border-border-soft text-text-muted uppercase tracking-widest">
+                                    {report.status}
+                                </span>
+                                <div className="text-[14px] font-bold text-text-muted uppercase tracking-widest flex items-center gap-1">
+                                    <Calendar size={12} />
+                                    {new Date(report.date).toLocaleDateString()}
+                                </div>
+                            </div>
+                            
+                            <h3 className="font-bold text-primary-navy mb-4 flex items-center gap-2 text-[14px]">
+                                <History size={16} className="text-slate-400" />
+                                Work Summary
+                            </h3>
+                            
+                            <p className="text-[14px] text-text-dark font-medium leading-relaxed mb-6 line-clamp-4">
+                                {report.workSummary}
+                            </p>
+
+                            <div className="space-y-4 pt-4 border-t border-border-soft mt-auto">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[14px] font-black text-text-muted uppercase tracking-widest">Hours Logged</span>
+                                    <span className="text-[14px] font-bold text-primary-navy">{report.hoursWorked} hrs</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {(report.tasksCompleted || []).map((task, i) => (
+                                        <span key={i} className="text-[14px] font-bold bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full border border-slate-100">
+                                            {task}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
+                        <div className="flex flex-col items-center gap-3 opacity-30">
+                            <FileSpreadsheet size={48} />
+                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No reports submitted yet.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderReportModal = () => (
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-500 ${showReportModal ? 'opacity-100' : 'opacity-0 pointer-events-none bg-black/0'}`}>
+            <div className={`fixed inset-0 bg-primary-navy/20 backdrop-blur-sm transition-opacity duration-500 ${showReportModal ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowReportModal(false)} />
+            <div className={`bg-white w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden relative z-10 transition-all duration-500 transform ${showReportModal ? 'translate-y-0 scale-100' : 'translate-y-20 scale-95'}`}>
+                <div className="bg-primary-navy p-8 text-white relative">
+                    <div className="absolute top-0 right-0 p-8">
+                        <button onClick={() => setShowReportModal(false)} className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-2xl flex items-center justify-center transition-all rotate-0 hover:rotate-90">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                            <FileSpreadsheet size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight uppercase">Daily Work Report</h2>
+                            <p className="text-white/60 text-[14px] font-bold tracking-[0.2em] uppercase">Document your achievements for {new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Overall Work Summary</label>
+                            <textarea 
+                                required
+                                rows="4"
+                                value={reportForm.workSummary}
+                                onChange={e => setReportForm({...reportForm, workSummary: e.target.value})}
+                                className="zoho-input py-4 resize-none text-[14px]"
+                                placeholder="Describe your main activities and outcomes of the day..."
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[14px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Tasks Completed</label>
+                                <input 
+                                    type="text"
+                                    value={reportForm.tasksCompleted}
+                                    onChange={e => setReportForm({...reportForm, tasksCompleted: e.target.value})}
+                                    className="zoho-input text-[14px]"
+                                    placeholder="Task 1, Task 2, Task 3..."
+                                />
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Separate tasks with commas</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[14px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Total Hours Worked</label>
+                                <input 
+                                    type="number"
+                                    step="0.5"
+                                    min="1"
+                                    max="24"
+                                    value={reportForm.hoursWorked}
+                                    onChange={e => setReportForm({...reportForm, hoursWorked: e.target.value})}
+                                    className="zoho-input text-[14px]"
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 flex gap-4">
+                        <button type="button" onClick={() => setShowReportModal(false)} className="flex-1 py-4 text-[14px] font-black uppercase tracking-widest text-text-muted hover:text-primary-navy transition-all">Cancel</button>
+                        <button type="submit" className="flex-[2] zoho-btn-secondary py-4 rounded-2xl text-[14px] font-black uppercase tracking-widest shadow-xl shadow-primary-navy/10">
+                            SUBMIT FINAL REPORT
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+
     const renderExpenses = () => (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">
@@ -1209,7 +1736,7 @@ const EmployeeDashboard = () => {
                 </div>
                 <button 
                     onClick={() => setShowExpenseModal(true)}
-                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-primary-red/20"
+                    className="zoho-btn-primary px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-primary-red/20 text-[14px]"
                 >
                     <Plus size={18} /> New Expense Claim
                 </button>
@@ -1231,25 +1758,25 @@ const EmployeeDashboard = () => {
                         <tbody className="divide-y divide-border-soft">
                             {expenses.length > 0 ? expenses.map(exp => (
                                 <tr key={exp._id} className="hover:bg-bg-soft/50 transition-colors">
-                                    <td className="px-6 py-4 text-sm font-medium text-primary-navy">
+                                    <td className="px-6 py-4 text-[14px] font-medium text-primary-navy">
                                         {new Date(exp.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="px-2 py-1 bg-bg-soft rounded-lg text-[10px] font-black uppercase tracking-widest text-text-muted border border-border-soft">
+                                        <span className="px-2 py-1 bg-bg-soft rounded-lg text-[14px] font-black uppercase tracking-widest text-text-muted border border-border-soft">
                                             {exp.category}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm font-bold text-primary-navy">
+                                    <td className="px-6 py-4 text-[14px] font-bold text-primary-navy">
                                         ₹{exp.amount.toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs text-text-muted line-clamp-1 max-w-[200px]" title={exp.description}>
+                                        <p className="text-[14px] text-text-muted line-clamp-1 max-w-[200px]" title={exp.description}>
                                             {exp.description}
                                         </p>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex flex-col items-center gap-1">
-                                            <span className={`status-chip ${
+                                            <span className={`status-chip text-[14px] ${
                                                 exp.status === 'Approved' ? 'bg-status-success-bg text-status-success-text' :
                                                 exp.status === 'Rejected' ? 'bg-status-danger-bg text-status-danger-text' :
                                                 'bg-status-warning-bg text-status-warning-text'
@@ -1257,7 +1784,7 @@ const EmployeeDashboard = () => {
                                                 {exp.status}
                                             </span>
                                             {exp.adminNote && (
-                                                <p className="text-[9px] font-bold text-text-muted mt-1 max-w-[100px] truncate" title={exp.adminNote}>
+                                                <p className="text-[14px] font-bold text-text-muted mt-1 max-w-[100px] truncate" title={exp.adminNote}>
                                                     "{exp.adminNote}"
                                                 </p>
                                             )}
@@ -1271,7 +1798,7 @@ const EmployeeDashboard = () => {
                                             >
                                                 <Eye size={16} />
                                             </button>
-                                        ) : <span className="text-[10px] font-bold text-gray-300">N/A</span>}
+                                        ) : <span className="text-[14px] font-bold text-gray-300">N/A</span>}
                                     </td>
                                 </tr>
                             )) : (
@@ -1279,7 +1806,7 @@ const EmployeeDashboard = () => {
                                     <td colSpan="6" className="py-24 text-center">
                                         <div className="flex flex-col items-center gap-3 opacity-30">
                                             <Receipt size={48} />
-                                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No expenses found</p>
+                                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No expenses found</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -1297,7 +1824,7 @@ const EmployeeDashboard = () => {
                         <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                             <div>
                                 <h3 className="text-xl font-bold text-primary-navy">New Claim</h3>
-                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Business Expense Details</p>
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Business Expense Details</p>
                             </div>
                             <button onClick={() => setShowExpenseModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
                                 <X size={20} />
@@ -1306,11 +1833,11 @@ const EmployeeDashboard = () => {
                         <form onSubmit={handleExpenseSubmit} className="p-10 space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Claim Amount (₹)</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Claim Amount (₹)</label>
                                     <input required type="number" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} className="zoho-input" placeholder="0.00" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Type</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Type</label>
                                     <select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="zoho-input">
                                         <option value="Travel">Travel</option>
                                         <option value="Materials">Materials</option>
@@ -1320,11 +1847,11 @@ const EmployeeDashboard = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Narrative / Description</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Narrative / Description</label>
                                 <textarea required rows="3" value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} className="zoho-input h-auto resize-none py-3" placeholder="Explain what the expense was for..."></textarea>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Receipt Image</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Receipt Image</label>
                                 <div className="group relative">
                                     {expenseForm.receiptImage ? (
                                         <div className="relative rounded-2xl overflow-hidden border-2 border-primary-navy/20 h-32">
@@ -1340,7 +1867,7 @@ const EmployeeDashboard = () => {
                                     ) : (
                                         <label className="flex flex-col items-center justify-center border-2 border-dashed border-border-soft rounded-2xl h-32 cursor-pointer hover:border-primary-red transition-colors bg-bg-soft/30 group-hover:bg-bg-soft/50">
                                             <Camera className="text-text-muted mb-2 group-hover:text-primary-red transition-colors" size={24} />
-                                            <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Click to upload image</span>
+                                            <span className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Click to upload image</span>
                                             <input type="file" className="hidden" accept="image/*" onChange={handleReceiptUpload} />
                                         </label>
                                     )}
@@ -1363,18 +1890,37 @@ const EmployeeDashboard = () => {
     );
 
     const renderContent = () => {
-        switch (activeTab) {
-            case 'overview': return renderOverview();
-            case 'new': return renderJobTable(jobs.filter(j => ['Pending', 'pending_schedule', 'reschedule_requested'].includes(j.status)), true);
-            case 'my-jobs': return renderMyJobs();
-            case 'attendance': return renderAttendance();
-            case 'leaves': return renderLeaves();
-            case 'notifications': return renderNotifications();
-            case 'profile': return renderProfile();
-            case 'chat': return renderChat();
-            case 'expenses': return renderExpenses();
-            case 'tasks': return renderTasks();
-            default: return renderOverview();
+        try {
+            switch (activeTab) {
+                case 'overview': return renderOverview();
+                case 'new': return renderJobTable(jobs.filter(j => ['Pending', 'pending_schedule', 'reschedule_requested'].includes(j.status)), true);
+                case 'my-jobs': return renderMyJobs();
+                case 'attendance': return renderAttendance();
+                case 'leaves': return renderLeaves();
+                case 'notifications': return renderNotifications();
+                case 'profile': return renderProfile();
+                case 'chat': return renderChat();
+                case 'expenses': return renderExpenses();
+                case 'tasks': return renderTasks();
+                case 'leads': return renderLeads();
+                case 'reports': return renderDailyReports();
+                case 'followups': return renderFollowUps();
+                default: return renderOverview();
+            }
+        } catch (error) {
+            console.error('Render Error:', error);
+            return (
+                <div className="p-10 text-center bg-white rounded-3xl border border-rose-100 shadow-xl shadow-rose-900/5">
+                    <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="text-rose-500" size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-primary-navy mb-2">Display Error</h3>
+                    <p className="text-[14px] text-text-muted mb-6 max-w-sm mx-auto">Something went wrong while displaying this section. Please try refreshing or clearing your cache.</p>
+                    <button onClick={() => window.location.reload()} className="zoho-btn-primary px-8 py-3 rounded-xl text-[14px] font-bold uppercase tracking-widest">
+                        REFRESH DASHBOARD
+                    </button>
+                </div>
+            );
         }
     };
 
@@ -1406,6 +1952,9 @@ const EmployeeDashboard = () => {
                         { id: 'chat', label: 'Chat', icon: MessageSquare },
                         { id: 'expenses', label: 'Expenses', icon: Receipt },
                         { id: 'tasks', label: 'Tasks', icon: ClipboardList },
+                        { id: 'leads', label: 'Leads', icon: TrendingUp },
+                        { id: 'followups', label: 'Follow-ups', icon: Calendar },
+                        { id: 'reports', label: 'Daily Reports', icon: FileSpreadsheet },
                         { id: 'profile', label: 'Profile', icon: User },
                     ].map(item => (
                         <button
@@ -1417,8 +1966,15 @@ const EmployeeDashboard = () => {
                                 : 'border-transparent text-slate-400 hover:bg-navy-light/20 hover:text-white'
                             }`}
                         >
-                            <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'} />
-                            {!isSidebarCollapsed && <span className="text-sm font-bold tracking-wide">{item.label}</span>}
+                            <item.icon 
+                                size={20} 
+                                className={`transition-colors ${
+                                    activeTab === item.id 
+                                    ? 'text-white' 
+                                    : 'text-blue-500 group-hover:text-blue-400'
+                                }`} 
+                            />
+                            {!isSidebarCollapsed && <span className="text-[14px] font-bold tracking-wide">{item.label}</span>}
                             {activeTab === item.id && !isSidebarCollapsed && (
                                 <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-white rounded-r-full" />
                             )}
@@ -1429,7 +1985,7 @@ const EmployeeDashboard = () => {
                 <div className="p-4 border-t border-navy-light/20">
                     <button onClick={logout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-rose-500/10 text-rose-500 transition-all font-bold">
                         <LogOut size={20} />
-                        {!isSidebarCollapsed && <span className="text-xs uppercase tracking-widest">Logout</span>}
+                        {!isSidebarCollapsed && <span className="text-[14px] uppercase tracking-widest">Logout</span>}
                     </button>
                 </div>
             </aside>
@@ -1454,8 +2010,8 @@ const EmployeeDashboard = () => {
                             {showNotificationsDropdown && (
                                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-border-soft overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className="p-4 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
-                                        <h3 className="text-sm font-bold text-primary-navy">Recent Alerts</h3>
-                                        <span className="text-[10px] font-bold text-primary-red uppercase tracking-widest">{notifications.filter(n=>!n.isRead).length} New</span>
+                                        <h3 className="text-[14px] font-bold text-primary-navy">Recent Alerts</h3>
+                                        <span className="text-[14px] font-bold text-primary-red uppercase tracking-widest">{notifications.filter(n=>!n.isRead).length} New</span>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto">
                                         {notifications.length > 0 ? (
@@ -1466,16 +2022,16 @@ const EmployeeDashboard = () => {
                                                     className={`p-4 border-b border-border-soft/50 hover:bg-bg-soft transition-colors cursor-pointer ${!n.isRead ? 'bg-primary-red/5' : ''}`}
                                                 >
                                                     <div className="flex justify-between items-start mb-1">
-                                                        <h4 className={`text-xs ${!n.isRead ? 'font-bold text-primary-navy' : 'font-medium text-text-dark'}`}>{n.title}</h4>
+                                                        <h4 className={`text-[14px] ${!n.isRead ? 'font-bold text-primary-navy' : 'font-medium text-text-dark'}`}>{n.title}</h4>
                                                     </div>
-                                                    <p className="text-[10px] text-text-muted line-clamp-2 leading-relaxed mt-1">{n.message}</p>
-                                                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-2 block">{new Date(n.createdAt).toLocaleDateString()}</span>
+                                                    <p className="text-[14px] text-text-muted line-clamp-2 leading-relaxed mt-1">{n.message}</p>
+                                                    <span className="text-[14px] font-bold text-text-muted uppercase tracking-widest mt-2 block">{new Date(n.createdAt).toLocaleDateString()}</span>
                                                 </div>
                                             ))
                                         ) : (
                                             <div className="p-8 text-center text-text-muted">
                                                 <Bell size={24} className="mx-auto mb-2 opacity-20" />
-                                                <p className="text-[10px] uppercase tracking-widest font-bold">No alerts found</p>
+                                                <p className="text-[14px] uppercase tracking-widest font-bold">No alerts found</p>
                                             </div>
                                         )}
                                     </div>
@@ -1485,7 +2041,7 @@ const EmployeeDashboard = () => {
                                                 setShowNotificationsDropdown(false);
                                                 handleTabChange('notifications');
                                             }}
-                                            className="w-full text-center text-[10px] font-bold text-primary-red uppercase tracking-widest hover:underline"
+                                            className="w-full text-center text-[14px] font-bold text-primary-red uppercase tracking-widest hover:underline"
                                         >
                                             View All Notifications
                                         </button>
@@ -1498,8 +2054,8 @@ const EmployeeDashboard = () => {
 
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-bold text-primary-navy leading-none">{user?.name}</p>
-                                <p className="text-[10px] font-black text-primary-red uppercase tracking-tighter mt-1">Field Technician</p>
+                                <p className="text-[14px] font-bold text-primary-navy leading-none">{user?.name}</p>
+                                <p className="text-[14px] font-black text-primary-red uppercase tracking-tighter mt-1">Field Technician</p>
                             </div>
                             <div className="w-10 h-10 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold shadow-lg">
                                 {user?.name?.[0]}
@@ -1513,7 +2069,7 @@ const EmployeeDashboard = () => {
                         {loading ? (
                             <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
                                 <div className="w-12 h-12 border-4 border-primary-navy/10 border-t-primary-red rounded-full animate-spin"></div>
-                                <p className="text-text-muted font-bold tracking-widest uppercase text-xs">Syncing Personnel Data...</p>
+                                <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">Syncing Personnel Data...</p>
                             </div>
                         ) : (
                             <div className="space-y-8">
@@ -1542,7 +2098,7 @@ const EmployeeDashboard = () => {
                         </div>
 
                         <div className="space-y-4">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1 mb-2 block">Upload Installation Photos</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-widest ml-1 mb-2 block">Upload Installation Photos</label>
                                 <div 
                                     onClick={() => proofForm.photos.length < 6 && document.getElementById('proof-upload').click()}
                                     className={`p-6 bg-bg-soft rounded-2xl border-2 border-dashed transition-all text-center group cursor-pointer flex flex-col items-center justify-center py-8 ${
@@ -1553,7 +2109,7 @@ const EmployeeDashboard = () => {
                                         <Camera size={24} className="text-primary-red" />
                                     </div>
 
-                                    <p className="text-[9px] text-text-muted mt-1.5 font-medium">
+                                    <p className="text-[14px] text-text-muted mt-1.5 font-medium">
                                         {proofForm.photos.length > 0
                                             ? `${proofForm.photos.length}/6 photos selected — click to add more`
                                             : 'Upload up to 6 photos of the completed installation'
@@ -1578,7 +2134,7 @@ const EmployeeDashboard = () => {
                                                 <img src={photo} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
                                                 <button
                                                     onClick={() => setProofForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
-                                                    className="absolute top-1 right-1 w-6 h-6 bg-red-500/90 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold shadow-md hover:bg-red-600"
+                                                    className="absolute top-1 right-1 w-6 h-6 bg-red-500/90 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[14px] font-bold shadow-md hover:bg-red-600"
                                                 >
                                                     ×
                                                 </button>
@@ -1590,9 +2146,9 @@ const EmployeeDashboard = () => {
                             )}
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Work Notes</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-widest ml-1">Work Notes</label>
                                 <textarea 
-                                    className="zoho-input min-h-[100px] resize-none py-4 text-xs font-medium"
+                                    className="zoho-input min-h-[100px] resize-none py-4 text-[14px] font-medium"
                                     placeholder=""
                                     value={proofForm.notes}
                                     onChange={e => setProofForm({...proofForm, notes: e.target.value})}
@@ -1606,14 +2162,14 @@ const EmployeeDashboard = () => {
                                         setPreviewUrl(null);
                                         setProofForm({ photos: [], notes: '' });
                                     }}
-                                    className="flex-1 px-6 py-3.5 rounded-xl border border-border-soft text-text-muted font-bold uppercase text-[10px] tracking-widest hover:bg-bg-soft transition-all"
+                                    className="flex-1 px-6 py-3.5 rounded-xl border border-border-soft text-text-muted font-bold uppercase text-[14px] tracking-widest hover:bg-bg-soft transition-all"
                                 >
                                     Abort
                                 </button>
                                 <button 
                                     disabled={proofForm.photos.length === 0}
                                     onClick={() => handleJobAction(selectedJob.bookingId, 'complete', { proofPhoto: proofForm.photos[0], proofPhotos: proofForm.photos, workNotes: proofForm.notes })}
-                                    className="flex-1 zoho-btn-primary py-3.5 text-[10px] rounded-xl shadow-lg shadow-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 zoho-btn-primary py-3.5 text-[14px] rounded-xl shadow-lg shadow-red-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     UPLOAD IMAGE
                                 </button>
@@ -1638,7 +2194,7 @@ const EmployeeDashboard = () => {
                             alt="Compliance Evidence" 
                             className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border border-white/10" 
                         />
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/5 text-white/80 text-[10px] font-bold uppercase tracking-[0.3em] mb-[-60px]">
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/5 text-white/80 text-[14px] font-bold uppercase tracking-[0.3em] mb-[-60px]">
                             SecureVision Compliance Evidence
                         </div>
                     </div>
@@ -1646,6 +2202,66 @@ const EmployeeDashboard = () => {
             )}
 
             {renderLeaveModal()}
+            {renderReportModal()}
+
+            {/* Follow-up Modal */}
+            {showFollowUpModal && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-primary-navy/60 backdrop-blur-md" onClick={() => setShowFollowUpModal(false)}></div>
+                    <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                            <div>
+                                <h3 className="text-xl font-bold text-primary-navy">Schedule Follow-up</h3>
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">{selectedLeadForFollowUp?.name}</p>
+                            </div>
+                            <button onClick={() => setShowFollowUpModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleFollowUpSubmit} className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Follow-up Date</label>
+                                <input 
+                                    required 
+                                    type="date" 
+                                    value={followUpForm.followUpDate} 
+                                    onChange={e => setFollowUpForm({...followUpForm, followUpDate: e.target.value})} 
+                                    className="zoho-input" 
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Preferred Time</label>
+                                <input 
+                                    required 
+                                    type="text" 
+                                    value={followUpForm.followUpTime} 
+                                    onChange={e => setFollowUpForm({...followUpForm, followUpTime: e.target.value})} 
+                                    className="zoho-input" 
+                                    placeholder="e.g. 10:30 AM"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Action Note</label>
+                                <textarea 
+                                    value={followUpForm.note} 
+                                    onChange={e => setFollowUpForm({...followUpForm, note: e.target.value})} 
+                                    className="zoho-input h-24 py-3 resize-none" 
+                                    placeholder="What needs to be discussed?"
+                                />
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={isSubmittingFollowUp}
+                                className="zoho-btn-navy w-full py-4 text-[14px] rounded-2xl font-bold tracking-widest uppercase shadow-lg disabled:opacity-50 transition-all font-black"
+                            >
+                                {isSubmittingFollowUp ? 'Scheduling...' : 'Confirm Schedule'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Booking Directive Modal (Schedule Placement) */}
             <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${showBookingModal ? 'visible' : 'invisible'}`}>
@@ -1654,7 +2270,7 @@ const EmployeeDashboard = () => {
                     <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                         <div>
                             <h3 className="text-xl font-bold text-primary-navy">Booking Directive</h3>
-                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Resource Assignment</p>
+                            <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Resource Assignment</p>
                         </div>
                         <button onClick={() => setShowBookingModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red hover:border-primary-red transition-all shadow-sm">
                             <X size={20} />
@@ -1662,7 +2278,7 @@ const EmployeeDashboard = () => {
                     </div>
                     <form onSubmit={handleBookingDirective} className="p-10 space-y-8">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Status</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Status</label>
                             <select value={bookingForm.status} onChange={e => setBookingForm({...bookingForm, status: e.target.value})} className="zoho-input">
                                 <option value="pending_schedule">Pending Schedule Request</option>
                                 <option value="schedule_sent">Schedule Proposed to Customer</option>
@@ -1673,11 +2289,11 @@ const EmployeeDashboard = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Schedule Date</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Schedule Date</label>
                             <input type="date" value={bookingForm.proposedDate} onChange={e => setBookingForm({...bookingForm, proposedDate: e.target.value})} className="zoho-input" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Time Slot</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Time Slot</label>
                             <select value={bookingForm.proposedTimeSlot} onChange={e => setBookingForm({...bookingForm, proposedTimeSlot: e.target.value})} className="zoho-input">
                                 <option value="">Select Time Slot</option>
                                 <option value="09:00 AM - 11:00 AM">09:00 AM - 11:00 AM</option>
@@ -1687,11 +2303,11 @@ const EmployeeDashboard = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Note / Customer Instruction</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Note / Customer Instruction</label>
                             <input type="text" value={bookingForm.adminNote} onChange={e => setBookingForm({...bookingForm, adminNote: e.target.value})} className="zoho-input" placeholder="e.g. Please confirm if this slot works..." />
                         </div>
                         <div className="pt-4">
-                            <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
+                            <button type="submit" className="zoho-btn-secondary w-full py-4 text-[14px] rounded-2xl">
                                 Apply Directives
                             </button>
                         </div>

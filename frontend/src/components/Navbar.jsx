@@ -128,7 +128,7 @@ const Navbar = () => {
     return (
         <>
             {/* Top Bar */}
-            <div className="bg-[#0b0f1a] text-white py-2 px-4 md:px-8 text-sm hidden md:flex justify-between items-center transition-all duration-300">
+            <div className="bg-[#0b0f1a] text-white py-2 px-4 md:px-8 text-[14px] hidden md:flex justify-between items-center transition-all duration-300">
                 <div className="flex space-x-6">
                     <div className="flex items-center space-x-2">
                         <Phone size={14} className="text-red-400" />
@@ -136,7 +136,7 @@ const Navbar = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                         <Mail size={14} className="text-red-400" />
-                        <span>info@securevision.com</span>
+                        <span>info@sktech.com</span>
                     </div>
                     <div className="flex items-center space-x-2">
                         <MapPin size={14} className="text-red-400" />
@@ -157,18 +157,18 @@ const Navbar = () => {
                             <div className="flex items-center space-x-4">
                                 <div className="flex items-center space-x-2 text-white">
                                     <UserIcon size={16} className="text-red-400" />
-                                    <span className="font-medium text-xs">{user.name}</span>
+                                    <span className="font-medium text-[14px]">{user.name}</span>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="flex items-center space-x-1 text-white/70 hover:text-red-400 text-xs transition-colors"
+                                    className="flex items-center space-x-1 text-white/70 hover:text-red-400 text-[14px] transition-colors"
                                 >
                                     <LogOut size={14} />
                                     <span>Logout</span>
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center space-x-4 text-xs font-medium text-white">
+                            <div className="flex items-center space-x-4 text-[14px] font-medium text-white">
                                 <UserIcon size={16} className="text-red-400" />
                                 <div className="flex items-center space-x-1">
                                     <button onClick={() => setIsAuthModalOpen(true)} className="hover:text-red-400 transition-colors">Login</button>
@@ -189,8 +189,8 @@ const Navbar = () => {
                     <Link to="/" className="flex items-center space-x-2">
                         <ShieldCheck size={32} className="text-primary-red" />
                         <div className="flex flex-col">
-                            <span className="font-bold text-xl text-primary-navy leading-tight">SecureVision</span>
-                            <span className="text-xs text-primary-red font-semibold tracking-wider">CCTV SOLUTIONS</span>
+                            <span className="font-bold text-xl text-primary-navy leading-tight">SKTECH</span>
+                            <span className="text-[14px] text-primary-red font-semibold tracking-wider">CCTV SOLUTIONS</span>
                         </div>
                     </Link>
 
@@ -209,7 +209,7 @@ const Navbar = () => {
                                 <a
                                     key={link.name}
                                     href={link.path}
-                                    className={`font-medium text-[15px] transition-colors ${isActive ? 'text-[#800000]' : 'text-gray-700 hover:text-red-700'}`}
+                                    className={`font-medium text-[14px] transition-colors ${isActive ? 'text-[#800000]' : 'text-gray-700 hover:text-red-700'}`}
                                 >
                                     {link.name}
                                 </a>
@@ -224,7 +224,7 @@ const Navbar = () => {
                                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                                         }
                                     }}
-                                    className={`font-medium text-[15px] transition-colors ${isActive ? 'text-[#800000]' : 'text-gray-700 hover:text-red-700'}`}
+                                    className={`font-medium text-[14px] transition-colors ${isActive ? 'text-[#800000]' : 'text-gray-700 hover:text-red-700'}`}
                                 >
                                     {link.name}
                                 </Link>
@@ -252,7 +252,7 @@ const Navbar = () => {
                                     value={tempSearchQuery}
                                     onChange={(e) => setTempSearchQuery(e.target.value)}
                                     placeholder="Search products..."
-                                    className="bg-transparent border-none focus:ring-0 text-[13px] w-full placeholder-gray-400 font-medium"
+                                    className="bg-transparent border-none focus:ring-0 text-[14px] w-full placeholder-gray-400 font-medium"
                                 />
                                 {tempSearchQuery && (
                                     <button
@@ -273,7 +273,7 @@ const Navbar = () => {
                             >
                                 <Heart size={22} strokeWidth={1.5} />
                                 {wishlistCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[14px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
                                         {wishlistCount}
                                     </span>
                                 )}
@@ -287,7 +287,7 @@ const Navbar = () => {
                             >
                                 <ShoppingCart size={22} strokeWidth={1.5} />
                                 {cartCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[14px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
                                         {cartCount}
                                     </span>
                                 )}
@@ -297,7 +297,7 @@ const Navbar = () => {
                             <div className="relative" ref={accountDropdownRef}>
                                 <button
                                     onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-                                    className="flex items-center space-x-1.5 hover:text-red-700 transition-colors py-2 uppercase text-[13px] font-bold tracking-wider"
+                                    className="flex items-center space-x-1.5 hover:text-red-700 transition-colors py-2 uppercase text-[14px] font-bold tracking-wider"
                                 >
                                     <UserIcon size={20} className="text-gray-700" strokeWidth={2} />
                                     <span>My Account</span>
@@ -312,12 +312,12 @@ const Navbar = () => {
                                         <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                                             {isAuthenticated ? (
                                                 <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Welcome</p>
-                                                    <p className="text-gray-900 font-bold text-[15px] truncate">{user.name}</p>
+                                                    <p className="text-gray-400 text-[14px] font-bold uppercase tracking-[0.2em] mb-1">Welcome</p>
+                                                    <p className="text-gray-900 font-bold text-[14px] truncate">{user.name}</p>
                                                 </div>
                                             ) : (
                                                 <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                                                    <p className="text-gray-900 font-bold text-[15px]">Hello, Guest</p>
+                                                    <p className="text-gray-900 font-bold text-[14px]">Hello, Guest</p>
                                                 </div>
                                             )}
 
@@ -353,13 +353,13 @@ const Navbar = () => {
                                                 ) : (
                                                     <div className="px-2 py-2 space-y-1">
                                                         <button
-                                                            className="block w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-bold transition-all"
+                                                            className="block w-full text-center py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-[14px] font-bold transition-all"
                                                             onClick={() => { setIsAccountDropdownOpen(false); setIsAuthModalOpen(true); }}
                                                         >
                                                             Log In
                                                         </button>
                                                         <button
-                                                            className="block w-full text-center py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-all shadow-md shadow-red-500/10"
+                                                            className="block w-full text-center py-2.5 px-4 bg-red-700 hover:bg-red-800 text-white rounded-lg text-[14px] font-bold transition-all shadow-md shadow-red-500/10"
                                                             onClick={() => { setIsAccountDropdownOpen(false); setIsAuthModalOpen(true); }}
                                                         >
                                                             Sign Up
@@ -409,7 +409,7 @@ const Navbar = () => {
                         ))}
                         {isAuthenticated && (
                             <div className="flex flex-col border-b border-gray-50 pb-2 mb-2">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">Account</p>
+                                <p className="text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">Account</p>
                                 <Link
                                     to="/dashboard"
                                     className="py-3 text-gray-800 font-medium hover:text-red-700 flex items-center space-x-2"

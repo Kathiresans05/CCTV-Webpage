@@ -43,7 +43,7 @@ const FeaturesSlider = () => {
                             <div className="mb-4 text-gray-700 group-hover:text-primary-red transition-colors duration-300">
                                 {feature.icon}
                             </div>
-                            <p className="text-sm font-semibold text-gray-800 text-center whitespace-normal leading-tight">
+                            <p className="text-[14px] font-semibold text-gray-800 text-center whitespace-normal leading-tight">
                                 {feature.text}
                             </p>
                         </div>

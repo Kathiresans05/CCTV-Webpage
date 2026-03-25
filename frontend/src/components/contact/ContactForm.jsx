@@ -90,7 +90,7 @@ const ContactForm = () => {
             <h3 className="text-2xl font-bold text-[#0b0f1a] mb-6">Send Us a Message</h3>
 
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
+                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-[14px]">
                     {error}
                 </div>
             )}
@@ -98,7 +98,7 @@ const ContactForm = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
+                        <label className="block text-[14px] font-semibold text-gray-700 mb-2">First Name</label>
                         <input
                             type="text"
                             name="firstName"
@@ -111,7 +111,7 @@ const ContactForm = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+                        <label className="block text-[14px] font-semibold text-gray-700 mb-2">Last Name</label>
                         <input
                             type="text"
                             name="lastName"
@@ -127,7 +127,7 @@ const ContactForm = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                        <label className="block text-[14px] font-semibold text-gray-700 mb-2">Email Address</label>
                         <input
                             type="email"
                             name="email"
@@ -140,7 +140,7 @@ const ContactForm = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                        <label className="block text-[14px] font-semibold text-gray-700 mb-2">Phone Number</label>
                         <input
                             type="tel"
                             name="phone"
@@ -154,7 +154,7 @@ const ContactForm = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
+                    <label className="block text-[14px] font-semibold text-gray-700 mb-2">Subject</label>
                     <select
                         name="subject"
                         value={formData.subject}
@@ -170,7 +170,7 @@ const ContactForm = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Your Message</label>
+                    <label className="block text-[14px] font-semibold text-gray-700 mb-2">Your Message</label>
                     <textarea
                         rows="5"
                         name="message"

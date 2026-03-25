@@ -114,8 +114,8 @@ const AuthModal = ({ isOpen, onClose }) => {
                                     <CheckCircle2 size={18} className="text-white" />
                                 </div>
                             </div>
-                            <h4 className="font-bold text-[13px] leading-tight mb-2 text-white">Zero Subscription Fees</h4>
-                            <p className="text-[10px] text-white/70 font-medium leading-relaxed">Access to premium services without any charges</p>
+                            <h4 className="font-bold text-[14px] leading-tight mb-2 text-white">Zero Subscription Fees</h4>
+                            <p className="text-[14px] text-white/70 font-medium leading-relaxed">Access to premium services without any charges</p>
                         </div>
 
                         {/* Feature 2 */}
@@ -125,8 +125,8 @@ const AuthModal = ({ isOpen, onClose }) => {
                                     <BadgePercent size={18} className="text-white" />
                                 </div>
                             </div>
-                            <h4 className="font-bold text-[13px] leading-tight mb-2 text-white">Lowest price guaranteed</h4>
-                            <p className="text-[10px] text-white/70 font-medium leading-relaxed">Explore unbeatable prices and unmatchable value</p>
+                            <h4 className="font-bold text-[14px] leading-tight mb-2 text-white">Lowest price guaranteed</h4>
+                            <p className="text-[14px] text-white/70 font-medium leading-relaxed">Explore unbeatable prices and unmatchable value</p>
                         </div>
 
                         {/* Feature 3 */}
@@ -136,8 +136,8 @@ const AuthModal = ({ isOpen, onClose }) => {
                                     <Lock size={18} className="text-white" />
                                 </div>
                             </div>
-                            <h4 className="font-bold text-[13px] leading-tight mb-2 text-white">100% secure & spam free</h4>
-                            <p className="text-[10px] text-white/70 font-medium leading-relaxed">Guaranteed data protection & spam-free inbox</p>
+                            <h4 className="font-bold text-[14px] leading-tight mb-2 text-white">100% secure & spam free</h4>
+                            <p className="text-[14px] text-white/70 font-medium leading-relaxed">Guaranteed data protection & spam-free inbox</p>
                         </div>
                     </div>
                 </div>
@@ -173,7 +173,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                                         defaultChecked 
                                         className="mt-1 w-4 h-4 rounded border-gray-300 text-[#6A4E46] focus:ring-[#6A4E46] cursor-pointer" 
                                     />
-                                    <label htmlFor="updates" className="text-[13px] text-gray-600 font-medium cursor-pointer leading-tight">
+                                    <label htmlFor="updates" className="text-[14px] text-gray-600 font-medium cursor-pointer leading-tight">
                                         Notify me for any updates & offers
                                     </label>
                                 </div>
@@ -188,11 +188,11 @@ const AuthModal = ({ isOpen, onClose }) => {
                             </form>
                             
                             <div className="mt-10 text-center space-y-4 w-full">
-                                <p className="text-[11px] text-gray-400 font-medium">
+                                <p className="text-[14px] text-gray-400 font-medium">
                                     I accept that I have read & understood SecureVision's <br/>
                                     <a href="#" className="underline">Privacy Policy</a> and <a href="#" className="underline">T&Cs</a>.
                                 </p>
-                                <button className="text-[13px] text-gray-400 font-semibold underline hover:text-[#6A4E46] transition-colors">
+                                <button className="text-[14px] text-gray-400 font-semibold underline hover:text-[#6A4E46] transition-colors">
                                     Trouble logging in?
                                 </button>
                             </div>
@@ -209,7 +209,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                                     <span className="font-bold text-gray-800 text-[15px]">+91 {phone}</span>
                                     <button 
                                         onClick={() => setStep('phone')} 
-                                        className="text-[13px] text-teal-600 font-bold border border-teal-600 px-2 py-0.5 rounded-full hover:bg-teal-50 transition-colors"
+                                        className="text-[14px] text-teal-600 font-bold border border-teal-600 px-2 py-0.5 rounded-full hover:bg-teal-50 transition-colors"
                                     >
                                         Edit
                                     </button>
@@ -233,13 +233,13 @@ const AuthModal = ({ isOpen, onClose }) => {
 
                             <div className="w-full flex justify-center mb-6">
                                 {timer > 0 ? (
-                                    <p className="text-[13px] font-bold text-gray-500 flex items-center">
+                                    <p className="text-[14px] font-bold text-gray-500 flex items-center">
                                         ⏱ Resend OTP in {timer} Sec
                                     </p>
                                 ) : (
                                     <button 
                                         onClick={() => setTimer(30)}
-                                        className="text-[13px] font-bold text-[#6A4E46] flex items-center hover:underline"
+                                        className="text-[14px] font-bold text-[#6A4E46] flex items-center hover:underline"
                                     >
                                         Resend OTP Now
                                     </button>
@@ -255,7 +255,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                             </button>
                             
                             <div className="mt-8 text-center space-y-4 w-full">
-                                <button className="text-[13px] text-gray-400 font-semibold underline hover:text-[#6A4E46] transition-colors">
+                                <button className="text-[14px] text-gray-400 font-semibold underline hover:text-[#6A4E46] transition-colors">
                                     Trouble logging in?
                                 </button>
                             </div>

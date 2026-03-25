@@ -295,32 +295,32 @@ const UserDashboard = () => {
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 group shadow-sm hover:shadow-md transition-all">
                                 <Package size={28} className="text-primary-red mb-4" />
                                 <h3 className="text-lg font-bold text-gray-800">Bookings</h3>
-                                <p className="text-gray-500 text-xs mt-1 leading-relaxed">Track your recent bookings, service appointments, and hardware orders.</p>
-                                <button onClick={() => handleTabChange('bookings')} className="mt-6 text-primary-red font-bold text-xs flex items-center gap-1.5 group-hover:gap-2 transition-all">
+                                <p className="text-gray-500 text-[14px] mt-1 leading-relaxed">Track your recent bookings, service appointments, and hardware orders.</p>
+                                <button onClick={() => handleTabChange('bookings')} className="mt-6 text-primary-red font-bold text-[14px] flex items-center gap-1.5 group-hover:gap-2 transition-all">
                                     View Bookings <ArrowRight size={14} />
                                 </button>
                             </div>
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 group shadow-sm hover:shadow-md transition-all">
                                 <MapPin size={28} className="text-blue-600 mb-4" />
                                 <h3 className="text-lg font-bold text-gray-800">Address</h3>
-                                <p className="text-gray-500 text-xs mt-1 leading-relaxed">Update your installation address and service location details anytime.</p>
-                                <button onClick={() => handleTabChange('address')} className="mt-6 text-blue-600 font-bold text-xs flex items-center gap-1.5 group-hover:gap-2 transition-all">
+                                <p className="text-gray-500 text-[14px] mt-1 leading-relaxed">Update your installation address and service location details anytime.</p>
+                                <button onClick={() => handleTabChange('address')} className="mt-6 text-blue-600 font-bold text-[14px] flex items-center gap-1.5 group-hover:gap-2 transition-all">
                                     Manage Address <ArrowRight size={14} />
                                 </button>
                             </div>
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 group shadow-sm hover:shadow-md transition-all">
                                 <Heart size={28} className="text-red-500 mb-4" />
                                 <h3 className="text-lg font-bold text-gray-800">Wishlist</h3>
-                                <p className="text-gray-500 text-xs mt-1 leading-relaxed">Products you have saved for later. Compare and plan your security setup.</p>
-                                <button onClick={() => handleTabChange('wishlist')} className="mt-6 text-red-600 font-bold text-xs flex items-center gap-1.5 group-hover:gap-2 transition-all">
+                                <p className="text-gray-500 text-[14px] mt-1 leading-relaxed">Products you have saved for later. Compare and plan your security setup.</p>
+                                <button onClick={() => handleTabChange('wishlist')} className="mt-6 text-red-600 font-bold text-[14px] flex items-center gap-1.5 group-hover:gap-2 transition-all">
                                     View Wishlist <ArrowRight size={14} />
                                 </button>
                             </div>
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 group shadow-sm hover:shadow-md transition-all">
                                 <User size={28} className="text-gray-600 mb-4" />
                                 <h3 className="text-lg font-bold text-gray-800">Profile</h3>
-                                <p className="text-gray-500 text-xs mt-1 leading-relaxed">Manage your account details, contact information, and security settings.</p>
-                                <button onClick={() => handleTabChange('profile')} className="mt-6 text-gray-600 font-bold text-xs flex items-center gap-1.5 group-hover:gap-2 transition-all">
+                                <p className="text-gray-500 text-[14px] mt-1 leading-relaxed">Manage your account details, contact information, and security settings.</p>
+                                <button onClick={() => handleTabChange('profile')} className="mt-6 text-gray-600 font-bold text-[14px] flex items-center gap-1.5 group-hover:gap-2 transition-all">
                                     Edit Profile <ArrowRight size={14} />
                                 </button>
                             </div>
@@ -335,45 +335,45 @@ const UserDashboard = () => {
                             <form onSubmit={handleAddressUpdate} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Name</label>
+                                        <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Name</label>
                                         <input 
                                             type="text" 
                                             value={addressInfo.name}
                                             onChange={(e) => setAddressInfo({ ...addressInfo, name: e.target.value })}
-                                            className="w-full border border-gray-200 rounded-xl px-5 py-3.5 text-sm font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all" 
+                                            className="w-full border border-gray-200 rounded-xl px-5 py-3.5 text-[14px] font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all" 
                                             placeholder="Full name for service contact"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Phone</label>
+                                        <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Phone</label>
                                         <input 
                                             type="text" 
                                             value={addressInfo.phone}
                                             onChange={(e) => setAddressInfo({ ...addressInfo, phone: e.target.value })}
-                                            className="w-full border border-gray-200 rounded-xl px-5 py-3.5 text-sm font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all" 
+                                            className="w-full border border-gray-200 rounded-xl px-5 py-3.5 text-[14px] font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all" 
                                             placeholder="Phone for installation updates"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Service & Installation Address</label>
+                                    <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Service & Installation Address</label>
                                     <textarea 
                                         rows="4"
                                         value={addressInfo.address}
                                         onChange={(e) => setAddressInfo({ ...addressInfo, address: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-5 py-4 text-sm font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all resize-none" 
+                                        className="w-full border border-gray-200 rounded-xl px-5 py-4 text-[14px] font-semibold focus:outline-none focus:border-[#B91C1C] bg-gray-50/30 transition-all resize-none" 
                                         placeholder="Full address (House no, Street, Landmark, City, Pincode)"
                                     />
                                     <div className="flex items-start gap-2 mt-3 ml-1">
                                         <ShieldCheck size={14} className="text-emerald-500 mt-0.5" />
-                                        <p className="text-[11px] text-gray-400 font-medium">This address is used for all onsite installation and technical support visits.</p>
+                                        <p className="text-[14px] text-gray-400 font-medium">This address is used for all onsite installation and technical support visits.</p>
                                     </div>
                                 </div>
 
                                 {profileStatus.message && (
-                                    <div className={`text-xs font-bold p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 ${profileStatus.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+                                    <div className={`text-[14px] font-bold p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 ${profileStatus.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
                                         <div className={`w-2 h-2 rounded-full ${profileStatus.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                                         {profileStatus.message}
                                     </div>
@@ -383,7 +383,7 @@ const UserDashboard = () => {
                                     <button 
                                         type="submit" 
                                         disabled={isUpdatingProfile}
-                                        className="bg-[#0F172A] text-white py-4 px-10 rounded-xl font-bold text-sm hover:bg-black transition-all disabled:opacity-70 flex items-center justify-center gap-3"
+                                        className="bg-[#0F172A] text-white py-4 px-10 rounded-xl font-bold text-[14px] hover:bg-black transition-all disabled:opacity-70 flex items-center justify-center gap-3"
                                     >
                                         {isUpdatingProfile ? (
                                             <>
@@ -416,13 +416,13 @@ const UserDashboard = () => {
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => handleTabChange('bookings')}
-                                    className="bg-[#0b0f1a] text-white py-3 px-8 rounded-xl font-bold text-sm hover:bg-black transition-colors"
+                                    className="bg-[#0b0f1a] text-white py-3 px-8 rounded-xl font-bold text-[14px] hover:bg-black transition-colors"
                                 >
                                     Track Installation
                                 </button>
                                 <button
                                     onClick={() => setCheckoutSuccess(false)}
-                                    className="border border-gray-200 text-gray-700 py-3 px-8 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                                    className="border border-gray-200 text-gray-700 py-3 px-8 rounded-xl font-bold text-[14px] hover:bg-gray-50 transition-colors"
                                 >
                                     Continue Shopping
                                 </button>
@@ -434,7 +434,7 @@ const UserDashboard = () => {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
                             {mappedCartItems.length > 0 && (
                                 <div className="text-right p-6 border-b border-gray-100">
-                                    <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Subtotal</p>
+                                    <p className="text-[14px] text-gray-400 font-bold uppercase tracking-widest">Subtotal</p>
                                     <p className="text-2xl font-bold text-[#800000]">₹{mappedCartItems.reduce((acc, item) => acc + (item.productDetails.price * (item.quantity || 1)), 0).toLocaleString('en-IN')}</p>
                                 </div>
                             )}
@@ -442,14 +442,14 @@ const UserDashboard = () => {
                         {loadingCart ? (
                             <div className="flex flex-col items-center justify-center py-24">
                                 <Loader2 size={40} className="text-red-600 animate-spin mb-3" />
-                                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Loading your cart...</p>
+                                <p className="text-gray-400 text-[14px] font-bold uppercase tracking-widest">Loading your cart...</p>
                             </div>
                         ) : mappedCartItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-24 text-center">
                                 <ShoppingCart size={48} className="text-gray-200 mb-4" />
                                 <h3 className="text-lg font-bold text-gray-700 mb-2">Your cart is empty</h3>
                                 <p className="text-gray-500 mb-8 max-w-xs mx-auto">Ready to secure your space? Choose from our premium surveillance hardware.</p>
-                                <Link to="/products" className="bg-[#800000] text-white py-3 px-8 rounded-full font-bold text-sm hover:bg-black transition-colors">
+                                <Link to="/products" className="bg-[#800000] text-white py-3 px-8 rounded-full font-bold text-[14px] hover:bg-black transition-colors">
                                     Explore Hardware
                                 </Link>
                             </div>
@@ -464,13 +464,13 @@ const UserDashboard = () => {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <h4 className="font-bold text-gray-900 text-[15px]">{item.productDetails.name}</h4>
-                                                    <p className="text-xs text-gray-500 mt-0.5">Quantity: {item.quantity || 1}</p>
+                                                    <p className="text-[14px] text-gray-500 mt-0.5">Quantity: {item.quantity || 1}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-lg font-bold text-primary-navy">₹{(item.productDetails.price * (item.quantity || 1)).toLocaleString('en-IN')}</p>
                                                     <button
                                                         onClick={() => removeFromCart(item.productId)}
-                                                        className="text-[10px] text-red-500 font-bold uppercase tracking-widest hover:underline mt-1"
+                                                        className="text-[14px] text-red-500 font-bold uppercase tracking-widest hover:underline mt-1"
                                                     >
                                                         Remove Item
                                                     </button>
@@ -479,9 +479,9 @@ const UserDashboard = () => {
                                             <div className="mt-4 flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Secured & Ready</span>
+                                                    <span className="text-[14px] font-bold text-gray-400 uppercase tracking-widest">Secured & Ready</span>
                                                 </div>
-                                                <button className="text-[#800000] text-xs font-bold flex items-center gap-1 hover:gap-2 transition-all">
+                                                <button className="text-[#800000] text-[14px] font-bold flex items-center gap-1 hover:gap-2 transition-all">
                                                     Checkout Now <ArrowRight size={14} />
                                                 </button>
                                             </div>
@@ -519,14 +519,14 @@ const UserDashboard = () => {
                         {loadingWishlist ? (
                             <div className="flex flex-col items-center justify-center py-24">
                                 <Loader2 size={40} className="text-red-600 animate-spin mb-3" />
-                                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Loading favorites...</p>
+                                <p className="text-gray-400 text-[14px] font-bold uppercase tracking-widest">Loading favorites...</p>
                             </div>
                         ) : wishlistedProducts.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-24 text-center">
                                 <Heart size={48} className="text-gray-200 mb-4" />
                                 <h3 className="text-lg font-bold text-gray-700 mb-2">Your wishlist is empty</h3>
                                 <p className="text-gray-500 mb-8 max-w-xs mx-auto">Browse our collection of high-end security solutions and save your favorites here.</p>
-                                <Link to="/products" className="bg-[#B91C1C] text-white py-3 px-8 rounded-full font-bold text-sm hover:bg-red-800 transition-colors">
+                                <Link to="/products" className="bg-[#B91C1C] text-white py-3 px-8 rounded-full font-bold text-[14px] hover:bg-red-800 transition-colors">
                                     Browse Products
                                 </Link>
                             </div>
@@ -544,28 +544,28 @@ const UserDashboard = () => {
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <div className="flex items-center text-orange-400">
                                                             <Star size={12} fill="currentColor" />
-                                                            <span className="text-xs font-bold text-gray-500 ml-1">{product.rating}</span>
+                                                            <span className="text-[14px] font-bold text-gray-500 ml-1">{product.rating}</span>
                                                         </div>
                                                         <span className="text-gray-300">•</span>
-                                                        <span className="text-xs font-bold text-green-600 uppercase tracking-wider">In Stock</span>
+                                                        <span className="text-[14px] font-bold text-green-600 uppercase tracking-wider">In Stock</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-xl font-bold text-[#B91C1C]">₹{product.price.toLocaleString('en-IN')}</p>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">MSRP: ₹{(product.price * 1.2).toLocaleString('en-IN')}</p>
+                                                    <p className="text-[14px] text-gray-400 font-bold uppercase tracking-widest">MSRP: ₹{(product.price * 1.2).toLocaleString('en-IN')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4 mt-4">
                                                 <Link
                                                     to="/products"
-                                                    className="inline-flex items-center gap-2 bg-[#0b0f1a] text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                                                    className="inline-flex items-center gap-2 bg-[#0b0f1a] text-white px-5 py-2 rounded-lg text-[14px] font-bold hover:bg-black transition-colors"
                                                 >
                                                     <ShoppingCart size={14} />
                                                     View Product
                                                 </Link>
                                                 <button
                                                     onClick={() => removeFromWishlist(product.id)}
-                                                    className="inline-flex items-center gap-2 text-gray-400 hover:text-red-600 text-xs font-bold transition-colors"
+                                                    className="inline-flex items-center gap-2 text-gray-400 hover:text-red-600 text-[14px] font-bold transition-colors"
                                                 >
                                                     <Trash2 size={14} />
                                                     Remove
@@ -588,18 +588,18 @@ const UserDashboard = () => {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-gray-900">{user?.name}</h4>
-                                    <p className="text-sm text-gray-500">{user?.email}</p>
-                                    <button className="text-[#B91C1C] text-[10px] font-bold uppercase tracking-widest mt-1 hover:underline">Change Avatar</button>
+                                    <p className="text-[14px] text-gray-500">{user?.email}</p>
+                                    <button className="text-[#B91C1C] text-[14px] font-bold uppercase tracking-widest mt-1 hover:underline">Change Avatar</button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
-                                    <input type="text" defaultValue={user?.name} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/50 font-medium focus:outline-none" readOnly />
+                                    <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
+                                    <input type="text" defaultValue={user?.name} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] bg-gray-50/50 font-medium focus:outline-none" readOnly />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
-                                    <input type="email" defaultValue={user?.email} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/50 font-medium focus:outline-none" readOnly />
+                                    <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
+                                    <input type="email" defaultValue={user?.email} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] bg-gray-50/50 font-medium focus:outline-none" readOnly />
                                 </div>
                             </div>
                             
@@ -608,35 +608,35 @@ const UserDashboard = () => {
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Change Password</h3>
                                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Current Password</label>
+                                        <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Current Password</label>
                                         <input 
                                             type="password" name="currentPassword" 
                                             value={passwordData.currentPassword} onChange={handlePasswordChange}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
                                             placeholder="Enter current password"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">New Password</label>
+                                        <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">New Password</label>
                                         <input 
                                             type="password" name="newPassword" 
                                             value={passwordData.newPassword} onChange={handlePasswordChange}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
                                             placeholder="Min. 8 characters"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Confirm New Password</label>
+                                        <label className="block text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Confirm New Password</label>
                                         <input 
                                             type="password" name="confirmPassword" 
                                             value={passwordData.confirmPassword} onChange={handlePasswordChange}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium focus:outline-none focus:border-[#B91C1C] transition-colors" 
                                             placeholder="Confirm new password"
                                         />
                                     </div>
                                     
                                     {passwordStatus.message && (
-                                        <div className={`text-xs font-bold p-3 rounded-lg ${passwordStatus.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                        <div className={`text-[14px] font-bold p-3 rounded-lg ${passwordStatus.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
                                             {passwordStatus.message}
                                         </div>
                                     )}
@@ -644,7 +644,7 @@ const UserDashboard = () => {
                                     <button 
                                         type="submit" 
                                         disabled={isUpdatingPassword}
-                                        className="bg-[#0b0f1a] text-white py-3 px-6 rounded-xl font-bold text-sm hover:bg-black transition-colors disabled:opacity-70 mt-2"
+                                        className="bg-[#0b0f1a] text-white py-3 px-6 rounded-xl font-bold text-[14px] hover:bg-black transition-colors disabled:opacity-70 mt-2"
                                     >
                                         {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                                     </button>
@@ -652,7 +652,7 @@ const UserDashboard = () => {
                             </div>
                             
                             <div className="pt-6 mt-6 border-t border-gray-50">
-                                <p className="text-xs text-gray-400 italic">Advanced profile controls are being finalized for the next security update.</p>
+                                <p className="text-[14px] text-gray-400 italic">Advanced profile controls are being finalized for the next security update.</p>
                             </div>
                         </div>
                     </div>
@@ -670,7 +670,7 @@ const UserDashboard = () => {
                 <div className="bg-[#0F172A] shadow-xl overflow-y-auto sticky top-0 flex flex-col pt-8 pb-4 h-screen z-10 custom-scrollbar border-r border-slate-800/50">
 
                     <div className="px-5 mb-4 px-6 pt-2">
-                        <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-4">Main Menu</h4>
+                        <h4 className="text-[14px] font-extrabold text-slate-500 uppercase tracking-widest mb-4">Main Menu</h4>
                         <nav className="space-y-1">
                             {TABS.map((tab) => {
                                 const Icon = tab.icon;
@@ -687,7 +687,7 @@ const UserDashboard = () => {
                                                 `}
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500'} strokeWidth={isActive ? 2.5 : 2} />
+                                            <Icon size={18} className={isActive ? 'text-white' : 'text-blue-500'} strokeWidth={isActive ? 2.5 : 2} />
                                             <span className="tracking-wide">{tab.label}</span>
                                         </div>
                                         {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
@@ -708,8 +708,8 @@ const UserDashboard = () => {
                                     <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#1C3643]"></div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-white font-bold text-sm leading-tight group-hover:text-gray-100">{user?.name}</span>
-                                    <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Customer</span>
+                                    <span className="text-white font-bold text-[14px] leading-tight group-hover:text-gray-100">{user?.name}</span>
+                                    <span className="text-slate-500 text-[14px] uppercase font-bold tracking-wider">Customer</span>
                                 </div>
                             </div>
                             <button
@@ -729,7 +729,7 @@ const UserDashboard = () => {
 
 
                 <div className="px-8 lg:px-12 pt-8 lg:pt-12 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-                    <div className="flex items-center space-x-2 text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">
+                    <div className="flex items-center space-x-2 text-[14px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">
                         <Link to="/" className="hover:text-primary-red transition-colors">Home</Link>
                         <span className="text-gray-300">/</span>
                         <span className="text-primary-red">User Dashboard</span>
@@ -742,7 +742,7 @@ const UserDashboard = () => {
                                         Account <span className="text-primary-red">Dashboard</span>
                                     </h1>
                                 </div>
-                                <p className="text-gray-500 font-medium text-sm leading-relaxed max-w-2xl">
+                                <p className="text-gray-500 font-medium text-[14px] leading-relaxed max-w-2xl">
                                      Welcome back, <span className="text-[#0F172A] font-bold">{user?.name}</span>.
                                 </p>
                             </div>
@@ -751,8 +751,8 @@ const UserDashboard = () => {
                                 <Star size={20} fill="currentColor" />
                             </div>
                             <div>
-                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Security Status</div>
-                                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                                <div className="text-[14px] text-gray-400 font-bold uppercase tracking-widest">Security Status</div>
+                                <div className="flex items-center gap-2 text-emerald-600 font-bold text-[14px]">
                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                                     Live & Protected
                                 </div>

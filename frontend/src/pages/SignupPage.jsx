@@ -43,14 +43,14 @@ const SignupPage = () => {
             <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <form onSubmit={handleSubmit} className="p-10 space-y-6">
                     {error && (
-                        <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl flex items-center gap-3 text-[13px] font-semibold">
+                        <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-3 rounded-2xl flex items-center gap-3 text-[14px] font-semibold">
                             <AlertCircle size={18} />
                             <span>{error}</span>
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <label className="block text-[13px] font-bold text-gray-700 uppercase tracking-widest ml-1">Full Name</label>
+                        <label className="block text-[14px] font-bold text-gray-700 uppercase tracking-widest ml-1">Full Name</label>
                         <div className="relative group">
                             <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#E11D48] transition-colors" size={18} />
                             <input
@@ -63,7 +63,7 @@ const SignupPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-[13px] font-bold text-gray-700 uppercase tracking-widest ml-1">Email Address</label>
+                        <label className="block text-[14px] font-bold text-gray-700 uppercase tracking-widest ml-1">Email Address</label>
                         <div className="relative group">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#E11D48] transition-colors" size={18} />
                             <input
@@ -76,7 +76,7 @@ const SignupPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-[13px] font-bold text-gray-700 uppercase tracking-widest ml-1">Password</label>
+                        <label className="block text-[14px] font-bold text-gray-700 uppercase tracking-widest ml-1">Password</label>
                         <div className="relative group">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#E11D48] transition-colors" size={18} />
                             <input
@@ -90,7 +90,7 @@ const SignupPage = () => {
 
                     <button
                         type="submit" disabled={loading}
-                        className="w-full bg-[#E11D48] text-white font-bold py-3.5 rounded-2xl uppercase tracking-wider text-[13px] flex items-center justify-center gap-3 disabled:opacity-70"
+                        className="w-full bg-[#E11D48] text-white font-bold py-3.5 rounded-2xl uppercase tracking-wider text-[14px] flex items-center justify-center gap-3 disabled:opacity-70"
                     >
                         {loading ? (
                             <RotateCw className="animate-spin" size={18} />
@@ -98,7 +98,7 @@ const SignupPage = () => {
                     </button>
 
                     <div className="text-center pt-2">
-                        <p className="text-gray-400 text-sm font-bold">
+                        <p className="text-gray-400 text-[14px] font-bold">
                             Already have an account?{' '}
                             <Link to="/login" className="text-[#E11D48] hover:underline">Log In</Link>
                         </p>

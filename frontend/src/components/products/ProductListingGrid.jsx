@@ -10,15 +10,15 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
         <div className="flex-1 space-y-6">
             {/* Top Bar (Results Info & Sort) */}
             <div className="bg-white p-3 border border-gray-200 rounded shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-[13px] text-gray-600 font-medium">
+                <div className="text-[14px] text-gray-600 font-medium">
                     Showing <span className="text-navy-900 font-bold">{startIdx}-{endIdx}</span> of <span className="text-navy-900 font-bold">{totalResults}</span> results
                 </div>
                 <div className="flex items-center space-x-3">
-                    <span className="text-[13px] text-gray-500 font-medium whitespace-nowrap">Sort by:</span>
+                    <span className="text-[14px] text-gray-500 font-medium whitespace-nowrap">Sort by:</span>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="text-[13px] border-gray-200 rounded bg-white py-1.5 pl-3 pr-8 focus:ring-red-700 focus:border-red-700 font-bold text-navy-900 appearance-none cursor-pointer outline-none min-w-[160px]"
+                        className="text-[14px] border-gray-200 rounded bg-white py-1.5 pl-3 pr-8 focus:ring-red-700 focus:border-red-700 font-bold text-navy-900 appearance-none cursor-pointer outline-none min-w-[160px]"
                         style={{
                             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234B5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                             backgroundRepeat: 'no-repeat',
@@ -57,7 +57,7 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
                     <button
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className={`px-4 py-2 border rounded text-sm font-medium transition-all ${currentPage === 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-red-700'}`}
+                        className={`px-4 py-2 border rounded text-[14px] font-medium transition-all ${currentPage === 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-red-700'}`}
                     >
                         Previous
                     </button>
@@ -67,7 +67,7 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
                             <button
                                 key={i + 1}
                                 onClick={() => onPageChange(i + 1)}
-                                className={`w-10 h-10 flex items-center justify-center rounded text-sm font-bold transition-all ${currentPage === i + 1 ? 'bg-red-700 text-white shadow-md' : 'border border-gray-300 text-gray-600 hover:bg-red-50 hover:text-red-700'}`}
+                                className={`w-10 h-10 flex items-center justify-center rounded text-[14px] font-bold transition-all ${currentPage === i + 1 ? 'bg-red-700 text-white shadow-md' : 'border border-gray-300 text-gray-600 hover:bg-red-50 hover:text-red-700'}`}
                             >
                                 {i + 1}
                             </button>
@@ -77,7 +77,7 @@ const ProductListingGrid = ({ products, totalResults, sortBy, setSortBy, onBookN
                     <button
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className={`px-4 py-2 border rounded text-sm font-medium transition-all ${currentPage === totalPages ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-red-700'}`}
+                        className={`px-4 py-2 border rounded text-[14px] font-medium transition-all ${currentPage === totalPages ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-red-700'}`}
                     >
                         Next
                     </button>

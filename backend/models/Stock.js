@@ -79,6 +79,16 @@ const stockSchema = mongoose.Schema({
         type: String,
         enum: ['instock', 'lowstock', 'outofstock'],
         default: 'instock'
+    },
+    rating: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    numReviews: {
+        type: Number,
+        required: true,
+        default: 0
     }
 }, {
     timestamps: true

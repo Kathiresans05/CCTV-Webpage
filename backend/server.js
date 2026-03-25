@@ -14,6 +14,10 @@ import Wishlist from './models/Wishlist.js';
 import Message from './models/Message.js';
 import Expense from './models/Expense.js';
 import Task from './models/Task.js';
+import leadRoutes from './routes/leadRoutes.js';
+import dailyReportRoutes from './routes/dailyReportRoutes.js';
+import followUpRoutes from './routes/followUpRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 import generateToken from './utils/generateToken.js';
 import { protect, admin, employee, optionalAuth } from './middleware/authMiddleware.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -23,6 +27,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,10 +47,41 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Security Middleware
+app.use(helmet()); // Set security headers
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 1000, // 1000 requests per minute
+    message: { success: false, message: 'Too many requests, please try again later.' }
+});
+app.use('/api', limiter);
+
+// Strict Rate Limiting for Auth
+const authLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // 100 auth requests per minute
+    message: { success: false, message: 'Too many login attempts, please try again later.' }
+});
+app.use('/api/auth', authLimiter);
+
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : 'http://localhost:5173',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Mount Routes
+app.use('/api/leads', leadRoutes);
+app.use('/api/daily-reports', dailyReportRoutes);
+app.use('/api/follow-ups', followUpRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Serve static files from uploads folder
 const uploadsDir = path.join(__dirname, 'uploads');

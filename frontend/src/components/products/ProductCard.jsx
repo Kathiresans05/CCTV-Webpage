@@ -277,21 +277,21 @@ const ProductCard = ({ product, onBookNow }) => {
                 
                 {/* Rating */}
                 <div className="flex items-center gap-1.5 mb-2">
-                    <div className="flex items-center bg-green-600 px-1.5 py-0.5 rounded text-white text-[11px] font-bold">
+                    <div className="flex items-center bg-green-600 px-1.5 py-0.5 rounded text-white text-[14px] font-bold">
                         {product.rating} <Star size={10} fill="currentColor" strokeWidth={0} className="ml-0.5" />
                     </div>
                 </div>
 
                 {/* Description */}
-                <p className="text-gray-500 text-[13px] line-clamp-2 mb-4 flex-grow">
+                <p className="text-gray-500 text-[14px] line-clamp-2 mb-4 flex-grow">
                     {product.description || "Professional CCTV surveillance camera."}
                 </p>
 
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-xl font-bold text-gray-900">₹{product.price.toLocaleString('en-IN')}</span>
-                    <span className="text-[13px] text-gray-400 line-through">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    <span className="text-[12px] font-bold text-green-600 ml-auto">20% off</span>
+                    <span className="text-[14px] text-gray-400 line-through">₹{(product.price * 1.2).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-[14px] font-bold text-green-600 ml-auto">20% off</span>
                 </div>
 
                 {/* Buttons Row */}
@@ -301,7 +301,7 @@ const ProductCard = ({ product, onBookNow }) => {
                             e.stopPropagation();
                             navigate(`/products/${product._id}`);
                         }}
-                        className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium text-sm hover:border-gray-800 hover:text-gray-900 transition-colors"
+                        className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium text-[14px] hover:border-gray-800 hover:text-gray-900 transition-colors"
                     >
                         View Details
                     </button>
@@ -311,7 +311,7 @@ const ProductCard = ({ product, onBookNow }) => {
                                 e.stopPropagation();
                                 onBookNow(product);
                             }}
-                            className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-black transition-colors"
+                            className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-medium text-[14px] hover:bg-black transition-colors"
                         >
                             Book Now
                         </button>
@@ -319,7 +319,7 @@ const ProductCard = ({ product, onBookNow }) => {
                         <button
                             onClick={handleAddToCart}
                             disabled={isAddingToCart}
-                            className="flex-1 bg-[#ff9f00] text-white py-2.5 rounded-lg font-medium text-sm hover:bg-[#f39800] transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 bg-[#ff9f00] text-white py-2.5 rounded-lg font-medium text-[14px] hover:bg-[#f39800] transition-colors flex items-center justify-center gap-1.5"
                         >
                             {isAddingToCart ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />} 
                             Add to Cart

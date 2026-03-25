@@ -23,7 +23,7 @@ const About = () => {
                         {/* Experience Badge */}
                         <div className="absolute -bottom-6 -right-6 md:-bottom-8 md:-right-8 bg-primary-red text-white p-6 md:p-8 rounded-lg shadow-xl z-20 flex flex-col items-center justify-center border-4 border-white">
                             <span className="text-4xl md:text-5xl font-bold mb-1">10+</span>
-                            <span className="text-sm md:text-base font-medium uppercase tracking-wider opacity-90 text-center">Years of<br />Experience</span>
+                            <span className="text-[14px] md:text-base font-medium uppercase tracking-wider opacity-90 text-center">Years of<br />Experience</span>
                         </div>
                         {/* Decorative background box */}
                         <div className="absolute -top-6 -left-6 w-full h-full border-4 border-red-100 rounded-lg -z-10"></div>
@@ -31,7 +31,7 @@ const About = () => {
 
                     {/* Content Side */}
                     <div className="lg:w-1/2 mt-12 lg:mt-0">
-                        <span className="text-primary-red font-bold uppercase tracking-wider text-sm mb-2 block">About Our Company</span>
+                        <span className="text-primary-red font-bold uppercase tracking-wider text-[14px] mb-2 block">About Our Company</span>
                         <h2 className="text-3xl md:text-4xl font-bold text-primary-navy mb-6 leading-tight">
                             Leading the Way in Modern Security & Surveillance
                         </h2>

@@ -34,7 +34,7 @@ const Process = () => {
             <div className="container mx-auto px-4 md:px-8">
 
                 <div className="text-center max-w-2xl mx-auto mb-16">
-                    <span className="text-red-700 font-bold uppercase tracking-wider text-sm mb-2 block">How We Work</span>
+                    <span className="text-red-700 font-bold uppercase tracking-wider text-[14px] mb-2 block">How We Work</span>
                     <h2 className="text-3xl md:text-4xl font-bold text-[#0b2239] mb-4">Our Working Process</h2>
                     <div className="h-1 w-20 bg-red-700 mx-auto rounded"></div>
                 </div>
@@ -54,14 +54,14 @@ const Process = () => {
                                         {step.icon}
                                     </div>
                                     {/* Step Number Badge */}
-                                    <div className="absolute -top-2 -right-2 bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow">
+                                    <div className="absolute -top-2 -right-2 bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-bold shadow">
                                         {step.num}
                                     </div>
                                 </div>
 
                                 {/* Content */}
                                 <h3 className="text-xl font-bold text-[#0b2239] mb-3">{step.title}</h3>
-                                <p className="text-gray-600 text-sm max-w-[250px] mx-auto leading-relaxed">
+                                <p className="text-gray-600 text-[14px] max-w-[250px] mx-auto leading-relaxed">
                                     {step.desc}
                                 </p>
                             </div>

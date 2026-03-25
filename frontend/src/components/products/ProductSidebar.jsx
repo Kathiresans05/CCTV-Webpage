@@ -59,7 +59,7 @@ const ProductSidebar = ({
                             onChange={(e) => setPriceRange(parseInt(e.target.value))}
                             className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-700"
                         />
-                        <div className="flex justify-between text-xs font-bold text-gray-700">
+                        <div className="flex justify-between text-[14px] font-bold text-gray-700">
                             <span>₹1,000</span>
                             <span>₹{priceRange.toLocaleString('en-IN')}</span>
                         </div>
@@ -80,7 +80,7 @@ const ProductSidebar = ({
                     <div className="max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                         <ul className="space-y-2">
                             {categories.map((cat, idx) => (
-                                <li key={idx} className="flex justify-between items-center text-sm text-gray-600 hover:text-red-700 cursor-pointer transition-colors group">
+                                <li key={idx} className="flex justify-between items-center text-[14px] text-gray-600 hover:text-red-700 cursor-pointer transition-colors group">
                                     <div className="flex items-center space-x-2">
                                         <input
                                             type="checkbox"
@@ -90,7 +90,7 @@ const ProductSidebar = ({
                                         />
                                         <span onClick={() => handleCategoryToggle(cat.name)} className="cursor-pointer">{cat.name}</span>
                                     </div>
-                                    <span className="text-xs text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-full group-hover:bg-red-50 group-hover:text-red-700 transition-colors">
+                                    <span className="text-[14px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-full group-hover:bg-red-50 group-hover:text-red-700 transition-colors">
                                         {cat.count}
                                     </span>
                                 </li>

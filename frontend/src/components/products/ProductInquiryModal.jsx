@@ -77,10 +77,10 @@ const ProductInquiryModal = ({ product, onClose }) => {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <Shield size={18} className="text-white/80" />
-                            <span className="text-white/80 text-xs uppercase tracking-widest font-semibold">Product Inquiry</span>
+                            <span className="text-white/80 text-[14px] uppercase tracking-widest font-semibold">Product Inquiry</span>
                         </div>
                         <h2 className="text-white text-xl font-bold leading-tight">{product.name}</h2>
-                        <p className="text-white/70 text-sm mt-0.5">
+                        <p className="text-white/70 text-[14px] mt-0.5">
                             Starting from <strong className="text-white">₹{product.price.toLocaleString('en-IN')}</strong>
                         </p>
                     </div>
@@ -95,24 +95,24 @@ const ProductInquiryModal = ({ product, onClose }) => {
                         <div className="text-center py-6">
                             <CheckCircle size={52} className="text-green-500 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-gray-800 mb-2">Booking Submitted!</h3>
-                            <p className="text-gray-500 text-sm mb-4">{statusMessage}</p>
+                            <p className="text-gray-500 text-[14px] mb-4">{statusMessage}</p>
                             {orderId && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4 text-center">
-                                    <p className="text-xs text-gray-500 mb-0.5 uppercase tracking-wider font-semibold">Your Order ID</p>
-                                    <p className="font-mono font-bold text-gray-800 text-sm tracking-wide">{orderId}</p>
+                                    <p className="text-[14px] text-gray-500 mb-0.5 uppercase tracking-wider font-semibold">Your Order ID</p>
+                                    <p className="font-mono font-bold text-gray-800 text-[14px] tracking-wide">{orderId}</p>
                                 </div>
                             )}
                             <div className="flex flex-col sm:flex-row gap-3 justify-center">
                                 <Link
                                     to="/my-bookings"
                                     onClick={onClose}
-                                    className="bg-[#B91C1C] text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-red-800 transition-colors"
+                                    className="bg-[#B91C1C] text-white px-6 py-2.5 rounded-full font-semibold text-[14px] hover:bg-red-800 transition-colors"
                                 >
                                     View My Bookings
                                 </Link>
                                 <button
                                     onClick={onClose}
-                                    className="bg-gray-100 text-gray-700 px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-gray-200 transition-colors"
+                                    className="bg-gray-100 text-gray-700 px-6 py-2.5 rounded-full font-semibold text-[14px] hover:bg-gray-200 transition-colors"
                                 >
                                     Continue Browsing
                                 </button>
@@ -120,57 +120,57 @@ const ProductInquiryModal = ({ product, onClose }) => {
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <p className="text-gray-500 text-sm mb-2">
+                            <p className="text-gray-500 text-[14px] mb-2">
                                 Please confirm your details below to book this service.
                             </p>
 
                             {/* Name */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
+                                <label className="block text-[14px] font-semibold text-gray-700 mb-1 uppercase tracking-wide">
                                     Full Name <span className="text-red-600">*</span>
                                 </label>
                                 <input
                                     type="text" name="name" required value={formData.name} onChange={handleChange}
                                     placeholder="e.g. Rahul Sharma"
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#B91C1C] transition-colors"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-[14px] focus:outline-none focus:border-[#B91C1C] transition-colors"
                                 />
                             </div>
 
                             {/* Email */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">
+                                <label className="block text-[14px] font-semibold text-gray-700 mb-1 uppercase tracking-wide">
                                     Email Address <span className="text-red-600">*</span>
                                 </label>
                                 <input
                                     type="email" name="email" required value={formData.email} onChange={handleChange}
                                     placeholder="e.g. rahul@email.com"
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#B91C1C] transition-colors"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-[14px] focus:outline-none focus:border-[#B91C1C] transition-colors"
                                 />
                             </div>
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Phone Number</label>
+                                <label className="block text-[14px] font-semibold text-gray-700 mb-1 uppercase tracking-wide">Phone Number</label>
                                 <input
                                     type="tel" name="phone" value={formData.phone} onChange={handleChange}
                                     placeholder="e.g. +91 98765 43210"
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#B91C1C] transition-colors"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-[14px] focus:outline-none focus:border-[#B91C1C] transition-colors"
                                 />
                             </div>
 
                             {/* Message */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Message</label>
+                                <label className="block text-[14px] font-semibold text-gray-700 mb-1 uppercase tracking-wide">Message</label>
                                 <textarea
                                     name="message" rows={3} value={formData.message} onChange={handleChange}
                                     placeholder="Tell us about your requirements, installation location, quantity, etc."
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#B91C1C] transition-colors resize-none"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-[14px] focus:outline-none focus:border-[#B91C1C] transition-colors resize-none"
                                 />
                             </div>
 
                             {/* Error */}
                             {status === 'error' && (
-                                <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm">
+                                <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-[14px]">
                                     <AlertCircle size={16} />
                                     <span>{statusMessage}</span>
                                 </div>
@@ -179,7 +179,7 @@ const ProductInquiryModal = ({ product, onClose }) => {
                             {/* Submit */}
                             <button
                                 type="submit" disabled={status === 'loading'}
-                                className="w-full bg-[#0b0f1a] hover:bg-black disabled:opacity-70 text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors text-sm mt-2"
+                                className="w-full bg-[#0b0f1a] hover:bg-black disabled:opacity-70 text-white font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-colors text-[14px] mt-2"
                             >
                                 {status === 'loading' ? (
                                     <>

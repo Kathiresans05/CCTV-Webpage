@@ -43,7 +43,7 @@ const WhyChooseUs = () => {
 
                     {/* Header Content */}
                     <div className="lg:w-1/3 text-left">
-                        <span className="text-red-400 font-bold uppercase tracking-wider text-sm mb-2 block">Why Choose Us</span>
+                        <span className="text-red-400 font-bold uppercase tracking-wider text-[14px] mb-2 block">Why Choose Us</span>
                         <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight text-white">
                             Trusted Security Solutions
                         </h2>
@@ -67,7 +67,7 @@ const WhyChooseUs = () => {
                                     <h3 className="text-xl font-bold mb-3 text-white">
                                         {reason.title}
                                     </h3>
-                                    <p className="text-gray-400 leading-relaxed text-sm">
+                                    <p className="text-gray-400 leading-relaxed text-[14px]">
                                         {reason.description}
                                     </p>
                                 </div>

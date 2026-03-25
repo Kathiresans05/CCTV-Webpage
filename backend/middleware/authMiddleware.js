@@ -7,10 +7,12 @@ const protect = async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             token = req.headers.authorization.split(' ')[1];
-            console.log('--- Auth Debug ---');
-            console.log('Token received');
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'securevision_secret_key');
-            console.log('Token decoded, user ID:', decoded.id);
+            const secret = process.env.JWT_SECRET;
+            if (!secret) {
+                console.error('CRITICAL: JWT_SECRET is not defined in environment variables');
+                return res.status(500).json({ success: false, message: 'Server configuration error' });
+            }
+            const decoded = jwt.verify(token, secret);
 
             req.user = await User.findById(decoded.id).select('-password');
             if (!req.user) {
@@ -26,7 +28,7 @@ const protect = async (req, res, next) => {
     }
 
     if (!token) {
-        res.status(401).json({ success: false, message: 'Not authorized, no token' });
+        return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 };
 
@@ -50,8 +52,9 @@ const optionalAuth = async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             const token = req.headers.authorization.split(' ')[1];
-            if (token && token !== 'null' && token !== 'undefined') {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'securevision_secret_key');
+            const secret = process.env.JWT_SECRET;
+            if (token && token !== 'null' && token !== 'undefined' && secret) {
+                const decoded = jwt.verify(token, secret);
                 req.user = await User.findById(decoded.id).select('-password');
             }
         } catch (error) {

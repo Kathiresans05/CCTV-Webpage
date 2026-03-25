@@ -112,7 +112,7 @@ const Hero = () => {
                                        ${slide.theme === 'dark' ? 'text-white' : 'text-gray-900'}
                                        animate-fade-in-up transition-opacity duration-500`}
                             >
-                                <span className={`font-bold uppercase tracking-widest text-sm md:text-base mb-3 block drop-shadow-sm ${slide.accent}`}>
+                                <span className={`font-bold uppercase tracking-widest text-[14px] md:text-base mb-3 block drop-shadow-sm ${slide.accent}`}>
                                     {slide.subtitle}
                                 </span>
                                 <h1 className={`text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 whitespace-pre-line drop-shadow-md ${slide.theme === 'dark' ? 'text-white' : 'text-primary-navy'}`}>
@@ -121,7 +121,7 @@ const Hero = () => {
                                 <p className={`text-base md:text-lg md:leading-relaxed mb-6 max-w-2xl font-medium drop-shadow-sm ${slide.theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                                     {slide.desc}
                                 </p>
-                                <button className={`px-6 py-2.5 rounded font-bold uppercase tracking-wider text-sm shadow-xl transition-transform hover:-translate-y-1 ${slide.theme === 'dark' ? 'bg-primary-red hover:bg-opacity-90 text-white' : 'bg-primary-navy hover:bg-primary-red text-white'}`}>
+                                <button className={`px-6 py-2.5 rounded font-bold uppercase tracking-wider text-[14px] shadow-xl transition-transform hover:-translate-y-1 ${slide.theme === 'dark' ? 'bg-primary-red hover:bg-opacity-90 text-white' : 'bg-primary-navy hover:bg-primary-red text-white'}`}>
                                     {slide.buttonText}
                                 </button>
                             </div>

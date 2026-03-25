@@ -85,7 +85,7 @@ const Chat = ({ currentUser, targetUser, token }) => {
                 </div>
                 <div>
                     <h3 className="font-bold text-primary-navy">{targetUser.name}</h3>
-                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
+                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest">
                         {targetUser.role === 'admin' ? 'System Administrator' : 'Technician'}
                     </p>
                 </div>
@@ -96,7 +96,7 @@ const Chat = ({ currentUser, targetUser, token }) => {
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-text-muted opacity-50 space-y-2">
                         <MessageSquare size={48} />
-                        <p className="text-sm font-medium">No messages yet. Start the conversation!</p>
+                        <p className="text-[14px] font-medium">No messages yet. Start the conversation!</p>
                     </div>
                 ) : (
                     messages.map((msg, idx) => {
@@ -108,8 +108,8 @@ const Chat = ({ currentUser, targetUser, token }) => {
                                         ? 'bg-primary-navy text-white rounded-tr-none' 
                                         : 'bg-white border border-border-soft text-primary-navy rounded-tl-none'
                                 }`}>
-                                    <p className="text-sm leading-relaxed">{msg.content}</p>
-                                    <div className={`flex items-center gap-1 mt-2 text-[10px] ${isMine ? 'text-slate-400' : 'text-text-muted'} font-medium`}>
+                                    <p className="text-[14px] leading-relaxed">{msg.content}</p>
+                                    <div className={`flex items-center gap-1 mt-2 text-[14px] ${isMine ? 'text-slate-400' : 'text-text-muted'} font-medium`}>
                                         <Clock size={10} />
                                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>

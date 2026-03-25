@@ -70,12 +70,14 @@ const AdminDashboard = () => {
         '/admin/bookings': 'bookings',
         '/admin/enquiries': 'enquiries',
         '/admin/attendance': 'attendance',
-        '/admin/reports': 'reports',
         '/admin/settings': 'settings',
         '/admin/notifications': 'notifications',
         '/admin/chat': 'chat',
         '/admin/expenses': 'expenses',
-        '/admin/tasks': 'tasks'
+        '/admin/tasks': 'tasks',
+        '/admin/leads': 'leads',
+        '/admin/follow-ups': 'followups',
+        '/admin/reports': 'daily-reports'
     };
 
     // Reverse mapping for navigation
@@ -86,12 +88,14 @@ const AdminDashboard = () => {
         'bookings': '/admin/bookings',
         'enquiries': '/admin/enquiries',
         'attendance': '/admin/attendance',
-        'reports': '/admin/reports',
         'settings': '/admin/settings',
         'notifications': '/admin/notifications',
         'chat': '/admin/chat',
         'expenses': '/admin/expenses',
-        'tasks': '/admin/tasks'
+        'tasks': '/admin/tasks',
+        'leads': '/admin/leads',
+        'followups': '/admin/follow-ups',
+        'daily-reports': '/admin/reports'
     };
 
     const [activeTab, setActiveTab] = useState('overview');
@@ -110,9 +114,11 @@ const AdminDashboard = () => {
         setShowProductModal(false);
         setShowBookingModal(false);
         setShowStockModal(false);
+        setShowLeadModal(false);
         setEditingEmployee(null);
         setEditingProduct(null);
         setEditingBooking(null);
+        setSelectedLead(null);
         navigate(tabToPath[tabId]);
     };
 
@@ -137,6 +143,8 @@ const AdminDashboard = () => {
     const [attendance, setAttendance] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [leaves, setLeaves] = useState([]);
+    const [leads, setLeads] = useState([]);
+    const [dailyReports, setDailyReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [productSearchQuery, setProductSearchQuery] = useState('');
@@ -155,6 +163,15 @@ const AdminDashboard = () => {
     const [tasksFilter, setTasksFilter] = useState('All');
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [taskForm, setTaskForm] = useState({ title: '', description: '', assignedTo: '', employeeName: '', priority: 'Medium', dueDate: '' });
+    
+    // Follow-ups State
+    const [adminFollowUps, setAdminFollowUps] = useState([]);
+    const [followUpsFilter, setFollowUpsFilter] = useState('All');
+    
+    // Lead Form State
+    const [showLeadModal, setShowLeadModal] = useState(false);
+    const [selectedLead, setSelectedLead] = useState(null);
+    const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '', company: '', serviceInterest: 'CCTV Installation', status: 'New', assignedTo: '', notes: '' });
     
     // Attendance History State
     const [selectedAttendanceEmployee, setSelectedAttendanceEmployee] = useState('all');
@@ -199,8 +216,8 @@ const AdminDashboard = () => {
     const [bookingForm, setBookingForm] = useState({ status: '', assignedEmployee: '', proposedDate: '', proposedTimeSlot: '', adminNote: '' });
     const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, type: 'add' });
     const [settings, setSettings] = useState({
-        companyName: 'SecureVision CCTV',
-        email: 'admin@securevision.com',
+        companyName: 'SKTECH CCTV',
+        email: 'admin@sktech.com',
         phone: '+91 98765 43210',
         address: '123 Secure Tower, IT Corridor, Chennai',
         logo: ''
@@ -216,18 +233,21 @@ const AdminDashboard = () => {
         setLoading(true);
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [bRes, sRes, eRes, qRes, aRes, lRes, nRes] = await Promise.all([
+            const [bRes, sRes, eRes, qRes, aRes, lRes, nRes, ldRes, drRes] = await Promise.all([
                 fetch('/api/admin/bookings', { headers }),
                 fetch('/api/products', { headers }),
                 fetch('/api/admin/employees', { headers }),
                 fetch('/api/admin/enquiries', { headers }),
                 fetch('/api/admin/attendance', { headers }),
                 fetch('/api/admin/leaves', { headers }),
-                fetch('/api/notifications', { headers })
+                fetch('/api/notifications', { headers }),
+                fetch('/api/leads', { headers }),
+                fetch('/api/daily-reports/admin', { headers }),
+                fetch('/api/follow-ups', { headers })
             ]);
 
-            const [bData, sData, eData, qData, aData, lData, nData] = await Promise.all([
-                bRes.json(), sRes.json(), eRes.json(), qRes.json(), aRes.json(), lRes.json(), nRes.json()
+            const [bData, sData, eData, qData, aData, lData, nData, ldData, drData, fuData] = await Promise.all([
+                bRes.json(), sRes.json(), eRes.json(), qRes.json(), aRes.json(), lRes.json(), nRes.json(), ldRes.json(), drRes.json(), fuRes.json()
             ]);
 
             if (bData.success) setBookings(bData.data);
@@ -237,6 +257,9 @@ const AdminDashboard = () => {
             if (aData.success) setAttendance(aData.data);
             if (lData.success) setLeaves(lData.data);
             if (nData.success) setNotifications(nData.data);
+            if (ldData && ldData.success) setLeads(ldData.data);
+            if (drData && drData.success) setDailyReports(drData.data);
+            if (fuData && fuData.success) setAdminFollowUps(fuData.data);
 
             const expRes = await fetch('/api/admin/expenses', { headers });
             const expData = await expRes.json();
@@ -437,6 +460,55 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleLeadSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const url = selectedLead ? `/api/leads/${selectedLead._id}` : '/api/leads';
+            const method = selectedLead ? 'PUT' : 'POST';
+            
+            const res = await fetch(url, {
+                method,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(leadForm)
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                toast.success(selectedLead ? 'Lead updated successfully' : 'New lead captured');
+                setShowLeadModal(false);
+                setSelectedLead(null);
+                setLeadForm({ name: '', email: '', phone: '', company: '', serviceInterest: 'CCTV Installation', status: 'New', assignedTo: '', notes: '' });
+                fetchAllData();
+            } else {
+                toast.error(data.message || 'Failed to save lead');
+            }
+        } catch (error) {
+            console.error('Error saving lead:', error);
+            toast.error('Connection error');
+        }
+    };
+
+    const deleteLead = async (id) => {
+        if (!window.confirm('Delete this lead permanently?')) return;
+        try {
+            const res = await fetch(`/api/leads/${id}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Lead removed');
+                fetchAllData();
+            }
+        } catch (error) {
+            console.error('Error deleting lead:', error);
+        }
+    };
+
     const handleStockAdjustmentSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -545,7 +617,7 @@ const AdminDashboard = () => {
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.bg} ${stat.color}`}>
                         <stat.icon size={16} strokeWidth={2.5} />
                     </div>
-                    <span className="text-[9px] font-black text-text-muted bg-bg-soft px-2 py-0.5 rounded-full tracking-wider uppercase">
+                    <span className="text-[14px] font-black text-text-muted bg-bg-soft px-2 py-0.5 rounded-full tracking-wider uppercase">
                         {stat.trend}
                     </span>
                 </div>
@@ -560,7 +632,7 @@ const AdminDashboard = () => {
             <div className="space-y-8 animate-in fade-in duration-700">
                 {/* 1. Operations */}
                 <div>
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <h4 className="text-[14px] font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <Briefcase size={14} className="text-primary-navy/40" /> Operations
                     </h4>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -570,7 +642,7 @@ const AdminDashboard = () => {
 
                 {/* 2. Staff */}
                 <div>
-                    <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <h4 className="text-[14px] font-bold text-text-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <Users size={14} className="text-primary-navy/40" /> Staff
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -584,9 +656,9 @@ const AdminDashboard = () => {
                     <div className="flex justify-between items-center mb-8">
                         <div>
                             <h3 className="text-lg font-bold text-primary-navy">Recent Booking Requests</h3>
-                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Incoming installation inquiries</p>
+                            <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Incoming installation inquiries</p>
                         </div>
-                        <button onClick={() => setActiveTab('bookings')} className="zoho-btn-secondary px-5 py-2.5 rounded-lg text-xs">View All</button>
+                        <button onClick={() => setActiveTab('bookings')} className="zoho-btn-secondary px-5 py-2.5 rounded-lg text-[14px]">View All</button>
                     </div>
                     <div className="space-y-4">
                         {bookings.slice(0, 5).map(b => (
@@ -596,8 +668,8 @@ const AdminDashboard = () => {
                                         {b.customerName[0]}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-sm text-primary-navy">{b.customerName}</p>
-                                        <p className="text-[11px] text-text-muted font-medium mt-0.5">{b.productName} • {b.city || 'NY Office'}</p>
+                                        <p className="font-bold text-[14px] text-primary-navy">{b.customerName}</p>
+                                        <p className="text-[14px] text-text-muted font-medium mt-0.5">{b.productName} • {b.city || 'NY Office'}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
@@ -606,7 +678,7 @@ const AdminDashboard = () => {
                                         b.status === 'Pending' ? 'bg-status-warning-bg text-status-warning-text' : 
                                         'bg-status-info-bg text-status-info-text'
                                     }`}>{b.status}</span>
-                                    <p className="text-[10px] text-text-muted mt-1.5 font-bold">{new Date(b.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                    <p className="text-[14px] text-text-muted mt-1.5 font-bold">{new Date(b.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
                                 </div>
                             </div>
                         ))}
@@ -621,14 +693,14 @@ const AdminDashboard = () => {
                             <LayoutDashboard size={100} />
                         </div>
                         <div className="relative z-10">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-6">Technician Pulse</h4>
+                            <h4 className="text-[14px] font-bold uppercase tracking-widest text-slate-400 mb-6">Technician Pulse</h4>
                             <div className="space-y-5">
                                 {attendance.slice(0, 3).map((a, i) => (
                                     <div key={i} className="flex items-center gap-4 transition-transform hover:translate-x-1 cursor-default">
                                         <div className="w-1 h-8 bg-primary-red rounded-full" />
                                         <div>
-                                            <p className="text-[13px] font-bold text-white">{a.employeeId?.name || 'Staff Member'}</p>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">Clocked In • {new Date(a.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            <p className="text-[14px] font-bold text-white">{a.employeeId?.name || 'Staff Member'}</p>
+                                            <p className="text-[14px] text-slate-400 mt-0.5">Clocked In • {new Date(a.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -640,6 +712,103 @@ const AdminDashboard = () => {
         </div>
     );
 };
+    const renderDailyReports = () => (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="bg-white p-8 rounded-[40px] border border-border-soft shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary-navy/5 rounded-full -mr-32 -mt-32 transition-transform duration-700 group-hover:scale-110" />
+                <div className="relative flex justify-between items-center">
+                    <div>
+                        <h2 className="text-3xl font-black text-primary-navy tracking-tight uppercase">Daily Work Reports</h2>
+                        <p className="text-[14px] text-text-muted mt-2 font-medium">Monitor staff productivity and daily achievements</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="zoho-search-bar w-72 group border border-border-soft">
+                            <Search className="text-gray-400 group-focus-within:text-primary-navy transition-colors" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search employee or task..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {dailyReports
+                    .filter(report => 
+                        report.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        report.workSummary.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map(report => (
+                        <div key={report._id} className="zoho-card flex flex-col group hover:shadow-2xl transition-all duration-500 border border-border-soft relative overflow-hidden h-full bg-white">
+                            <div className="p-8 flex-1">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary-navy/5 text-primary-navy flex items-center justify-center font-black text-[14px] border border-primary-navy/10">
+                                            {report.employeeName[0]}
+                                        </div>
+                                        <div>
+                                            <p className="text-[14px] font-black text-primary-navy uppercase tracking-tight">{report.employeeName}</p>
+                                            <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-0.5">
+                                                {new Date(report.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="bg-bg-soft text-text-muted px-3 py-1 rounded-full text-[14px] font-black uppercase tracking-widest border border-border-soft">
+                                        {report.status}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100/50">
+                                        <h4 className="text-[14px] font-black text-primary-navy uppercase tracking-widest mb-2 flex items-center gap-2">
+                                            <History size={12} />
+                                            Work Summary
+                                        </h4>
+                                        <p className="text-[14px] text-text-dark font-medium leading-relaxed italic">
+                                            "{report.workSummary}"
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {(report.tasksCompleted || []).map((task, i) => (
+                                            <span key={i} className="text-[14px] font-bold bg-white text-primary-navy px-3 py-1 rounded-xl border border-primary-navy/10 shadow-sm">
+                                                {task}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-8 py-4 bg-bg-soft border-t border-border-soft flex justify-between items-center">
+                                <div className="flex items-center gap-2 text-primary-navy">
+                                    <Clock size={14} className="opacity-50" />
+                                    <span className="text-[14px] font-black uppercase tracking-widest">{report.hoursWorked} Hours</span>
+                                </div>
+                                <button className="text-[14px] font-black text-primary-navy uppercase tracking-widest hover:underline decoration-2 underline-offset-4">
+                                    Details
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                
+                {dailyReports.length === 0 && (
+                    <div className="col-span-full py-32 text-center bg-white rounded-[40px] border border-border-soft border-dashed">
+                        <div className="flex flex-col items-center gap-4 opacity-20">
+                            <FileSpreadsheet size={64} className="text-primary-navy" />
+                            <div>
+                                <p className="text-primary-navy font-black tracking-[0.2em] uppercase text-[14px]">Waiting for Submissions</p>
+                                <p className="text-[14px] font-bold text-text-muted mt-1 uppercase tracking-widest">No daily reports recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     const renderBookings = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
 
@@ -650,7 +819,7 @@ const AdminDashboard = () => {
                             <button
                                 key={f}
                                 onClick={() => setBookingsFilter(f)}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                className={`px-4 py-2 rounded-lg text-[14px] font-bold transition-all ${
                                     bookingsFilter === f 
                                     ? 'bg-primary-navy text-white' 
                                     : 'bg-bg-soft text-text-muted hover:bg-white border border-transparent hover:border-border-soft'
@@ -706,23 +875,23 @@ const AdminDashboard = () => {
                                 .map(b => (
                                 <tr key={b._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] font-black text-text-muted uppercase tracking-tighter">#SV-{b.bookingId.substring(0, 8).toUpperCase()}</p>
+                                        <p className="text-[14px] font-black text-text-muted uppercase tracking-tighter">#SV-{b.bookingId.substring(0, 8).toUpperCase()}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="crm-card-title leading-none">{b.customerName}</p>
-                                        <p className="crm-body text-[10px] mt-1">{new Date(b.createdAt).toLocaleDateString()}</p>
+                                        <p className="crm-body text-[14px] mt-1">{new Date(b.createdAt).toLocaleDateString()}</p>
                                     </td>
-                                    <td className="px-6 py-4 text-xs font-bold text-text-muted">{b.customerPhone}</td>
+                                    <td className="px-6 py-4 text-[14px] font-bold text-text-muted">{b.customerPhone}</td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-primary-navy truncate max-w-[140px]">{b.productName}</p>
+                                        <p className="text-[14px] font-bold text-primary-navy truncate max-w-[140px]">{b.productName}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col gap-1">
-                                            <p className="text-[11px] font-bold text-primary-navy flex items-center gap-1">
+                                            <p className="text-[14px] font-bold text-primary-navy flex items-center gap-1">
                                                 <Calendar size={10} className="text-primary-red" />
                                                 {b.preferredDate ? new Date(b.preferredDate).toLocaleDateString() : 'N/A'}
                                             </p>
-                                            <p className="text-[10px] font-bold text-text-muted flex items-center gap-1">
+                                            <p className="text-[14px] font-bold text-text-muted flex items-center gap-1">
                                                 <Clock size={10} />
                                                 {b.preferredTime || 'N/A'}
                                             </p>
@@ -731,15 +900,15 @@ const AdminDashboard = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-1.5 text-text-muted">
                                             <MapPin size={12} className="shrink-0" />
-                                            <p className="text-[11px] font-semibold truncate max-w-[150px]">{b.address}</p>
+                                            <p className="text-[14px] font-semibold truncate max-w-[150px]">{b.address}</p>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col items-center gap-1.5">
-                                            <div className="w-7 h-7 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+                                            <div className="w-7 h-7 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-[14px] shadow-sm">
                                                 {b.assignedEmployeeName?.[0] || b.assignedEmployee?.name?.[0] || '?'}
                                             </div>
-                                            <p className="text-[10px] font-bold text-primary-navy truncate max-w-[80px] text-center">
+                                            <p className="text-[14px] font-bold text-primary-navy truncate max-w-[80px] text-center">
                                                 {b.assignedEmployeeName || b.assignedEmployee?.name || (b.status === 'Pending' ? 'Pending Assignment' : 'Unassigned')}
                                             </p>
                                         </div>
@@ -765,7 +934,7 @@ const AdminDashboard = () => {
                                                     });
                                                     setShowBookingModal(true);
                                                 }}
-                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px] shrink-0"
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[14px] shrink-0"
                                             >
                                                 Modify
                                             </button>
@@ -782,89 +951,98 @@ const AdminDashboard = () => {
 
     const renderTracking = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
-
-            <div className="zoho-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="zoho-table">
-                        <thead>
-                            <tr className="zoho-table-header">
-                                <th className="px-6 py-4">Job ID</th>
-                                <th className="px-6 py-4">Site Detail</th>
-                                <th className="px-6 py-4">Product</th>
-                                <th className="px-6 py-4">Assigned Personnel</th>
-                                <th className="px-6 py-4">Timeline</th>
-                                <th className="px-6 py-4">Deployment Status</th>
-                                <th className="px-6 py-4">Site Evidence</th>
-                                <th className="px-6 py-4 text-right">Observation</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-soft">
-                            {bookings.filter(b => ['Accepted', 'In Progress', 'Completed', 'scheduled_confirmed', 'in_progress', 'completed'].includes(b.status)).map(b => (
-                                <tr key={b._id} className="hover:bg-bg-soft/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <p className="text-[10px] font-black text-text-muted uppercase">#SV-{b.bookingId.substring(0,8).toUpperCase()}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-primary-navy leading-none">{b.customerName}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-[11px] font-semibold text-text-muted">{b.productName}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded bg-primary-navy text-white flex items-center justify-center font-bold text-[9px]">
-                                                {b.assignedEmployeeName?.[0] || b.assignedEmployee?.name?.[0] || 'T'}
-                                            </div>
-                                            <p className="text-[11px] font-bold text-primary-navy truncate max-w-[100px]">
-                                                {b.assignedEmployeeName || b.assignedEmployee?.name || 'Unassigned'}
-                                            </p>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="space-y-1">
-                                            {b.acceptedAt && <p className="text-[9px] font-bold text-text-muted flex items-center gap-1"><Clock size={8}/> Accepted: {new Date(b.acceptedAt).toLocaleDateString()} {new Date(b.acceptedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
-                                            {b.startedAt && <p className="text-[9px] font-bold text-blue-500 flex items-center gap-1"><Clock size={8}/> Started: {new Date(b.startedAt).toLocaleDateString()} {new Date(b.startedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
-                                            {b.completedAt && <p className="text-[9px] font-bold text-status-success-text flex items-center gap-1"><Clock size={8}/> Done: {new Date(b.completedAt).toLocaleDateString()} {new Date(b.completedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
-                                            {!b.acceptedAt && !b.startedAt && !b.completedAt && <span className="text-[9px] text-text-muted">—</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`status-chip ${
-                                            ['Completed', 'completed'].includes(b.status) ? 'bg-status-success-bg text-status-success-text' : 'bg-status-info-bg text-status-info-text'
-                                        }`}>{b.status.replace('_', ' ')}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {b.proofPhotos && b.proofPhotos.length > 0 ? (
-                                            <div className="flex gap-1 flex-wrap">
-                                                {b.proofPhotos.map((photo, idx) => (
-                                                    <a key={idx} href={photo} target="_blank" rel="noreferrer">
-                                                        <div className="w-10 h-10 rounded-lg bg-bg-soft border border-border-soft overflow-hidden cursor-zoom-in shadow-sm hover:scale-110 transition-transform">
-                                                            <img src={photo} alt={`Proof ${idx+1}`} className="w-full h-full object-cover" />
-                                                        </div>
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        ) : b.proofPhoto ? (
-                                            <a href={b.proofPhoto} target="_blank" rel="noreferrer">
-                                                <div className="w-10 h-10 rounded-lg bg-bg-soft border border-border-soft overflow-hidden cursor-zoom-in shadow-sm hover:scale-110 transition-transform">
-                                                    <img src={b.proofPhoto} alt="Proof" className="w-full h-full object-cover" />
-                                                </div>
-                                            </a>
-                                        ) : (
-                                            <span className="text-[10px] text-text-muted bg-bg-soft px-2 py-1 rounded border border-border-soft">No Evidence</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <p className="text-[10px] text-text-muted font-medium max-w-[120px] truncate ml-auto italic">
-                                            {b.workNotes || 'No notes available'}
-                                        </p>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {bookings.filter(b => ['Accepted', 'In Progress', 'Completed', 'scheduled_confirmed', 'in_progress', 'completed'].includes(b.status)).length === 0 ? (
+                <div className="zoho-card p-12 text-center text-text-muted font-bold tracking-widest uppercase text-[14px]">
+                    No active deployments found
                 </div>
-            </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                    {bookings.filter(b => ['Accepted', 'In Progress', 'Completed', 'scheduled_confirmed', 'in_progress', 'completed'].includes(b.status)).map(b => (
+                        <div key={b._id} className="zoho-card p-6 hover:shadow-lg transition-all duration-300 flex flex-col h-full bg-white border-gray-200 group">
+                            {/* Card Header: Job ID & Status */}
+                            <div className="flex justify-between items-start mb-5 pb-5 border-b border-border-soft">
+                                <div>
+                                    <p className="text-[14px] font-bold text-text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-primary-navy"></span>
+                                        JOB ID: #SV-{b.bookingId.substring(0,8).toUpperCase()}
+                                    </p>
+                                    <h3 className="text-lg font-black text-primary-navy leading-tight" title={b.customerName}>
+                                        {b.customerName}
+                                    </h3>
+                                </div>
+                                <span className={`status-chip text-[14px] shrink-0 ml-3 px-3 py-1.5 rounded-lg border ${
+                                    ['Completed', 'completed'].includes(b.status) ? 'bg-status-success-bg text-status-success-text border-green-200' : 'bg-status-info-bg text-status-info-text border-blue-200 shadow-sm'
+                                }`}>
+                                    {b.status.replace('_', ' ')}
+                                </span>
+                            </div>
+
+                            {/* Product Info */}
+                            <div className="mb-6">
+                                <p className="text-[14px] font-bold text-text-dark line-clamp-1 p-3.5 bg-bg-soft rounded-xl border border-gray-200 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" title={b.productName}>
+                                    📦 {b.productName}
+                                </p>
+                            </div>
+
+                            {/* Assigned & Timeline */}
+                            <div className="grid grid-cols-2 gap-6 mb-6 flex-grow">
+                                <div>
+                                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mb-3">Personnel</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-primary-navy text-white flex items-center justify-center font-black text-[14px] shrink-0 shadow-md">
+                                            {b.assignedEmployeeName?.[0] || b.assignedEmployee?.name?.[0] || 'T'}
+                                        </div>
+                                        <p className="text-[14px] font-bold text-primary-navy truncate">
+                                            {b.assignedEmployeeName || b.assignedEmployee?.name || 'Unassigned'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mb-3">Timeline</p>
+                                    <div className="space-y-2">
+                                        {b.acceptedAt && <p className="text-[14px] font-bold text-text-muted flex items-center gap-2"><Clock size={14} className="shrink-0"/> Accepted</p>}
+                                        {b.startedAt && <p className="text-[14px] font-bold text-blue-600 flex items-center gap-2"><Clock size={14} className="shrink-0"/> Started</p>}
+                                        {b.completedAt && <p className="text-[14px] font-bold text-green-600 flex items-center gap-2"><CheckCircle2 size={14} className="shrink-0"/> Done</p>}
+                                        {!b.acceptedAt && !b.startedAt && !b.completedAt && <span className="text-[14px] text-text-muted flex items-center gap-2"><Clock size={14} className="shrink-0 text-gray-400"/> Pending</span>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Evidence & Observation Footer */}
+                            <div className="pt-5 border-t border-border-soft mt-auto flex justify-between items-start gap-4 bg-gray-50/80 -mx-6 -mb-6 px-6 pb-6 rounded-b-[16px]">
+                                <div className="max-w-[45%]">
+                                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mb-3">Evidence</p>
+                                    {b.proofPhotos && b.proofPhotos.length > 0 ? (
+                                        <div className="flex gap-2 flex-wrap">
+                                            {b.proofPhotos.map((photo, idx) => (
+                                                <a key={idx} href={photo} target="_blank" rel="noreferrer">
+                                                    <div className="w-12 h-12 rounded-lg shrink-0 bg-white border border-gray-200 overflow-hidden cursor-zoom-in hover:scale-105 transition-transform shadow-sm">
+                                                        <img src={photo} alt={`Proof ${idx+1}`} className="w-full h-full object-cover" />
+                                                    </div>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : b.proofPhoto ? (
+                                        <a href={b.proofPhoto} target="_blank" rel="noreferrer">
+                                            <div className="w-12 h-12 rounded-lg shrink-0 bg-white border border-gray-200 overflow-hidden cursor-zoom-in hover:scale-105 transition-transform shadow-sm">
+                                                <img src={b.proofPhoto} alt="Proof" className="w-full h-full object-cover" />
+                                            </div>
+                                        </a>
+                                    ) : (
+                                        <span className="text-[14px] text-text-muted font-bold bg-white px-3 py-1.5 rounded-lg border border-gray-200 inline-block shadow-sm">📸 None</span>
+                                    )}
+                                </div>
+                                <div className="text-right flex-1 max-w-[55%] pl-2 border-l border-gray-200">
+                                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mb-3">Observations</p>
+                                    <p className="text-[14px] text-gray-700 font-medium leading-relaxed max-h-20 overflow-y-auto custom-scrollbar pr-1" title={b.workNotes || 'No additional notes provided'}>
+                                        {b.workNotes || <span className="text-gray-400 italic">No notes</span>}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 
@@ -968,24 +1146,24 @@ const AdminDashboard = () => {
                              <div className="flex items-center gap-3 bg-bg-soft px-4 py-2.5 rounded-2xl border border-border-soft">
                                 <Calendar size={14} className="text-primary-navy" />
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] font-bold text-text-muted uppercase leading-none mb-1">From Date</span>
+                                    <span className="text-[14px] font-bold text-text-muted uppercase leading-none mb-1">From Date</span>
                                     <input 
                                         type="date" 
                                         value={reportStartDate}
                                         onChange={(e) => setReportStartDate(e.target.value)}
-                                        className="bg-transparent text-xs font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
+                                        className="bg-transparent text-[14px] font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
                                     />
                                 </div>
                              </div>
                              <div className="flex items-center gap-3 bg-bg-soft px-4 py-2.5 rounded-2xl border border-border-soft">
                                 <Calendar size={14} className="text-primary-navy" />
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] font-bold text-text-muted uppercase leading-none mb-1">To Date</span>
+                                    <span className="text-[14px] font-bold text-text-muted uppercase leading-none mb-1">To Date</span>
                                     <input 
                                         type="date" 
                                         value={reportEndDate}
                                         onChange={(e) => setReportEndDate(e.target.value)}
-                                        className="bg-transparent text-xs font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
+                                        className="bg-transparent text-[14px] font-bold text-primary-navy border-none focus:ring-0 p-0 h-4"
                                     />
                                 </div>
                              </div>
@@ -994,7 +1172,7 @@ const AdminDashboard = () => {
 
                     <button 
                         onClick={handleExport}
-                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-2xl text-[11px] font-bold transition-all shadow-lg shadow-emerald-200/50 uppercase tracking-wider"
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-2xl text-[14px] font-bold transition-all shadow-lg shadow-emerald-200/50 uppercase tracking-wider"
                     >
                         <FileSpreadsheet size={16} />
                         Export Excel
@@ -1020,30 +1198,30 @@ const AdminDashboard = () => {
                                     <tr key={row.id} className={`hover:bg-bg-soft/50 transition-colors ${row.isWeekend ? 'bg-bg-soft/10' : ''}`}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-xs uppercase">
+                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-[14px] uppercase">
                                                     {row.employeeName[0]}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-primary-navy">{row.employeeName}</p>
-                                                    <p className="text-[10px] text-text-muted font-semibold uppercase">{row.empRole}</p>
+                                                    <p className="text-[14px] font-bold text-primary-navy">{row.employeeName}</p>
+                                                    <p className="text-[14px] text-text-muted font-semibold uppercase">{row.empRole}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <p className="text-xs font-bold text-primary-navy">{row.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                                                <p className="text-[9px] text-text-muted font-bold uppercase">{row.date.getFullYear()}</p>
+                                                <p className="text-[14px] font-bold text-primary-navy">{row.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                                <p className="text-[14px] text-text-muted font-bold uppercase">{row.date.getFullYear()}</p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-xs font-bold text-primary-navy">{row.login}</p>
+                                            <p className="text-[14px] font-bold text-primary-navy">{row.login}</p>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className={`text-xs font-bold ${row.logout === 'Active' ? 'text-emerald-600 animate-pulse' : 'text-primary-navy'}`}>{row.logout}</p>
+                                            <p className={`text-[14px] font-bold ${row.logout === 'Active' ? 'text-emerald-600 animate-pulse' : 'text-primary-navy'}`}>{row.logout}</p>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <p className="text-xs font-black text-primary-navy">
-                                                {row.workingHours} <span className="text-[9px] text-text-muted font-bold uppercase">hrs</span>
+                                            <p className="text-[14px] font-black text-primary-navy">
+                                                {row.workingHours} <span className="text-[14px] text-text-muted font-bold uppercase">hrs</span>
                                             </p>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -1061,7 +1239,7 @@ const AdminDashboard = () => {
                                         <td colSpan="6" className="px-6 py-20 text-center">
                                             <div className="flex flex-col items-center">
                                                 <Search size={40} className="text-text-muted opacity-20 mb-4" />
-                                                <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-xs">No records matching your search or range</p>
+                                                <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-[14px]">No records matching your search or range</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -1106,10 +1284,10 @@ const AdminDashboard = () => {
                 <div className="flex justify-between items-center">
                     <div>
                         <h3 className="text-xl font-bold text-primary-navy uppercase tracking-tight">Today Attendance</h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Real-time Personnel Status Registry</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Real-time Personnel Status Registry</p>
                     </div>
                     <div className="bg-white px-4 py-2 rounded-xl border border-border-soft shadow-sm">
-                        <p className="text-xs font-bold text-primary-navy">{today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p className="text-[14px] font-bold text-primary-navy">{today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                 </div>
 
@@ -1121,7 +1299,7 @@ const AdminDashboard = () => {
                                 <UserCheck size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Present Today</p>
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Present Today</p>
                                 <h4 className="text-2xl font-black text-primary-navy mt-1">{presentToday}</h4>
                             </div>
                         </div>
@@ -1132,7 +1310,7 @@ const AdminDashboard = () => {
                                 <XCircle size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Absent Today</p>
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Absent Today</p>
                                 <h4 className="text-2xl font-black text-primary-navy mt-1">{absentToday}</h4>
                             </div>
                         </div>
@@ -1143,7 +1321,7 @@ const AdminDashboard = () => {
                                 <Clock size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Late Arrivals</p>
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Late Arrivals</p>
                                 <h4 className="text-2xl font-black text-primary-navy mt-1">{lateArrivals}</h4>
                             </div>
                         </div>
@@ -1154,7 +1332,7 @@ const AdminDashboard = () => {
                                 <Users size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Active Shifts</p>
+                                <p className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Active Shifts</p>
                                 <h4 className="text-2xl font-black text-primary-navy mt-1">{activeEmployees}</h4>
                             </div>
                         </div>
@@ -1206,12 +1384,12 @@ const AdminDashboard = () => {
                                         <tr key={emp._id} className="hover:bg-bg-soft/50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold text-sm">
+                                                    <div className="w-10 h-10 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold text-[14px]">
                                                         {emp.name[0]}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-primary-navy">{emp.name}</p>
-                                                        <p className="text-[10px] text-text-muted font-semibold uppercase">{emp.role}</p>
+                                                        <p className="text-[14px] font-bold text-primary-navy">{emp.name}</p>
+                                                        <p className="text-[14px] text-text-muted font-semibold uppercase">{emp.role}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1219,7 +1397,7 @@ const AdminDashboard = () => {
                                                 {record?.checkIn ? (
                                                     <div className="flex items-center gap-2 text-primary-navy">
                                                         <Clock size={12} className="text-emerald-500" />
-                                                        <p className="text-sm font-bold">{new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                        <p className="text-[14px] font-bold">{new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                                                     </div>
                                                 ) : <span className="text-text-muted/40 font-bold">—</span>}
                                             </td>
@@ -1227,13 +1405,13 @@ const AdminDashboard = () => {
                                                 {record?.checkOut ? (
                                                     <div className="flex items-center gap-2 text-primary-navy">
                                                         <Clock size={12} className="text-rose-500" />
-                                                        <p className="text-sm font-bold">{new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                        <p className="text-[14px] font-bold">{new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                                                     </div>
-                                                ) : (isActive ? <span className="text-emerald-600 font-black animate-pulse uppercase text-[10px] tracking-widest bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">Live Active</span> : <span className="text-text-muted/40 font-bold">—</span>)}
+                                                ) : (isActive ? <span className="text-emerald-600 font-black animate-pulse uppercase text-[14px] tracking-widest bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">Live Active</span> : <span className="text-text-muted/40 font-bold">—</span>)}
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <p className="text-sm font-black text-primary-navy">
-                                                    {displayHours} <span className="text-[10px] text-text-muted">hrs</span>
+                                                <p className="text-[14px] font-black text-primary-navy">
+                                                    {displayHours} <span className="text-[14px] text-text-muted">hrs</span>
                                                 </p>
                                             </td>
                                             <td className="px-6 py-4 text-right">
@@ -1251,7 +1429,7 @@ const AdminDashboard = () => {
                                 }) : (
                                     <tr>
                                         <td colSpan="5" className="px-6 py-12 text-center">
-                                            <p className="text-text-muted font-bold uppercase tracking-widest text-xs">No personnel records found</p>
+                                            <p className="text-text-muted font-bold uppercase tracking-widest text-[14px]">No personnel records found</p>
                                         </td>
                                     </tr>
                                 )}
@@ -1270,19 +1448,19 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-2 p-1 bg-white inline-flex rounded-2xl border border-border-soft shadow-sm mb-2">
                     <button 
                         onClick={() => setAttendanceSubTab('today')}
-                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'today' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                        className={`px-8 py-2.5 rounded-xl text-[14px] font-bold transition-all ${attendanceSubTab === 'today' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
                     >
                         Today
                     </button>
                     <button 
                         onClick={() => setAttendanceSubTab('monthly')}
-                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'monthly' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                        className={`px-8 py-2.5 rounded-xl text-[14px] font-bold transition-all ${attendanceSubTab === 'monthly' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
                     >
                         Monthly
                     </button>
                     <button 
                         onClick={() => setAttendanceSubTab('leave')}
-                        className={`px-8 py-2.5 rounded-xl text-xs font-bold transition-all ${attendanceSubTab === 'leave' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
+                        className={`px-8 py-2.5 rounded-xl text-[14px] font-bold transition-all ${attendanceSubTab === 'leave' ? 'bg-primary-navy text-white shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}
                     >
                         Leave
                     </button>
@@ -1316,18 +1494,18 @@ const AdminDashboard = () => {
                             {enquiries.map(q => (
                                 <tr key={q._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-primary-navy leading-none">{q.firstName} {q.lastName || ''}</p>
-                                        <p className="text-[10px] text-text-muted mt-1.5 font-semibold">{q.phone || 'No Phone'}</p>
+                                        <p className="text-[14px] font-bold text-primary-navy leading-none">{q.firstName} {q.lastName || ''}</p>
+                                        <p className="text-[14px] text-text-muted mt-1.5 font-semibold">{q.phone || 'No Phone'}</p>
                                     </td>
-                                    <td className="px-6 py-4 text-xs font-bold text-text-muted">{q.email}</td>
+                                    <td className="px-6 py-4 text-[14px] font-bold text-text-muted">{q.email}</td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-primary-navy truncate max-w-[150px]">{q.subject || 'Sales Inquiry'}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-[11px] text-text-muted font-medium truncate max-w-[200px] italic">"{q.message}"</p>
+                                        <p className="text-[14px] font-bold text-primary-navy truncate max-w-[150px]">{q.subject || 'Sales Inquiry'}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] font-bold text-text-muted uppercase tracking-tight">{new Date(q.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                        <p className="text-[14px] text-text-muted font-medium truncate max-w-[200px] italic">"{q.message}"</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <p className="text-[14px] font-bold text-text-muted uppercase tracking-tight">{new Date(q.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`status-chip ${
@@ -1338,7 +1516,7 @@ const AdminDashboard = () => {
                                         <div className="flex justify-end items-center gap-2">
                                             <button 
                                                 onClick={() => updateEnquiryStatus(q._id, 'Processed')}
-                                                className="zoho-btn-secondary px-4 py-3 rounded-xl text-[10px] font-bold"
+                                                className="zoho-btn-secondary px-4 py-3 rounded-xl text-[14px] font-bold"
                                             >
                                                 Process
                                             </button>
@@ -1369,9 +1547,9 @@ const AdminDashboard = () => {
                             <Bell size={24} className="text-primary-red" />
                             Operations Alerts
                         </h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">System-wide critical events</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">System-wide critical events</p>
                      </div>
-                     <button onClick={markAllAsRead} className="text-xs font-black text-primary-red bg-primary-red/5 px-4 py-2 rounded-xl hover:bg-primary-red hover:text-white transition-all">Acknowledge All</button>
+                     <button onClick={markAllAsRead} className="text-[14px] font-black text-primary-red bg-primary-red/5 px-4 py-2 rounded-xl hover:bg-primary-red hover:text-white transition-all">Acknowledge All</button>
                 </div>
                 <div className="space-y-4">
                     {notifications.length > 0 ? notifications.map(n => (
@@ -1382,9 +1560,9 @@ const AdminDashboard = () => {
                              <div className="flex-grow">
                                 <div className="flex justify-between items-start">
                                      <p className="font-bold text-[15px] text-primary-navy group-hover:text-primary-red transition-colors">{n.title}</p>
-                                     <span className="text-[10px] font-bold text-text-muted bg-white px-2 py-0.5 rounded-lg border border-border-soft">{new Date(n.createdAt).toLocaleDateString()}</span>
+                                     <span className="text-[14px] font-bold text-text-muted bg-white px-2 py-0.5 rounded-lg border border-border-soft">{new Date(n.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <p className="text-[13px] text-text-muted mt-2 leading-relaxed font-medium">{n.message}</p>
+                                <p className="text-[14px] text-text-muted mt-2 leading-relaxed font-medium">{n.message}</p>
                              </div>
                         </div>
                     )) : (
@@ -1392,7 +1570,7 @@ const AdminDashboard = () => {
                              <div className="w-20 h-20 bg-white rounded-[24px] flex items-center justify-center mx-auto mb-6 text-text-muted shadow-sm">
                                 <ShieldAlert size={32} />
                              </div>
-                             <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-xs">No Operational Alerts Detected</p>
+                             <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-[14px]">No Operational Alerts Detected</p>
                         </div>
                     )}
                 </div>
@@ -1427,7 +1605,7 @@ const AdminDashboard = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Financial Claims</h2>
-                    <p className="text-sm text-text-muted mt-1">Review and process staff expense reimbursements</p>
+                    <p className="text-base text-text-muted mt-1">Review and process staff expense reimbursements</p>
                 </div>
                 <div className="flex gap-4">
                     <button 
@@ -1441,7 +1619,7 @@ const AdminDashboard = () => {
                         <button 
                             key={f}
                             onClick={() => setExpensesFilter(f)}
-                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                            className={`px-4 py-2 text-[14px] font-black uppercase tracking-widest rounded-lg transition-all ${
                                 expensesFilter === f 
                                 ? 'bg-primary-navy text-white shadow-md' 
                                 : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
@@ -1469,14 +1647,14 @@ const AdminDashboard = () => {
                         {adminExpenses.filter(e => expensesFilter === 'All' || e.status === expensesFilter).length > 0 ? (
                             adminExpenses.filter(e => expensesFilter === 'All' || e.status === expensesFilter).map(exp => (
                                 <tr key={exp._id} className="hover:bg-bg-soft/50 transition-colors">
-                                    <td className="px-6 py-4 font-bold text-primary-navy text-sm">
+                                    <td className="px-6 py-4 font-bold text-primary-navy text-[14px]">
                                         {exp.employeeName}
                                     </td>
-                                    <td className="px-6 py-4 text-xs text-text-muted">
+                                    <td className="px-6 py-4 text-[14px] text-text-muted">
                                         {new Date(exp.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-[10px] font-bold text-text-dark uppercase tracking-wider bg-bg-soft px-2 py-1 rounded border border-border-soft">
+                                        <span className="text-[14px] font-bold text-text-dark uppercase tracking-wider bg-bg-soft px-2 py-1 rounded border border-border-soft">
                                             {exp.category}
                                         </span>
                                     </td>
@@ -1520,7 +1698,7 @@ const AdminDashboard = () => {
                                 <td colSpan="6" className="py-24 text-center">
                                     <div className="flex flex-col items-center gap-3 opacity-30">
                                         <Receipt size={48} />
-                                        <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No financial claims found</p>
+                                        <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No financial claims found</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1536,7 +1714,7 @@ const AdminDashboard = () => {
                         <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                             <div>
                                 <h3 className="text-xl font-bold text-primary-navy">Expense Audit</h3>
-                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Status Finalization</p>
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Status Finalization</p>
                             </div>
                             <button onClick={() => setShowExpenseApprovalModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
                                 <X size={20} />
@@ -1544,12 +1722,12 @@ const AdminDashboard = () => {
                         </div>
                         <div className="p-10 space-y-8">
                             <div className="p-4 bg-bg-soft rounded-2xl border border-border-soft space-y-1">
-                                <p className="text-[10px] text-text-muted font-bold uppercase">Claimant</p>
+                                <p className="text-[14px] text-text-muted font-bold uppercase">Claimant</p>
                                 <p className="font-bold text-primary-navy">{selectedExpense?.employeeName}</p>
                                 <p className="text-lg font-black text-primary-navy mt-2">₹{selectedExpense?.amount.toLocaleString()}</p>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Audit Note</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Audit Note</label>
                                 <textarea 
                                     value={expenseActionNote}
                                     onChange={e => setExpenseActionNote(e.target.value)}
@@ -1583,7 +1761,7 @@ const AdminDashboard = () => {
                         <div className="p-6 border-b border-border-soft flex justify-between items-center bg-white">
                             <div>
                                 <h3 className="text-xl font-bold text-primary-navy">Receipt Verification</h3>
-                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Claim ID: {selectedExpense?._id}</p>
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Claim ID: {selectedExpense?._id}</p>
                             </div>
                             <button onClick={() => setShowReceiptModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
                                 <X size={20} />
@@ -1648,7 +1826,7 @@ const AdminDashboard = () => {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-2xl font-bold text-primary-navy tracking-tight">Team Operations</h2>
-                    <p className="text-sm text-text-muted mt-1">Assign and track administrative tasks for staff</p>
+                    <p className="text-[14px] text-text-muted mt-1">Assign and track administrative tasks for staff</p>
                 </div>
                 <div className="flex gap-4">
                     <button 
@@ -1661,7 +1839,7 @@ const AdminDashboard = () => {
                         <button 
                             key={f}
                             onClick={() => setTasksFilter(f)}
-                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                            className={`px-4 py-2 text-[14px] font-black uppercase tracking-widest rounded-lg transition-all ${
                                 tasksFilter === f 
                                 ? 'bg-primary-navy text-white shadow-md' 
                                 : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
@@ -1678,7 +1856,7 @@ const AdminDashboard = () => {
                     adminTasks.filter(t => tasksFilter === 'All' || t.status === tasksFilter).map(task => (
                         <div key={task._id} className="zoho-card p-6 group hover:border-primary-navy transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
+                                <span className={`text-[14px] font-black px-2 py-1 rounded border uppercase tracking-widest ${
                                     task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                                     task.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
                                     'bg-bg-soft text-text-muted border-border-soft'
@@ -1690,17 +1868,17 @@ const AdminDashboard = () => {
                                 </button>
                             </div>
                             <h3 className="font-bold text-primary-navy mb-2 line-clamp-1">{task.title}</h3>
-                            <p className="text-xs text-text-muted mb-4 line-clamp-2">{task.description}</p>
+                            <p className="text-[14px] text-text-muted mb-4 line-clamp-2">{task.description}</p>
                             <div className="space-y-3 pt-4 border-t border-border-soft">
-                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                <div className="flex justify-between items-center text-[14px] font-bold uppercase tracking-wider">
                                     <span className="text-text-muted">Assigned To</span>
                                     <span className="text-primary-navy">{task.employeeName}</span>
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                <div className="flex justify-between items-center text-[14px] font-bold uppercase tracking-wider">
                                     <span className="text-text-muted">Due Date</span>
                                     <span className="text-primary-navy">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                                <div className="flex justify-between items-center text-[14px] font-bold uppercase tracking-wider">
                                     <span className="text-text-muted">Status</span>
                                     <span className={`status-chip ${
                                         task.status === 'Completed' ? 'bg-status-success-bg text-status-success-text' :
@@ -1717,7 +1895,7 @@ const AdminDashboard = () => {
                     <div className="col-span-full py-24 text-center bg-white rounded-[32px] border border-border-soft border-dashed">
                         <div className="flex flex-col items-center gap-3 opacity-30">
                             <ClipboardList size={48} />
-                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No administrative tasks recorded</p>
+                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No administrative tasks recorded</p>
                         </div>
                     </div>
                 )}
@@ -1730,7 +1908,7 @@ const AdminDashboard = () => {
                         <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                             <div>
                                 <h3 className="text-xl font-bold text-primary-navy">Project Directive</h3>
-                                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">New Task Assignment</p>
+                                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">New Task Assignment</p>
                             </div>
                             <button onClick={() => setShowTaskModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
                                 <X size={20} />
@@ -1738,16 +1916,16 @@ const AdminDashboard = () => {
                         </div>
                         <form onSubmit={handleTaskSubmit} className="p-8 space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Task Title</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Task Title</label>
                                 <input required type="text" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} className="zoho-input" placeholder="e.g. Audit Inventory" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Detail Description</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Detail Description</label>
                                 <textarea value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} className="zoho-input h-24 resize-none py-3" placeholder="Provide context..." />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign Staff</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign Staff</label>
                                     <select required value={taskForm.assignedTo} onChange={e => {
                                         const emp = employees.find(emp => emp._id === e.target.value);
                                         setTaskForm({...taskForm, assignedTo: e.target.value, employeeName: emp ? emp.name : ''});
@@ -1757,7 +1935,7 @@ const AdminDashboard = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Priority</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Priority</label>
                                     <select required value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})} className="zoho-input">
                                         <option value="Low">Low</option>
                                         <option value="Medium">Medium</option>
@@ -1767,7 +1945,7 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Target Deadline</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Target Deadline</label>
                                 <input type="date" value={taskForm.dueDate} onChange={e => setTaskForm({...taskForm, dueDate: e.target.value})} className="zoho-input" />
                             </div>
                             <button type="submit" className="w-full py-4 bg-primary-navy text-white rounded-2xl font-bold hover:bg-navy-dark transition-all shadow-lg shadow-primary-navy/20 mt-4">
@@ -1777,6 +1955,206 @@ const AdminDashboard = () => {
                     </div>
                 </div>
             )}
+        </div>
+    );
+
+    const renderFollowUps = () => (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-border-soft shadow-sm">
+                <div>
+                    <h3 className="text-xl font-bold text-primary-navy uppercase tracking-tight">Staff Follow-ups</h3>
+                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Global Interaction Pipeline</p>
+                </div>
+                <div className="flex gap-4">
+                    {['Pending', 'Completed', 'Missed', 'All'].map(f => (
+                        <button 
+                            key={f}
+                            onClick={() => setFollowUpsFilter(f)}
+                            className={`px-4 py-2 text-[14px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                                followUpsFilter === f 
+                                ? 'bg-primary-navy text-white shadow-md' 
+                                : 'bg-white text-text-muted border border-border-soft hover:bg-bg-soft'
+                            }`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="zoho-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="zoho-table">
+                        <thead>
+                            <tr className="zoho-table-header uppercase">
+                                <th className="px-6 py-4 text-left">Customer / Lead</th>
+                                <th className="px-6 py-4 text-left">Assigned Agent</th>
+                                <th className="px-6 py-4 text-left">Scheduled</th>
+                                <th className="px-6 py-4 text-left">Interaction Note</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-soft">
+                            {adminFollowUps.filter(f => followUpsFilter === 'All' || f.status === followUpsFilter).length > 0 ? (
+                                adminFollowUps.filter(f => followUpsFilter === 'All' || f.status === followUpsFilter).map(fu => (
+                                    <tr key={fu._id} className="hover:bg-bg-soft/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <p className="text-[14px] font-bold text-primary-navy">{fu.leadId?.name || 'N/A'}</p>
+                                                <p className="text-[14px] text-text-muted font-semibold mt-0.5">{fu.leadId?.company || 'Personal'}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-primary-navy/10 text-primary-navy flex items-center justify-center text-[14px] font-bold">
+                                                    {fu.assignedTo?.name?.[0]}
+                                                </div>
+                                                <p className="text-[14px] font-bold text-primary-navy">{fu.assignedTo?.name || 'Unknown'}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <p className="text-[14px] font-bold text-primary-navy">{new Date(fu.followUpDate).toLocaleDateString()}</p>
+                                                <p className="text-[14px] text-text-muted font-black uppercase">{fu.followUpTime}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-[14px] text-text-muted line-clamp-1 max-w-[200px]" title={fu.note}>{fu.note || 'No notes provided'}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`status-chip ${
+                                                fu.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                                                fu.status === 'Missed' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                                'bg-blue-50 text-blue-600 border border-blue-200'
+                                            }`}>{fu.status}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="py-20 text-center">
+                                        <div className="flex flex-col items-center opacity-30">
+                                            <Calendar size={48} />
+                                            <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-[14px] mt-4">No follow-ups recorded for this filter.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderLeads = () => (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-border-soft shadow-sm">
+                <div>
+                    <h3 className="text-xl font-bold text-primary-navy uppercase tracking-tight">Leads Management</h3>
+                    <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Pipeline Tracking & Sales Conversions</p>
+                </div>
+                <button 
+                    onClick={() => {
+                        setLeadForm({ name: '', email: '', phone: '', company: '', serviceInterest: 'CCTV Installation', status: 'New', assignedTo: '', notes: '' });
+                        setSelectedLead(null);
+                        setShowLeadModal(true);
+                    }}
+                    className="flex items-center gap-2 bg-primary-navy text-white px-6 py-3.5 rounded-2xl text-[14px] font-bold transition-all shadow-lg hover:bg-navy-dark uppercase tracking-wider"
+                >
+                    <Plus size={16} /> Create New Lead
+                </button>
+            </div>
+
+            <div className="zoho-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="zoho-table">
+                        <thead>
+                            <tr className="zoho-table-header uppercase">
+                                <th className="px-6 py-4 text-left">Customer</th>
+                                <th className="px-6 py-4 text-left">Company</th>
+                                <th className="px-6 py-4 text-left">Interest</th>
+                                <th className="px-6 py-4 text-left">Assigned To</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-soft">
+                            {leads.length > 0 ? leads.map(lead => (
+                                <tr key={lead._id} className="hover:bg-bg-soft/50 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <p className="text-[14px] font-bold text-primary-navy">{lead.name}</p>
+                                            <p className="text-[14px] text-text-muted font-semibold mt-0.5">{lead.email} • {lead.phone}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <p className="text-[14px] font-bold text-text-muted truncate max-w-[120px]">{lead.company || 'Private Individual'}</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-[14px] font-bold text-primary-navy bg-primary-navy/5 border border-primary-navy/10 px-2 py-1 rounded-lg uppercase tracking-wider">
+                                            {lead.serviceInterest}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[14px] font-bold text-slate-500 border border-slate-200">
+                                                {lead.assignedTo?.name ? lead.assignedTo.name[0] : '?'}
+                                            </div>
+                                            <p className="text-[14px] font-bold text-primary-navy">{lead.assignedTo?.name || 'Unassigned'}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`status-chip ${
+                                            lead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                                            lead.status === 'Lost' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                            'bg-blue-50 text-blue-600 border border-blue-200'
+                                        }`}>{lead.status}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end items-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedLead(lead);
+                                                    setLeadForm({
+                                                        name: lead.name,
+                                                        email: lead.email,
+                                                        phone: lead.phone,
+                                                        company: lead.company,
+                                                        serviceInterest: lead.serviceInterest,
+                                                        status: lead.status,
+                                                        assignedTo: lead.assignedTo?._id || '',
+                                                        notes: lead.notes
+                                                    });
+                                                    setShowLeadModal(true);
+                                                }}
+                                                className="p-2.5 text-text-muted hover:text-primary-navy bg-bg-soft hover:bg-white rounded-xl transition-all border border-transparent hover:border-border-soft"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={() => deleteLead(lead._id)}
+                                                className="p-2.5 text-text-muted hover:text-primary-red bg-bg-soft hover:bg-white rounded-xl transition-all border border-transparent hover:border-border-soft"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr>
+                                    <td colSpan="6" className="py-20 text-center">
+                                        <div className="flex flex-col items-center opacity-30">
+                                            <Users size={48} />
+                                            <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-[14px] mt-4">Safe storage empty. No leads captured.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 
@@ -1798,14 +2176,14 @@ const AdminDashboard = () => {
                                     : 'hover:bg-bg-soft text-text-dark'
                             }`}
                         >
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[14px] ${
                                 selectedChatEmployee?._id === emp._id ? 'bg-white/20' : 'bg-primary-navy/10 text-primary-navy'
                             }`}>
                                 {emp.name[0]}
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <p className="font-bold text-sm truncate">{emp.name}</p>
-                                <p className={`text-[10px] ${selectedChatEmployee?._id === emp._id ? 'text-slate-300' : 'text-text-muted'} font-medium`}>{emp.role}</p>
+                                <p className="font-bold text-[14px] truncate">{emp.name}</p>
+                                <p className={`text-[14px] ${selectedChatEmployee?._id === emp._id ? 'text-slate-300' : 'text-text-muted'} font-medium`}>{emp.role}</p>
                             </div>
                         </div>
                     ))}
@@ -1832,23 +2210,103 @@ const AdminDashboard = () => {
         </div>
     );
 
+    const renderLeadModal = () => (
+        <div className={`fixed inset-0 z-[120] flex items-center justify-center p-6 ${showLeadModal ? 'block' : 'hidden'}`}>
+            <div className="absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md" onClick={() => setShowLeadModal(false)}></div>
+            <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="p-10 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
+                    <div>
+                        <h3 className="text-2xl font-bold text-primary-navy">{selectedLead ? 'Update Pipeline Entry' : 'New Sales Lead'}</h3>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Lead Capture Interface</p>
+                    </div>
+                    <button onClick={() => setShowLeadModal(false)} className="w-12 h-12 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red transition-all shadow-sm">
+                        <X size={24} />
+                    </button>
+                </div>
+                
+                <form onSubmit={handleLeadSubmit} className="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-2 gap-6 mb-8">
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Full Name</label>
+                            <input required type="text" value={leadForm.name} onChange={e => setLeadForm({...leadForm, name: e.target.value})} className="zoho-input" placeholder="e.g. Robert Smith" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Personal / Business Email</label>
+                            <input required type="email" value={leadForm.email} onChange={e => setLeadForm({...leadForm, email: e.target.value})} className="zoho-input" placeholder="robert@example.com" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Phone</label>
+                            <input required type="text" value={leadForm.phone} onChange={e => setLeadForm({...leadForm, phone: e.target.value})} className="zoho-input" placeholder="+91 00000 00000" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Company / Organization</label>
+                            <input type="text" value={leadForm.company} onChange={e => setLeadForm({...leadForm, company: e.target.value})} className="zoho-input" placeholder="e.g. Acme Corp" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 mb-8">
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Nature of Interest</label>
+                            <select value={leadForm.serviceInterest} onChange={e => setLeadForm({...leadForm, serviceInterest: e.target.value})} className="zoho-input">
+                                <option>CCTV Installation</option>
+                                <option>Maintenance AMC</option>
+                                <option>Security Audit</option>
+                                <option>Bulk Hardware</option>
+                                <option>Others</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Pipeline Status</label>
+                            <select value={leadForm.status} onChange={e => setLeadForm({...leadForm, status: e.target.value})} className="zoho-input">
+                                <option>New</option>
+                                <option>Contacted</option>
+                                <option>Qualified</option>
+                                <option>Lost</option>
+                                <option>Converted</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 mb-8">
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign to Agent</label>
+                        <select value={leadForm.assignedTo} onChange={e => setLeadForm({...leadForm, assignedTo: e.target.value})} className="zoho-input">
+                            <option value="">Keep Unassigned</option>
+                            {employees.filter(emp => emp.role === 'employee').map(emp => (
+                                <option key={emp._id} value={emp._id}>{emp.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2 mb-10">
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Interaction Notes</label>
+                        <textarea value={leadForm.notes} onChange={e => setLeadForm({...leadForm, notes: e.target.value})} className="zoho-input h-32 py-4 resize-none" placeholder="Details about customer requirements, site details, budget etc." />
+                    </div>
+
+                    <button type="submit" className="zoho-btn-secondary w-full py-5 text-[14px] rounded-3xl font-bold tracking-widest uppercase shadow-xl hover:shadow-primary-red/20 transition-all">
+                        {selectedLead ? 'Authorize Pipeline Update' : 'Initialize New Lead Entry'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+
     const renderSettings = () => (
         <div className="max-w-5xl space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
                 <h3 className="text-xl font-bold text-primary-navy uppercase tracking-tight">System Configuration</h3>
-                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Foundational Site Controls & Security</p>
+                <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Foundational Site Controls & Security</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <div className="lg:col-span-7 zoho-card p-10 space-y-8">
                     <div className="flex items-center gap-3 border-b border-gray-100 pb-6">
                         <Settings size={20} className="text-primary-red" />
-                        <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Company Settings</h4>
+                        <h4 className="text-[14px] font-bold text-primary-navy uppercase tracking-widest">Company Settings</h4>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Name</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Name</label>
                             <input 
                                 type="text" 
                                 value={settings.companyName} 
@@ -1857,7 +2315,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Support Email</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Support Email</label>
                             <input 
                                 type="email" 
                                 value={settings.email}
@@ -1866,7 +2324,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
                             <input 
                                 type="text" 
                                 value={settings.phone}
@@ -1875,7 +2333,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Office Address</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Office Address</label>
                             <textarea 
                                 value={settings.address}
                                 onChange={(e) => setSettings({...settings, address: e.target.value})}
@@ -1883,7 +2341,7 @@ const AdminDashboard = () => {
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Logo</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Company Logo</label>
                             <div className="flex items-center gap-4 mt-2">
                                 {settings.logo ? (
                                     <div className="relative group">
@@ -1903,19 +2361,19 @@ const AdminDashboard = () => {
                                         <Camera size={24} className="text-text-muted opacity-30" />
                                     </div>
                                 )}
-                                <label className="zoho-btn-secondary px-6 py-2.5 rounded-xl cursor-pointer text-xs font-bold hover:bg-bg-soft transition-all">
+                                <label className="zoho-btn-secondary px-6 py-2.5 rounded-xl cursor-pointer text-[14px] font-bold hover:bg-bg-soft transition-all">
                                     <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
                                     {settings.logo ? 'Change Logo' : 'Upload Logo'}
                                 </label>
                             </div>
                         </div>
                     </div>
-                    <button onClick={handleSettingsUpdate} className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">Save Business Settings</button>
+                    <button onClick={handleSettingsUpdate} className="zoho-btn-secondary w-full py-4 text-[14px] rounded-2xl">Save Business Settings</button>
                 </div>
 
                 <div className="lg:col-span-5 space-y-10">
                     <div className="zoho-card p-10">
-                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-[0.2em] border-b border-border-soft pb-6 mb-8 text-center">Authorized Administrator</h4>
+                        <h4 className="text-[14px] font-bold text-text-muted uppercase tracking-[0.2em] border-b border-border-soft pb-6 mb-8 text-center">Authorized Administrator</h4>
                         <div className="flex flex-col items-center">
                             <div className="relative group">
                                 <div className="w-24 h-24 rounded-[32px] bg-primary-navy text-white flex items-center justify-center font-extrabold text-3xl border-4 border-white relative z-10 transition-transform group-hover:scale-105 duration-500">
@@ -1924,8 +2382,8 @@ const AdminDashboard = () => {
                             </div>
                             <div className="text-center mt-6">
                                 <p className="text-xl font-bold text-primary-navy">{user?.name}</p>
-                                <p className="text-xs font-bold text-text-muted mt-1">{user?.email}</p>
-                                <div className="mt-4 px-4 py-1.5 bg-primary-navy text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">Full Access Control</div>
+                                <p className="text-[14px] font-bold text-text-muted mt-1">{user?.email}</p>
+                                <div className="mt-4 px-4 py-1.5 bg-primary-navy text-white rounded-full text-[14px] font-black uppercase tracking-[0.2em]">Full Access Control</div>
                             </div>
                         </div>
                     </div>
@@ -1933,18 +2391,18 @@ const AdminDashboard = () => {
                     <div className="zoho-card p-10 space-y-6">
                         <div className="flex items-center gap-3 border-b border-gray-100 pb-6">
                             <ShieldCheck size={20} className="text-primary-red" />
-                            <h4 className="text-sm font-bold text-primary-navy uppercase tracking-widest">Security & Login</h4>
+                            <h4 className="text-[14px] font-bold text-primary-navy uppercase tracking-widest">Security & Login</h4>
                         </div>
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">New Password</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">New Password</label>
                                 <input type="password" placeholder="••••••••" className="zoho-input" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Confirm Password</label>
+                                <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Confirm Password</label>
                                 <input type="password" placeholder="••••••••" className="zoho-input" />
                             </div>
-                            <button className="zoho-btn-secondary w-full py-4 text-xs font-black">Update Password</button>
+                            <button className="zoho-btn-secondary w-full py-4 text-[14px] font-black">Update Password</button>
                         </div>
                     </div>
                 </div>
@@ -1991,28 +2449,28 @@ const AdminDashboard = () => {
                                     <tr key={l._id} className="hover:bg-bg-soft/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-xs uppercase">
+                                                <div className="w-8 h-8 rounded-lg bg-primary-navy text-white flex items-center justify-center font-bold text-[14px] uppercase">
                                                     {l.employeeName?.[0]}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-primary-navy">{l.employeeName}</span>
-                                                    <span className="text-[10px] text-text-muted">{l.employeeId?.email || 'N/A'}</span>
+                                                    <span className="text-[14px] font-bold text-primary-navy">{l.employeeName}</span>
+                                                    <span className="text-[14px] text-text-muted">{l.employeeId?.email || 'N/A'}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-xs font-semibold text-text-dark">{l.leaveType}</span>
+                                            <span className="text-[14px] font-semibold text-text-dark">{l.leaveType}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex flex-col text-xs font-medium">
+                                            <div className="flex flex-col text-[14px] font-medium">
                                                 <span>{new Date(l.startDate).toLocaleDateString()}</span>
-                                                <span className="text-[10px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
+                                                <span className="text-[14px] text-text-muted">to {new Date(l.endDate).toLocaleDateString()}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-xs text-text-muted line-clamp-1 max-w-[150px]" title={l.reason}>{l.reason}</p>
+                                            <p className="text-[14px] text-text-muted line-clamp-1 max-w-[150px]" title={l.reason}>{l.reason}</p>
                                         </td>
-                                        <td className="px-6 py-4 text-xs text-text-muted">
+                                        <td className="px-6 py-4 text-[14px] text-text-muted">
                                             {new Date(l.appliedAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -2043,14 +2501,14 @@ const AdminDashboard = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Processed</span>
+                                                <span className="text-[14px] font-bold text-text-muted uppercase tracking-widest">Processed</span>
                                             )}
                                         </td>
                                     </tr>
                                 )) : (
                                     <tr>
                                         <td colSpan="7" className="py-24 text-center">
-                                            <p className="text-text-muted font-bold tracking-widest uppercase text-xs">No pending leave requests</p>
+                                            <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">No pending leave requests</p>
                                         </td>
                                     </tr>
                                 )}
@@ -2121,37 +2579,37 @@ const AdminDashboard = () => {
                                 .map(e => (
                                 <tr key={e._id} className="hover:bg-bg-soft/50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] text-text-muted font-bold tracking-widest uppercase"># {e._id.substring(18)}</p>
+                                        <p className="text-[14px] text-text-muted font-bold tracking-widest uppercase"># {e._id.substring(18)}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                                            <div className="w-9 h-9 rounded-xl bg-primary-navy text-white flex items-center justify-center font-bold text-[14px] shadow-sm">
                                                 {e.name[0]}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-primary-navy leading-none">{e.name}</p>
-                                                <p className="text-[10px] text-text-muted mt-1 font-semibold">{e.phone}</p>
+                                                <p className="text-[14px] font-bold text-primary-navy leading-none">{e.name}</p>
+                                                <p className="text-[14px] text-text-muted mt-1 font-semibold">{e.phone}</p>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-text-muted">{e.email}</p>
+                                        <p className="text-[14px] font-bold text-text-muted">{e.email}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="bg-bg-soft text-primary-navy px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border border-border-soft">
+                                        <span className="bg-bg-soft text-primary-navy px-2.5 py-1 rounded-lg text-[14px] font-bold uppercase border border-border-soft">
                                             {e.role}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${e.isActive ? 'bg-status-success-text shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-text-muted'}`} />
-                                            <span className={`text-[10px] font-bold uppercase ${e.isActive ? 'text-status-success-text' : 'text-text-muted'}`}>
+                                            <span className={`text-[14px] font-bold uppercase ${e.isActive ? 'text-status-success-text' : 'text-text-muted'}`}>
                                                 {e.isActive ? 'Active' : 'Offline'}
                                             </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <p className="text-sm font-extrabold text-primary-navy">{e.assignedJobs || 0}</p>
+                                        <p className="text-[14px] font-extrabold text-primary-navy">{e.assignedJobs || 0}</p>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end items-center gap-2">
@@ -2161,7 +2619,7 @@ const AdminDashboard = () => {
                                                     setEmployeeForm({ ...e, password: '' });
                                                     setShowEmployeeModal(true);
                                                 }}
-                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[14px]"
                                             >
                                                 Update
                                             </button>
@@ -2235,19 +2693,19 @@ const AdminDashboard = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-primary-navy group-hover:text-primary-red transition-colors">{s.name}</p>
+                                        <p className="text-[14px] font-bold text-primary-navy group-hover:text-primary-red transition-colors">{s.name}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] text-text-muted font-bold tracking-widest uppercase"># {s.sku}</p>
+                                        <p className="text-[14px] text-text-muted font-bold tracking-widest uppercase"># {s.sku}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-xs font-bold text-primary-navy">{s.category}</p>
+                                        <p className="text-[14px] font-bold text-primary-navy">{s.category}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] text-text-muted font-bold uppercase">{s.brand}</p>
+                                        <p className="text-[14px] text-text-muted font-bold uppercase">{s.brand}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-extrabold text-primary-navy">₹{s.price.toLocaleString()}</p>
+                                        <p className="text-[14px] font-extrabold text-primary-navy">₹{s.price.toLocaleString()}</p>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className={`status-chip ${
@@ -2268,7 +2726,7 @@ const AdminDashboard = () => {
                                                     });
                                                     setShowProductModal(true);
                                                 }}
-                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px]"
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[14px]"
                                             >
                                                 Update
                                             </button>
@@ -2289,7 +2747,7 @@ const AdminDashboard = () => {
              <div className="flex justify-between items-center">
                 <div>
                      <h3 className="text-xl font-bold text-primary-navy">Inventory Registry</h3>
-                     <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Real-time Stock Audit & Reorder Metrics</p>
+                     <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Real-time Stock Audit & Reorder Metrics</p>
                 </div>
             </div>
 
@@ -2311,15 +2769,15 @@ const AdminDashboard = () => {
                             {stocks.map(s => (
                                 <tr key={s._id} className="hover:bg-bg-soft/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-primary-navy leading-none">{s.name}</p>
+                                        <p className="text-[14px] font-bold text-primary-navy leading-none">{s.name}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest"># {s.sku}</p>
+                                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest"># {s.sku}</p>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <p className="text-sm font-extrabold text-primary-navy">{s.quantity} Units</p>
+                                        <p className="text-[14px] font-extrabold text-primary-navy">{s.quantity} Units</p>
                                     </td>
-                                    <td className="px-6 py-4 text-center text-[10px] font-bold text-text-muted uppercase">
+                                    <td className="px-6 py-4 text-center text-[14px] font-bold text-text-muted uppercase">
                                         {s.reorderLevel || 5} Units
                                     </td>
                                     <td className="px-6 py-4 text-center">
@@ -2327,7 +2785,7 @@ const AdminDashboard = () => {
                                             s.quantity > (s.reorderLevel || 5) ? 'bg-status-success-bg text-status-success-text' : 'bg-status-danger-bg text-status-danger-text'
                                         }`}>{s.quantity > (s.reorderLevel || 5) ? 'Operational' : 'Critical Level'}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-[10px] text-text-muted font-black tracking-tighter uppercase whitespace-nowrap">
+                                    <td className="px-6 py-4 text-[14px] text-text-muted font-black tracking-tighter uppercase whitespace-nowrap">
                                         {new Date(s.updatedAt).toLocaleDateString()} @ {new Date(s.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -2337,7 +2795,7 @@ const AdminDashboard = () => {
                                                     setEditingProduct(s);
                                                     setShowStockModal(true);
                                                 }}
-                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[10px] whitespace-nowrap"
+                                                className="zoho-btn-secondary px-4 py-2 rounded-lg text-[14px] whitespace-nowrap"
                                             >
                                                 Inbound Update
                                             </button>
@@ -2360,7 +2818,7 @@ const AdminDashboard = () => {
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                     <div>
                         <h3 className="text-xl font-bold text-primary-navy">{editingEmployee ? 'Staff Configuration' : 'Personnel Registration'}</h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Operational Access Management</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Operational Access Management</p>
                     </div>
                     <button onClick={() => setShowEmployeeModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red hover:border-primary-red transition-all shadow-sm">
                         <X size={20} />
@@ -2369,19 +2827,19 @@ const AdminDashboard = () => {
                 <form onSubmit={handleEmployeeSubmit} className="p-10 space-y-6">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Employee Name</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Employee Name</label>
                             <input required type="text" value={employeeForm.name} onChange={e => setEmployeeForm({...employeeForm, name: e.target.value})} className="zoho-input" placeholder="e.g. John Carter" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Official Email</label>
-                            <input required type="email" value={employeeForm.email} onChange={e => setEmployeeForm({...employeeForm, email: e.target.value})} className="zoho-input" placeholder="john@securevision.com" />
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Email Address</label>
+                            <input required type="email" value={employeeForm.email} onChange={e => setEmployeeForm({...employeeForm, email: e.target.value})} className="zoho-input" placeholder="john@sktech.com" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Contact Number</label>
                             <input required type="text" value={employeeForm.phone} onChange={e => setEmployeeForm({...employeeForm, phone: e.target.value})} className="zoho-input" placeholder="+91 00000 00000" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Password</label>
+                            <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Password</label>
                             <input required={!editingEmployee} type="password" value={employeeForm.password} onChange={e => setEmployeeForm({...employeeForm, password: e.target.value})} className="zoho-input" placeholder={editingEmployee ? 'Unchanged' : 'Min 6 characters'} />
                         </div>
                     </div>
@@ -2390,11 +2848,11 @@ const AdminDashboard = () => {
                         <button 
                             type="button" 
                             onClick={() => setShowEmployeeModal(false)}
-                            className="px-6 py-3.5 text-sm font-bold text-text-muted hover:text-primary-navy transition-colors"
+                            className="px-6 py-3.5 text-[14px] font-bold text-text-muted hover:text-primary-navy transition-colors"
                         >
                             Cancel
                         </button>
-                        <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-sm rounded-xl shadow-lg">
+                        <button type="submit" className="zoho-btn-secondary px-8 py-3.5 text-[14px] rounded-xl shadow-lg">
                             {editingEmployee ? 'Update Employee' : 'Register Employee'}
                         </button>
                     </div>
@@ -2406,7 +2864,7 @@ const AdminDashboard = () => {
     const renderProductModal = () => (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${showProductModal ? 'visible' : 'invisible'}`}>
             <div className={`absolute inset-0 bg-[#0B1739]/60 backdrop-blur-md transition-opacity duration-500 ${showProductModal ? 'opacity-100' : 'opacity-0'}`} onClick={() => setShowProductModal(false)}></div>
-            <div className={`bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform flex flex-col ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
+            <div className={`bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl relative z-10 overflow-hidden transition-all duration-500 transform ${showProductModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-95 opacity-0'}`}>
                 {/* Modal Header */}
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                     <div className="flex items-center gap-4">
@@ -2415,7 +2873,7 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-primary-navy">CCTV Inventory Management</h3>
-                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">
+                            <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">
                                 {editingProduct ? 'Modify Security Hardware Record' : 'Register New Security Asset'}
                             </p>
                         </div>
@@ -2430,24 +2888,24 @@ const AdminDashboard = () => {
                     <div className="flex-1 p-10 space-y-8 overflow-y-auto custom-scrollbar">
                         {/* Section 1: Basic Identity */}
                         <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h4 className="text-[14px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Package size={14} /> Basic Identification
                             </h4>
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Name</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Name</label>
                                     <input required type="text" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="zoho-input" placeholder="Example – Hikvision 4MP Bullet Camera" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Model Number</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Model Number</label>
                                     <input required type="text" value={productForm.modelNumber} onChange={e => setProductForm({...productForm, modelNumber: e.target.value})} className="zoho-input" placeholder="DS-2CD2043G0" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">SKU Reference</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">SKU Reference</label>
                                     <input required type="text" value={productForm.sku} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="zoho-input" placeholder="SV-CAM-001" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Camera Type</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Camera Type</label>
                                     <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="zoho-input">
                                         <option value="">Select Type</option>
                                         <option value="Bullet Camera">Bullet Camera</option>
@@ -2459,7 +2917,7 @@ const AdminDashboard = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Brand</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Brand</label>
                                     <input required type="text" value={productForm.brand} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="zoho-input" placeholder="Hikvision / Dahua / CP Plus" />
                                 </div>
                             </div>
@@ -2467,24 +2925,24 @@ const AdminDashboard = () => {
 
                         {/* Section 2: Technical Specifications */}
                         <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h4 className="text-[14px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Settings size={14} /> Technical Specifications
                             </h4>
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Resolution</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Resolution</label>
                                     <input type="text" value={productForm.resolution} onChange={e => setProductForm({...productForm, resolution: e.target.value})} className="zoho-input" placeholder="Example: 2MP / 4MP / 8MP" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Lens Size</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Lens Size</label>
                                     <input type="text" value={productForm.lensSize} onChange={e => setProductForm({...productForm, lensSize: e.target.value})} className="zoho-input" placeholder="Example: 2.8mm / 3.6mm" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Night Vision Distance</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Night Vision Distance</label>
                                     <input type="text" value={productForm.nightVisionDistance} onChange={e => setProductForm({...productForm, nightVisionDistance: e.target.value})} className="zoho-input" placeholder="Example: 30m / 40m" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Warranty</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Warranty</label>
                                     <select value={productForm.warranty} onChange={e => setProductForm({...productForm, warranty: e.target.value})} className="zoho-input">
                                         <option value="">Select Warranty</option>
                                         <option value="1 Year">1 Year</option>
@@ -2497,15 +2955,15 @@ const AdminDashboard = () => {
 
                         {/* Section 3: Commercial Details */}
                         <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h4 className="text-[14px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <BarChart3 size={14} /> Commercial Details
                             </h4>
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Price (₹)</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Price (₹)</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                                            <span className="text-primary-navy/40 font-bold text-sm">₹</span>
+                                            <span className="text-primary-navy/40 font-bold text-[14px]">₹</span>
                                         </div>
                                         <input 
                                             required 
@@ -2518,7 +2976,7 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Available Stock</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Available Stock</label>
                                     <input required type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} className="zoho-input" placeholder="Initial quantity..." />
                                 </div>
                             </div>
@@ -2526,27 +2984,27 @@ const AdminDashboard = () => {
 
                         {/* Section 4: Media & Description */}
                         <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h4 className="text-[14px] font-black text-primary-navy/40 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Camera size={14} /> Documentation & description
                             </h4>
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Description</label>
+                                    <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Product Description</label>
                                     <textarea rows="4" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="zoho-input resize-none py-4" placeholder="Enter detailed product biological and technical specifications..."></textarea>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Product Visuals</label>
+                                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider">Product Visuals</label>
                                         <div className="flex items-center gap-4">
-                                            <label htmlFor="image-upload" className="text-[10px] font-black text-primary-navy uppercase tracking-widest cursor-pointer hover:text-primary-red transition-colors flex items-center gap-1.5">
+                                            <label htmlFor="image-upload" className="text-[14px] font-black text-primary-navy uppercase tracking-widest cursor-pointer hover:text-primary-red transition-colors flex items-center gap-1.5">
                                                 <Plus size={12} /> Add Images
                                             </label>
                                             {(productForm.productImages?.length > 0 || productForm.productImage) && (
                                                 <button 
                                                     type="button" 
                                                     onClick={() => setProductForm({ ...productForm, productImage: '', productImages: [] })}
-                                                    className="text-[10px] font-black text-primary-red uppercase tracking-widest hover:underline flex items-center gap-1.5"
+                                                    className="text-[14px] font-black text-primary-red uppercase tracking-widest hover:underline flex items-center gap-1.5"
                                                 >
                                                     <Trash2 size={12} /> Reset Gallery
                                                 </button>
@@ -2573,8 +3031,8 @@ const AdminDashboard = () => {
                                                     <Camera size={20} />
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-xs font-bold text-primary-navy">Upload Product Images</p>
-                                                    <p className="text-[10px] text-text-muted mt-1 font-semibold uppercase tracking-tighter">JPG, PNG, WEBP • Multiple supported</p>
+                                                    <p className="text-[14px] font-bold text-primary-navy">Upload Product Images</p>
+                                                    <p className="text-[14px] text-text-muted mt-1 font-semibold uppercase tracking-tighter">JPG, PNG, WEBP • Multiple supported</p>
                                                 </div>
                                             </label>
                                         ) : (
@@ -2621,7 +3079,7 @@ const AdminDashboard = () => {
                         <button 
                             type="button" 
                             onClick={() => setProductForm(initialProductForm)}
-                            className="flex items-center gap-2 px-6 py-3.5 text-xs font-black text-text-muted hover:text-primary-red transition-all uppercase tracking-widest"
+                            className="flex items-center gap-2 px-6 py-3.5 text-[14px] font-black text-text-muted hover:text-primary-red transition-all uppercase tracking-widest"
                         >
                             <Trash2 size={16} /> Clear Form
                         </button>
@@ -2630,12 +3088,12 @@ const AdminDashboard = () => {
                             <button 
                                 type="button" 
                                 onClick={() => setShowProductModal(false)}
-                                className="px-8 py-3.5 text-xs font-black text-text-muted hover:text-primary-navy transition-all uppercase tracking-widest"
+                                className="px-8 py-3.5 text-[14px] font-black text-text-muted hover:text-primary-navy transition-all uppercase tracking-widest"
                             >
                                 Discard
                             </button>
-                            <button type="submit" className="zoho-btn-secondary px-10 py-4 text-sm rounded-[20px] shadow-xl shadow-primary-navy/10 relative overflow-hidden group">
-                                <span className="relative z-10 flex items-center gap-2 uppercase font-black tracking-widest text-[11px]">
+                            <button type="submit" className="zoho-btn-secondary px-10 py-4 text-[14px] rounded-[20px] shadow-xl shadow-primary-navy/10 relative overflow-hidden group">
+                                <span className="relative z-10 flex items-center gap-2 uppercase font-black tracking-widest text-[14px]">
                                     {editingProduct ? 'Update Inventory' : 'Add to Inventory'}
                                 </span>
                             </button>
@@ -2653,7 +3111,7 @@ const AdminDashboard = () => {
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                     <div>
                         <h3 className="text-xl font-bold text-primary-navy">Booking Directive</h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Resource Assignment</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Resource Assignment</p>
                     </div>
                     <button onClick={() => setShowBookingModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red hover:border-primary-red transition-all shadow-sm">
                         <X size={20} />
@@ -2661,7 +3119,7 @@ const AdminDashboard = () => {
                 </div>
                 <form onSubmit={handleBookingUpdate} className="p-10 space-y-8">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Status</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Operational Status</label>
                         <select value={bookingForm.status} onChange={e => setBookingForm({...bookingForm, status: e.target.value})} className="zoho-input">
                             <option value="pending_schedule">Pending Schedule Request</option>
                             <option value="schedule_sent">Schedule Proposed to Customer</option>
@@ -2673,11 +3131,11 @@ const AdminDashboard = () => {
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Schedule Date</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Schedule Date</label>
                         <input type="date" value={bookingForm.proposedDate} onChange={e => setBookingForm({...bookingForm, proposedDate: e.target.value})} className="zoho-input" />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Time Slot</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Proposed Time Slot</label>
                         <select value={bookingForm.proposedTimeSlot} onChange={e => setBookingForm({...bookingForm, proposedTimeSlot: e.target.value})} className="zoho-input">
                             <option value="">Select Time Slot</option>
                             <option value="09:00 AM - 11:00 AM">09:00 AM - 11:00 AM</option>
@@ -2687,7 +3145,7 @@ const AdminDashboard = () => {
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign Lead Technician</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Assign Lead Technician</label>
                         <select value={bookingForm.assignedEmployee} onChange={e => setBookingForm({...bookingForm, assignedEmployee: e.target.value})} className="zoho-input">
                             <option value="">Awaiting Assignment</option>
                             {employees.map(emp => (
@@ -2696,11 +3154,11 @@ const AdminDashboard = () => {
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Note / Customer Instruction</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Internal Note / Customer Instruction</label>
                         <input type="text" value={bookingForm.adminNote} onChange={e => setBookingForm({...bookingForm, adminNote: e.target.value})} className="zoho-input" placeholder="e.g. Please confirm if this slot works..." />
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-[14px] rounded-2xl">
                             Apply Directives
                         </button>
                     </div>
@@ -2716,7 +3174,7 @@ const AdminDashboard = () => {
                 <div className="p-8 border-b border-border-soft flex justify-between items-center bg-bg-soft/30">
                     <div>
                         <h3 className="text-xl font-bold text-primary-navy">Inventory Audit</h3>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">Stock Adjustment</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest mt-1">Stock Adjustment</p>
                     </div>
                     <button onClick={() => setShowStockModal(false)} className="w-10 h-10 rounded-full bg-white border border-border-soft flex items-center justify-center text-text-muted hover:text-primary-red hover:border-primary-red transition-all shadow-sm">
                         <X size={20} />
@@ -2724,23 +3182,23 @@ const AdminDashboard = () => {
                 </div>
                 <form onSubmit={handleStockAdjustmentSubmit} className="p-10 space-y-8">
                     <div className="flex gap-2 p-1.5 bg-bg-soft rounded-2xl border border-border-soft shadow-inner">
-                        <button type="button" onClick={() => setStockAdjustment({...stockAdjustment, type: 'add'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${stockAdjustment.type === 'add' ? 'bg-white text-emerald-600 shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}>Inbound (+)</button>
-                        <button type="button" onClick={() => setStockAdjustment({...stockAdjustment, type: 'remove'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${stockAdjustment.type === 'remove' ? 'bg-white text-primary-red shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}>Outbound (-)</button>
+                        <button type="button" onClick={() => setStockAdjustment({...stockAdjustment, type: 'add'})} className={`flex-1 py-3 rounded-xl text-[14px] font-black uppercase tracking-widest transition-all ${stockAdjustment.type === 'add' ? 'bg-white text-emerald-600 shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}>Inbound (+)</button>
+                        <button type="button" onClick={() => setStockAdjustment({...stockAdjustment, type: 'remove'})} className={`flex-1 py-3 rounded-xl text-[14px] font-black uppercase tracking-widest transition-all ${stockAdjustment.type === 'remove' ? 'bg-white text-primary-red shadow-lg' : 'text-text-muted hover:text-primary-navy'}`}>Outbound (-)</button>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Delta Quantity</label>
+                        <label className="text-[14px] font-bold text-text-muted uppercase tracking-wider ml-1">Delta Quantity</label>
                         <input required type="number" min="1" value={stockAdjustment.quantity} onChange={e => setStockAdjustment({...stockAdjustment, quantity: parseInt(e.target.value)})} className="zoho-input" placeholder="0" />
                     </div>
                     <div className="p-6 bg-primary-navy/[0.03] border border-border-soft rounded-2xl">
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Target Hardware</p>
-                        <p className="text-sm text-primary-navy font-bold mt-1 truncate">{editingProduct?.name}</p>
+                        <p className="text-[14px] text-text-muted font-bold uppercase tracking-widest">Target Hardware</p>
+                        <p className="text-[14px] text-primary-navy font-bold mt-1 truncate">{editingProduct?.name}</p>
                         <div className="mt-4 pt-4 border-t border-border-soft flex justify-between items-center">
-                            <span className="text-[10px] text-text-muted font-bold uppercase">Current Assets</span>
-                            <span className="text-sm font-extrabold text-primary-navy">{editingProduct?.quantity} Units</span>
+                            <span className="text-[14px] text-text-muted font-bold uppercase">Current Assets</span>
+                            <span className="text-[14px] font-extrabold text-primary-navy">{editingProduct?.quantity} Units</span>
                         </div>
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-sm rounded-2xl">
+                        <button type="submit" className="zoho-btn-secondary w-full py-4 text-[14px] rounded-2xl">
                             Confirm Audit Release
                         </button>
                     </div>
@@ -2759,7 +3217,7 @@ const AdminDashboard = () => {
                             <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center shadow-lg shadow-slate-900/30">
                                 <TrendingUp size={18} className="text-white" />
                             </div>
-                            <span className="font-extrabold text-lg tracking-tight uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>Secure<span className="text-slate-400">Vision</span></span>
+                            <span className="font-extrabold text-lg tracking-tight uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>SK<span className="text-slate-400">TECH</span></span>
                         </div>
                     )}
                     <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-2 hover:bg-navy-light/30 rounded-lg transition-colors text-slate-400">
@@ -2767,7 +3225,7 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
-                <nav className="flex-grow p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+                <nav className="flex-grow p-4 space-y-2 overflow-y-auto custom-scrollbar">
                     {[
                         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
                         { id: 'bookings', label: 'Bookings', icon: Calendar },
@@ -2779,21 +3237,36 @@ const AdminDashboard = () => {
                         { id: 'chat', label: 'Chat', icon: MessageSquare },
                         { id: 'expenses', label: 'Expenses', icon: Receipt },
                         { id: 'tasks', label: 'Tasks', icon: ClipboardList },
+                        { id: 'leads', label: 'Leads', icon: TrendingUp },
+                        { id: 'followups', label: 'Follow-ups', icon: Calendar },
+                        { id: 'daily-reports', label: 'Daily Reports', icon: FileSpreadsheet },
                         { id: 'settings', label: 'Settings', icon: Settings },
                     ].map(item => (
                         <button
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative border ${
+                            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-start px-4'} gap-4 py-3 rounded-lg transition-all duration-300 group relative ${
                                 activeTab === item.id 
-                                ? 'border-slate-500/50 text-white bg-slate-800/30' 
-                                : 'border-transparent text-slate-400 hover:bg-navy-light/20 hover:text-white'
+                                ? 'bg-[#1E293B] text-white shadow-sm' 
+                                : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
                             }`}
                         >
-                            <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'} />
-                            {!isSidebarCollapsed && <span className="text-sm font-bold tracking-wide" style={{ fontFamily: "'Inter', sans-serif" }}>{item.label}</span>}
-                            {activeTab === item.id && !isSidebarCollapsed && (
-                                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-white rounded-r-full" />
+                            <item.icon 
+                                size={22} 
+                                strokeWidth={2} 
+                                className={`transition-all duration-300 ${
+                                    activeTab === item.id 
+                                    ? 'text-white' 
+                                    : 'text-blue-500 group-hover:text-blue-400'
+                                }`} 
+                            />
+                            {!isSidebarCollapsed && (
+                                <span className="text-[14px] font-medium tracking-wide" style={{ fontFamily: "'Inter', sans-serif" }}>
+                                    {item.label}
+                                </span>
+                            )}
+                            {activeTab === item.id && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-r-md shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                             )}
                         </button>
                     ))}
@@ -2802,7 +3275,7 @@ const AdminDashboard = () => {
                 <div className="p-4 border-t border-navy-light/20">
                     <button onClick={logout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-rose-500/10 text-rose-500 transition-all font-bold">
                         <LogOut size={20} />
-                        {!isSidebarCollapsed && <span className="text-xs uppercase tracking-widest">Logout System</span>}
+                        {!isSidebarCollapsed && <span className="text-[14px] uppercase tracking-widest">Logout System</span>}
                     </button>
                 </div>
             </aside>
@@ -2831,7 +3304,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex flex-col items-start hidden sm:flex">
                                 <span className="text-[14px] font-semibold text-gray-900 leading-tight" style={{fontFamily:"'Inter', sans-serif"}}>{user?.name}</span>
-                                <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/80 mt-0.5 tracking-wide" style={{fontFamily:"'Inter', sans-serif"}}>Super Admin</span>
+                                <span className="text-[14px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/80 mt-0.5 tracking-wide" style={{fontFamily:"'Inter', sans-serif"}}>Super Admin</span>
                             </div>
                         </div>
                     </div>
@@ -2842,7 +3315,7 @@ const AdminDashboard = () => {
                         {loading ? (
                             <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
                                 <div className="w-12 h-12 border-4 border-primary-navy/10 border-t-primary-red rounded-full animate-spin"></div>
-                                <p className="text-text-muted font-bold tracking-widest uppercase text-xs">Initializing Secure Environment...</p>
+                                <p className="text-text-muted font-bold tracking-widest uppercase text-[14px]">Initializing Secure Environment...</p>
                             </div>
                         ) : (
                             <div className="space-y-8">
@@ -2858,6 +3331,9 @@ const AdminDashboard = () => {
                                 {activeTab === 'chat' && renderChat()}
                                 {activeTab === 'expenses' && renderExpenses()}
                                 {activeTab === 'tasks' && renderTasks()}
+                                {activeTab === 'leads' && renderLeads()}
+                                {activeTab === 'followups' && renderFollowUps()}
+                                {activeTab === 'daily-reports' && renderDailyReports()}
                                 {activeTab === 'settings' && renderSettings()}
                             </div>
                         )}
@@ -2868,6 +3344,7 @@ const AdminDashboard = () => {
                 {renderProductModal()}
                 {renderBookingModal()}
                 {renderStockModal()}
+                {renderLeadModal()}
             </main>
         </div>
     );

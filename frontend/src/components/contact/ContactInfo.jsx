@@ -22,8 +22,8 @@ const ContactInfo = () => {
                         </div>
                         <div>
                             <h4 className="text-lg font-bold text-[#0b0f1a] mb-1">{item.title}</h4>
-                            <p className="text-gray-600 text-sm leading-relaxed">{item.detail1}</p>
-                            <p className="text-gray-600 text-sm leading-relaxed">{item.detail2}</p>
+                            <p className="text-gray-600 text-[14px] leading-relaxed">{item.detail1}</p>
+                            <p className="text-gray-600 text-[14px] leading-relaxed">{item.detail2}</p>
                         </div>
                     </div>
                 ))}

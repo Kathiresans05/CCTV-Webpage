@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Home, ChevronRight, CheckCircle2, Truck, ShieldCheck, PenTool, Smartphone, PlayCircle } from 'lucide-react';
+import { Home, ChevronRight, CheckCircle2, Truck, ShieldCheck, PenTool, Smartphone, PlayCircle, Star, MessageSquare } from 'lucide-react';
 import ServiceBookingModal from '../components/products/ServiceBookingModal';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,6 +34,8 @@ const ProductDetailsPage = () => {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [isZoomed, setIsZoomed] = useState(false);
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
 
     // Close on Escape key
     useEffect(() => {
@@ -90,6 +92,22 @@ const ProductDetailsPage = () => {
             }
         };
         fetchProduct();
+        
+        const fetchReviews = async () => {
+            try {
+                const res = await fetch(`/api/reviews/product/${id}`);
+                const data = await res.json();
+                if (data.success) {
+                    setReviews(data.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch reviews', err);
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+        fetchReviews();
+
         window.scrollTo(0, 0);
     }, [id]);
 
@@ -147,7 +165,7 @@ const ProductDetailsPage = () => {
                 <div className="container mx-auto px-4 md:px-8 relative z-10 text-center">
                     <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-6 line-clamp-2">{product.name}</h1>
                     <div className="mt-3">
-                        <nav className="flex items-center justify-center space-x-2 text-gray-400 text-sm">
+                        <nav className="flex items-center justify-center space-x-2 text-gray-400 text-[14px]">
                             <Link to="/" className="hover:text-red-500 transition-colors flex items-center">
                                 <Home size={14} className="mr-1" /> Home
                             </Link>
@@ -192,7 +210,7 @@ const ProductDetailsPage = () => {
 
                         {/* Main Preview */}
                         <div className="flex-1 order-1 md:order-2 relative group flex items-center justify-center bg-gray-50 rounded-2xl overflow-hidden min-h-[400px] md:min-h-[500px]">
-                            <div className="absolute top-4 left-4 z-10 bg-primary-red text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            <div className="absolute top-4 left-4 z-10 bg-primary-red text-white text-[14px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                                 {product.category}
                             </div>
                             
@@ -252,7 +270,7 @@ const ProductDetailsPage = () => {
                                     
                                     {/* Zoom Instructions */}
                                     {!isZoomed && (
-                                        <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] text-gray-500 font-medium pointer-events-none">
+                                        <div className="absolute bottom-4 right-4 bg-black/10 backdrop-blur-md px-3 py-1 rounded-lg text-[14px] text-gray-500 font-medium pointer-events-none">
                                             Roll over image to zoom
                                         </div>
                                     )}
@@ -263,33 +281,33 @@ const ProductDetailsPage = () => {
 
                     {/* Right Column: Key Info & Overview */}
                     <div className="lg:w-2/5 p-8 md:p-12 flex flex-col bg-white">
-                        <div className="mb-2 uppercase text-xs font-bold text-gray-400 tracking-widest">{product.brand} • SKU: {product.sku}</div>
+                        <div className="mb-2 uppercase text-[14px] font-bold text-gray-400 tracking-widest">{product.brand} • SKU: {product.sku}</div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">{product.name}</h2>
                         
                         <div className="flex items-center space-x-4 mb-8">
                             <div className="text-4xl font-black text-primary-navy">₹{product.price?.toLocaleString('en-IN') || '0'}</div>
                             <div className="flex flex-col">
-                                <div className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Available Now</div>
-                                <div className="text-xs text-gray-400">Inclusive of all taxes</div>
+                                <div className="text-[14px] font-bold text-green-600 uppercase tracking-widest">Available Now</div>
+                                <div className="text-[14px] text-gray-400">Inclusive of all taxes</div>
                             </div>
                         </div>
 
                         <div className="space-y-6 mb-10">
                             <div>
-                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Description</h4>
-                                <p className="text-gray-600 text-sm leading-relaxed">
+                                <h4 className="text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Description</h4>
+                                <p className="text-gray-600 text-[14px] leading-relaxed">
                                     {product.description || 'No description available.'}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Status</p>
-                                    <p className="text-xs font-bold text-green-700 mt-1">{product.status === 'instock' ? 'In Stock' : (product.status || 'Checking...')}</p>
+                                    <p className="text-[14px] * 1.2 font-bold text-gray-400 uppercase">Status</p>
+                                    <p className="text-[14px] font-bold text-green-700 mt-1">{product.status === 'instock' ? 'In Stock' : (product.status || 'Checking...')}</p>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase">Warranty</p>
-                                    <p className="text-xs font-bold text-primary-navy mt-1">1 Year Brand</p>
+                                    <p className="text-[14px] * 1.2 font-bold text-gray-400 uppercase">Warranty</p>
+                                    <p className="text-[14px] font-bold text-primary-navy mt-1">1 Year Brand</p>
                                 </div>
                             </div>
                         </div>
@@ -311,7 +329,7 @@ const ProductDetailsPage = () => {
                                 Book Installation Now
                                 <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </button>
-                            <div className="flex items-center justify-between px-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <div className="flex items-center justify-between px-2 text-[14px] font-bold text-gray-400 uppercase tracking-widest">
                                 <span className="flex items-center"><ShieldCheck size={14} className="mr-1 text-green-500" /> Secure Checkout</span>
                                 <span className="flex items-center"><Truck size={14} className="mr-1 text-blue-500" /> Fast Delivery</span>
                             </div>
@@ -326,7 +344,7 @@ const ProductDetailsPage = () => {
                         <div className="w-full md:w-3/5 lg:w-2/3">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-2xl font-bold text-gray-900 border-l-4 border-primary-red pl-4">Product Overview</h3>
-                                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">4K Product Reveal</span>
+                                <span className="text-[14px] font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">4K Product Reveal</span>
                             </div>
                             <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-900 shadow-lg group">
                                 <iframe 
@@ -364,7 +382,7 @@ const ProductDetailsPage = () => {
                             <Truck size={24} />
                         </div>
                         <h4 className="font-bold text-gray-900 mb-2">Fast Delivery</h4>
-                        <p className="text-sm text-gray-500">24-48 hours dispatch for quick security setup.</p>
+                        <p className="text-[14px] text-gray-500">24-48 hours dispatch for quick security setup.</p>
                     </div>
                     
                     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
@@ -372,7 +390,7 @@ const ProductDetailsPage = () => {
                             <ShieldCheck size={24} />
                         </div>
                         <h4 className="font-bold text-gray-900 mb-2">Official Warranty</h4>
-                        <p className="text-sm text-gray-500">Minimum 1-year brand warranty on all products.</p>
+                        <p className="text-[14px] text-gray-500">Minimum 1-year brand warranty on all products.</p>
                     </div>
                     
                     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
@@ -380,7 +398,7 @@ const ProductDetailsPage = () => {
                             <PenTool size={24} />
                         </div>
                         <h4 className="font-bold text-gray-900 mb-2">Expert Installation</h4>
-                        <p className="text-sm text-gray-500">Professional setup by verified technicians.</p>
+                        <p className="text-[14px] text-gray-500">Professional setup by verified technicians.</p>
                     </div>
                     
                     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
@@ -388,7 +406,96 @@ const ProductDetailsPage = () => {
                             <Smartphone size={24} />
                         </div>
                         <h4 className="font-bold text-gray-900 mb-2">Mobile Monitoring</h4>
-                        <p className="text-sm text-gray-500">Access live feeds securely via your smartphone.</p>
+                        <p className="text-[14px] text-gray-500">Access live feeds securely via your smartphone.</p>
+                    </div>
+                </div>
+
+                {/* Reviews Section */}
+                <div className="mt-12 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-8 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-gray-50/50 to-white">
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                <MessageSquare className="text-primary-red" />
+                                Customer Reviews
+                            </h3>
+                            <p className="text-gray-500 text-[14px] mt-1 font-medium">What our verified owners are saying about this {product.brand} product</p>
+                        </div>
+
+                        {product.numReviews > 0 && (
+                            <div className="flex items-center gap-6">
+                                <div className="text-center">
+                                    <div className="text-4xl font-black text-gray-900">{product.rating?.toFixed(1)}</div>
+                                    <div className="flex text-amber-400 mt-1">
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                            <Star key={s} size={14} fill={s <= Math.round(product.rating) ? "currentColor" : "none"} />
+                                        ))}
+                                    </div>
+                                    <p className="text-[14px] font-black text-gray-400 uppercase tracking-widest mt-2">{product.numReviews} Reviews</p>
+                                </div>
+                                <div className="h-12 w-[1px] bg-gray-100 hidden md:block" />
+                                <div className="space-y-1.5 hidden md:block">
+                                    {[5, 4, 3, 2, 1].map(r => {
+                                        const count = reviews.filter(rev => rev.rating === r).length;
+                                        const percent = product.numReviews > 0 ? (count / product.numReviews) * 100 : 0;
+                                        return (
+                                            <div key={r} className="flex items-center gap-2">
+                                                <span className="text-[14px] font-bold text-gray-400 w-2">{r}</span>
+                                                <Star size={10} className="text-amber-400 fill-amber-400" />
+                                                <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-amber-400" style={{ width: `${percent}%` }} />
+                                                </div>
+                                                <span className="text-[14px] font-bold text-gray-400 w-6">{Math.round(percent)}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-8">
+                        {reviewsLoading ? (
+                            <div className="flex justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red"></div>
+                            </div>
+                        ) : reviews.length > 0 ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {reviews.map((review) => (
+                                    <div key={review._id} className="p-6 rounded-2xl bg-gray-50/50 border border-gray-100 hover:border-gray-200 transition-colors">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-primary-red/10 text-primary-red flex items-center justify-center font-bold text-[14px]">
+                                                    {review.user?.name?.charAt(0) || review.name?.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900 text-[14px] leading-none">{review.user?.name || review.name}</h4>
+                                                    <p className="text-[14px] text-gray-400 font-bold uppercase tracking-tight mt-1">Verified Purchase</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-[14px] text-gray-400 font-medium italic">
+                                                {new Date(review.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex text-amber-400 mb-3">
+                                            {[1, 2, 3, 4, 5].map(s => (
+                                                <Star key={s} size={14} fill={s <= review.rating ? "currentColor" : "none"} />
+                                            ))}
+                                        </div>
+                                        
+                                        <p className="text-gray-600 text-[14px] leading-relaxed font-serif italic">
+                                            "{review.comment}"
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <MessageSquare size={48} className="text-gray-100 mx-auto mb-4" />
+                                <h4 className="text-lg font-bold text-gray-300 uppercase tracking-widest">No Reviews Yet</h4>
+                                <p className="text-gray-400 text-[14px] mt-2 max-w-sm mx-auto">Be the first to share your experience after your installation is complete!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
